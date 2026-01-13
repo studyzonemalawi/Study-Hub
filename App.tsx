@@ -13,11 +13,18 @@ import { Activity } from './pages/Activity';
 import { Testimonials } from './pages/Testimonials';
 import { Announcements } from './pages/Announcements';
 import { FAQs } from './pages/FAQs';
+import { SyncIndicator } from './components/SyncIndicator';
+import { storage } from './services/storage';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState('home');
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Sync & Network States
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [lastSynced, setLastSynced] = useState<string | null>(null);
 
   const ADMIN_NUMBER = '+265999326377';
 
@@ -33,11 +40,46 @@ const App: React.FC = () => {
       setUser(parsedUser);
     }
     setIsLoading(false);
+
+    // Network Listeners
+    const handleOnline = () => {
+      setIsOnline(true);
+      triggerSync();
+    };
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
   }, []);
+
+  const triggerSync = async () => {
+    const savedUser = localStorage.getItem('study_hub_session');
+    if (!savedUser) return;
+    
+    const parsed = JSON.parse(savedUser);
+    setIsSyncing(true);
+    
+    try {
+      const result = await storage.syncWithServer(parsed.id);
+      if (result.success) {
+        setLastSynced(result.timestamp);
+      }
+    } catch (err) {
+      console.error("Sync failed", err);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const handleLogin = (u: User) => {
     setUser(u);
     localStorage.setItem('study_hub_session', JSON.stringify(u));
+    if (navigator.onLine) triggerSync();
   };
 
   const handleLogout = () => {
@@ -122,6 +164,7 @@ const App: React.FC = () => {
       activeTab={activeTab} 
       setActiveTab={setActiveTab}
     >
+      <SyncIndicator isOnline={isOnline} isSyncing={isSyncing} lastSynced={lastSynced} />
       <div className="pb-10">
         <div className="mb-6 flex space-x-2 md:space-x-4 overflow-x-auto no-scrollbar py-2 px-1">
           {availableTabs.map(tab => (

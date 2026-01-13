@@ -7,6 +7,7 @@ const USERS_KEY = 'study_hub_users';
 const PROGRESS_KEY = 'study_hub_progress';
 const TESTIMONIALS_KEY = 'study_hub_testimonials';
 const ANNOUNCEMENTS_KEY = 'study_hub_announcements';
+const LAST_SYNC_KEY = 'study_hub_last_sync';
 
 export const storage = {
   getMaterials: (): StudyMaterial[] => {
@@ -56,7 +57,6 @@ export const storage = {
     if (index !== -1) {
       users[index] = updatedUser;
       localStorage.setItem(USERS_KEY, JSON.stringify(users));
-      // Also update session if it's the current user
       const session = localStorage.getItem('study_hub_session');
       if (session) {
         const parsed = JSON.parse(session);
@@ -70,12 +70,8 @@ export const storage = {
   deleteUser: (userId: string) => {
     const users = storage.getUsers().filter(u => u.id !== userId);
     localStorage.setItem(USERS_KEY, JSON.stringify(users));
-    
-    // Also cleanup their messages
     const messages = storage.getMessages().filter(m => m.senderId !== userId && m.receiverId !== userId);
     localStorage.setItem(MESSAGES_KEY, JSON.stringify(messages));
-    
-    // Cleanup progress
     const progresses = storage.getAllProgress();
     delete progresses[userId];
     localStorage.setItem(PROGRESS_KEY, JSON.stringify(progresses));
@@ -94,7 +90,6 @@ export const storage = {
   updateProgress: (userId: string, progress: UserProgress) => {
     const all = storage.getAllProgress();
     if (!all[userId]) all[userId] = [];
-    
     const index = all[userId].findIndex(p => p.materialId === progress.materialId);
     if (index !== -1) {
       all[userId][index] = { ...all[userId][index], ...progress };
@@ -122,22 +117,6 @@ export const storage = {
     }
   },
 
-  toggleFavorite: (userId: string, materialId: string) => {
-    const users = storage.getUsers();
-    const user = users.find(u => u.id === userId);
-    if (user) {
-      const idx = user.favoriteIds.indexOf(materialId);
-      if (idx > -1) {
-        user.favoriteIds.splice(idx, 1);
-      } else {
-        user.favoriteIds.push(materialId);
-      }
-      storage.updateUser(user);
-      return user;
-    }
-    return null;
-  },
-
   getTestimonials: (): Testimonial[] => {
     const data = localStorage.getItem(TESTIMONIALS_KEY);
     return data ? JSON.parse(data) : [];
@@ -163,5 +142,24 @@ export const storage = {
   deleteAnnouncement: (id: string) => {
     const announcements = storage.getAnnouncements().filter(a => a.id !== id);
     localStorage.setItem(ANNOUNCEMENTS_KEY, JSON.stringify(announcements));
+  },
+
+  // Mock Synchronization Method
+  syncWithServer: async (userId: string) => {
+    // Simulate network delay
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    const lastSync = localStorage.getItem(LAST_SYNC_KEY);
+    const progress = storage.getUserProgress(userId);
+    const user = storage.getUsers().find(u => u.id === userId);
+
+    console.log(`[Sync] Reconciling data for user ${userId}...`);
+    console.log(`[Sync] Progress items: ${progress.length}, Saved files: ${user?.downloadedIds.length}`);
+
+    localStorage.setItem(LAST_SYNC_KEY, new Date().toISOString());
+    return {
+      success: true,
+      timestamp: new Date().toISOString()
+    };
   }
 };
