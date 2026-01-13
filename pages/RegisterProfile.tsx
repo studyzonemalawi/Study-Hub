@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { User, AccountRole, MALAWI_DISTRICTS, JOIN_REASONS, PRIMARY_GRADES, SECONDARY_GRADES, OTHER_GRADE_OPTIONS, Grade } from '../types';
 import { storage } from '../services/storage';
@@ -17,31 +16,14 @@ export const RegisterProfile: React.FC<RegisterProfileProps> = ({ user, onComple
   const [schoolName, setSchoolName] = useState('');
   const [currentGrade, setCurrentGrade] = useState<Grade | ''>('');
   const [bio, setBio] = useState('');
-  const [profilePic, setProfilePic] = useState<string>('');
+  const [profilePic, setProfilePic] = useState<string>('initials'); // Marker for initials-based avatar
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
-  
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const getWordCount = (text: string) => text.trim().split(/\s+/).filter(w => w.length > 0).length;
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        alert("Image must be smaller than 2MB");
-        return;
-      }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfilePic(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
 
   const finalUpdatedUser: User = {
     ...user,
@@ -53,7 +35,7 @@ export const RegisterProfile: React.FC<RegisterProfileProps> = ({ user, onComple
     schoolName,
     currentGrade: currentGrade as Grade,
     bio,
-    profilePic,
+    profilePic: 'initials',
     termsAccepted,
     isProfileComplete: true
   };
@@ -62,8 +44,8 @@ export const RegisterProfile: React.FC<RegisterProfileProps> = ({ user, onComple
     e.preventDefault();
     setError('');
 
-    if (!name || !age || !accountRole || !district || !reason || !currentGrade || !bio || !profilePic) {
-      setError('All fields are mandatory, including profile picture.');
+    if (!name || !age || !accountRole || !district || !reason || !currentGrade || !bio) {
+      setError('All fields are mandatory.');
       return;
     }
 
@@ -132,17 +114,13 @@ export const RegisterProfile: React.FC<RegisterProfileProps> = ({ user, onComple
           
           <div className="flex flex-col items-center">
             <div 
-              onClick={() => fileInputRef.current?.click()}
-              className="w-32 h-32 rounded-full border-4 border-emerald-100 bg-gray-50 flex items-center justify-center cursor-pointer overflow-hidden relative group"
+              className="w-32 h-32 rounded-full border-4 border-emerald-100 bg-emerald-600 flex items-center justify-center overflow-hidden shadow-xl"
             >
-              {profilePic ? (
-                <img src={profilePic} className="w-full h-full object-cover" alt="Profile" />
-              ) : (
-                <span className="text-emerald-500 font-bold">Upload Photo</span>
-              )}
-              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold">Change</div>
+              <span className="text-white font-black text-3xl">
+                {name ? name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : '?'}
+              </span>
             </div>
-            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
+            <p className="text-[10px] font-black uppercase text-emerald-700 tracking-widest mt-4">Personal Identity Circle</p>
           </div>
 
           <div className="grid md:grid-cols-2 gap-6">
@@ -214,7 +192,7 @@ export const RegisterProfile: React.FC<RegisterProfileProps> = ({ user, onComple
 
       {/* Terms Modal */}
       {showTerms && (
-        <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-[2.5rem] max-w-2xl w-full max-h-[80vh] flex flex-col overflow-hidden shadow-2xl animate-in zoom-in duration-300">
             <div className="p-8 border-b border-gray-100 flex justify-between items-center">
               <h3 className="text-2xl font-black text-gray-800">Terms & Conditions</h3>

@@ -1,7 +1,14 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// We initialize inside a getter to ensure process.env.API_KEY is available and defined
+// This prevents immediate crashes if the environment variable is not yet injected by Vite
+const getAI = () => {
+  const apiKey = process.env.API_KEY;
+  if (!apiKey) {
+    throw new Error("Gemini API Key is missing. Please set API_KEY in your environment variables.");
+  }
+  return new GoogleGenAI({ apiKey });
+};
 
 export interface QuizQuestion {
   id: string;
@@ -26,6 +33,7 @@ export interface EvaluationResult {
 
 export const aiService = {
   generateQuiz: async (title: string, subject: string, grade: string, docContext: string): Promise<QuizChapter[]> => {
+    const ai = getAI();
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: `You are an expert Malawian educator. You are reviewing a specific textbook: "${title}" for ${grade} ${subject}.
@@ -83,7 +91,8 @@ export const aiService = {
     });
 
     try {
-      const data = JSON.parse(response.text || '{"chapters": []}');
+      const text = response.text;
+      const data = JSON.parse(text || '{"chapters": []}');
       return data.chapters;
     } catch (e) {
       console.error("Failed to parse AI response", e);
@@ -92,6 +101,7 @@ export const aiService = {
   },
 
   evaluateComprehensionAnswer: async (question: string, userAnswer: string, modelAnswer: string, pointsToCover: string): Promise<EvaluationResult> => {
+    const ai = getAI();
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: `You are a helpful and encouraging Malawian teacher. 
@@ -118,7 +128,8 @@ export const aiService = {
     });
 
     try {
-      return JSON.parse(response.text || '{}');
+      const text = response.text;
+      return JSON.parse(text || '{}');
     } catch (e) {
       console.error("Failed to parse evaluation response", e);
       return {

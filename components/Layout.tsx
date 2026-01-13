@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { User } from '../types';
 
@@ -25,6 +24,11 @@ export const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, active
     ...(isAdmin ? [{ id: 'admin', label: 'Admin', icon: '🛡️' }] : [])
   ];
 
+  const getInitials = (name: string) => {
+    if (!name) return '?';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+
   return (
     <div className="min-h-screen bg-[#fcfdfc] flex flex-col font-sans">
       {/* Header */}
@@ -40,8 +44,8 @@ export const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, active
                 <p className="text-xs font-black uppercase tracking-widest">{user.name || user.phoneNumber}</p>
                 <p className="text-[9px] text-emerald-300 font-bold uppercase tracking-widest opacity-80">{user.accountRole || 'Member'}</p>
               </div>
-              <div className="w-10 h-10 rounded-xl bg-white/10 border border-white/10 overflow-hidden shadow-lg">
-                <img src={user.profilePic || 'https://via.placeholder.com/150'} className="w-full h-full object-cover" alt="Profile" />
+              <div className="w-10 h-10 rounded-xl bg-emerald-700 flex items-center justify-center text-white font-black text-xs border border-white/20 shadow-lg">
+                {getInitials(user.name || user.phoneNumber)}
               </div>
             </div>
             <button 

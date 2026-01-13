@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { User, Testimonial } from '../types';
 import { storage } from '../services/storage';
@@ -27,7 +26,7 @@ export const Testimonials: React.FC<TestimonialsProps> = ({ user }) => {
       id: Math.random().toString(36).substr(2, 9),
       userId: user.id,
       userName: user.name || 'Anonymous Learner',
-      userProfilePic: user.profilePic || '',
+      userProfilePic: 'initials',
       userRole: user.accountRole || 'Member',
       content: newContent,
       rating: rating,
@@ -42,6 +41,11 @@ export const Testimonials: React.FC<TestimonialsProps> = ({ user }) => {
       setIsSubmitting(false);
       setShowForm(false);
     }, 800);
+  };
+
+  const getInitials = (name: string) => {
+    if (!name) return '?';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
   return (
@@ -136,8 +140,8 @@ export const Testimonials: React.FC<TestimonialsProps> = ({ user }) => {
               </div>
 
               <div className="mt-8 flex items-center gap-4 border-t border-gray-50 pt-6">
-                <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 overflow-hidden flex-none">
-                  <img src={t.userProfilePic || 'https://via.placeholder.com/150'} className="w-full h-full object-cover" alt="" />
+                <div className="w-12 h-12 rounded-2xl bg-emerald-700 border border-emerald-800 overflow-hidden flex-none flex items-center justify-center text-white font-black text-xs shadow-md">
+                  {getInitials(t.userName)}
                 </div>
                 <div className="min-w-0">
                   <h4 className="font-black text-gray-800 text-sm truncate">{t.userName}</h4>

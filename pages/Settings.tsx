@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { User, MALAWI_DISTRICTS, JOIN_REASONS, PRIMARY_GRADES, SECONDARY_GRADES, OTHER_GRADE_OPTIONS, Grade, AccountRole } from '../types';
 import { storage } from '../services/storage';
@@ -45,9 +44,13 @@ export const Settings: React.FC<SettingsProps> = ({ user, onUpdate, onNavigate }
       setIsSaving(false);
       setNewPassword('');
       setMessage({ type: 'success', text: 'Profile saved successfully' });
-      // Scroll to top to see message
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }, 600);
+  };
+
+  const getInitials = (name: string) => {
+    if (!name) return '?';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
   const allGrades = [...PRIMARY_GRADES, ...SECONDARY_GRADES, ...OTHER_GRADE_OPTIONS];
@@ -74,8 +77,8 @@ export const Settings: React.FC<SettingsProps> = ({ user, onUpdate, onNavigate }
           <div className="bg-white p-10 rounded-[2.5rem] border border-gray-100 shadow-xl text-center relative overflow-hidden">
             <div className="absolute top-0 left-0 right-0 h-24 bg-emerald-600"></div>
             <div className="relative z-10">
-              <div className="w-24 h-24 rounded-full border-4 border-white bg-white mx-auto mb-4 overflow-hidden shadow-lg">
-                <img src={user.profilePic || 'https://via.placeholder.com/150'} className="w-full h-full object-cover" alt="Profile" />
+              <div className="w-24 h-24 rounded-full border-4 border-white bg-emerald-700 mx-auto mb-4 flex items-center justify-center text-white font-black text-2xl shadow-lg">
+                {getInitials(user.name)}
               </div>
               <h3 className="text-xl font-black text-gray-800">{user.name}</h3>
               <p className="text-sm text-emerald-600 font-bold">{user.phoneNumber}</p>
