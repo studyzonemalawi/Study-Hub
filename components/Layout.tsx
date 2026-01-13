@@ -18,10 +18,10 @@ export const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, active
 
   const navItems = [
     { id: 'home', label: 'Home', icon: '🏠' },
+    { id: 'announcements', label: 'Updates', icon: '📢' },
     { id: 'library', label: 'Library', icon: '📚' },
     { id: 'activity', label: 'Activity', icon: '📈' },
     { id: 'support', label: 'Support', icon: '💬' },
-    { id: 'settings', label: 'Settings', icon: '⚙️' },
     ...(isAdmin ? [{ id: 'admin', label: 'Admin', icon: '🛡️' }] : [])
   ];
 

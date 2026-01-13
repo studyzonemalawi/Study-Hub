@@ -11,6 +11,7 @@ import { RegisterProfile } from './pages/RegisterProfile';
 import { Settings } from './pages/Settings';
 import { Activity } from './pages/Activity';
 import { Testimonials } from './pages/Testimonials';
+import { Announcements } from './pages/Announcements';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -72,6 +73,7 @@ const App: React.FC = () => {
 
   const availableTabs = [
     { id: 'home', label: 'Home' },
+    { id: 'announcements', label: 'Updates' },
     { id: 'library', label: 'Library' },
     { id: 'papers', label: 'Past Papers' },
     { id: 'testimonials', label: 'Community' },
@@ -89,6 +91,8 @@ const App: React.FC = () => {
     switch (activeTab) {
       case 'home':
         return <Home userName={user.name} onNavigate={setActiveTab} />;
+      case 'announcements':
+        return <Announcements />;
       case 'library':
       case 'papers':
         return <Library onNavigate={setActiveTab} />;

@@ -68,6 +68,14 @@ export interface Testimonial {
   timestamp: string;
 }
 
+export interface Announcement {
+  id: string;
+  title: string;
+  content: string;
+  timestamp: string;
+  priority: 'normal' | 'urgent' | 'important';
+}
+
 export interface User {
   id: string;
   phoneNumber: string;

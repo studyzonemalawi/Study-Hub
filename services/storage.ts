@@ -1,11 +1,12 @@
 
-import { StudyMaterial, Message, User, UserProgress, Testimonial } from '../types';
+import { StudyMaterial, Message, User, UserProgress, Testimonial, Announcement } from '../types';
 
 const MATERIALS_KEY = 'study_hub_materials';
 const MESSAGES_KEY = 'study_hub_messages';
 const USERS_KEY = 'study_hub_users';
 const PROGRESS_KEY = 'study_hub_progress';
 const TESTIMONIALS_KEY = 'study_hub_testimonials';
+const ANNOUNCEMENTS_KEY = 'study_hub_announcements';
 
 export const storage = {
   getMaterials: (): StudyMaterial[] => {
@@ -146,5 +147,21 @@ export const storage = {
     const testimonials = storage.getTestimonials();
     testimonials.unshift(testimonial);
     localStorage.setItem(TESTIMONIALS_KEY, JSON.stringify(testimonials));
+  },
+
+  getAnnouncements: (): Announcement[] => {
+    const data = localStorage.getItem(ANNOUNCEMENTS_KEY);
+    return data ? JSON.parse(data) : [];
+  },
+
+  saveAnnouncement: (announcement: Announcement) => {
+    const announcements = storage.getAnnouncements();
+    announcements.unshift(announcement);
+    localStorage.setItem(ANNOUNCEMENTS_KEY, JSON.stringify(announcements));
+  },
+
+  deleteAnnouncement: (id: string) => {
+    const announcements = storage.getAnnouncements().filter(a => a.id !== id);
+    localStorage.setItem(ANNOUNCEMENTS_KEY, JSON.stringify(announcements));
   }
 };
