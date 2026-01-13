@@ -11,7 +11,6 @@ import {
   SECONDARY_GRADES, 
   PRIMARY_SUBJECTS, 
   SECONDARY_SUBJECTS,
-  OTHER_GRADE_OPTIONS,
   User
 } from '../types';
 import { storage } from '../services/storage';
@@ -53,7 +52,6 @@ export const Library: React.FC<LibraryProps> = ({ onNavigate }) => {
     setSelectedIds(new Set());
   }, [level, selectedGrade, activeView]);
 
-  // Removed OTHER_GRADE_OPTIONS here as materials should follow curriculum grades
   const grades = level === EducationLevel.PRIMARY 
     ? PRIMARY_GRADES 
     : SECONDARY_GRADES;
@@ -68,7 +66,6 @@ export const Library: React.FC<LibraryProps> = ({ onNavigate }) => {
     link.click();
     document.body.removeChild(link);
     storage.recordDownload(userId, m.id);
-    // Refresh user state
     const updatedUsers = storage.getUsers();
     const found = updatedUsers.find(u => u.id === userId);
     if (found) setCurrentUser(found);
@@ -79,7 +76,7 @@ export const Library: React.FC<LibraryProps> = ({ onNavigate }) => {
     selectedMaterials.forEach((m, index) => {
       setTimeout(() => {
         handleDownload(m);
-      }, index * 500); // Staggered to prevent browser blocking
+      }, index * 500);
     });
     setIsSelectionMode(false);
     setSelectedIds(new Set());
@@ -128,6 +125,14 @@ export const Library: React.FC<LibraryProps> = ({ onNavigate }) => {
 
   const getStatusForMaterial = (mId: string) => {
     return userProgress.find(p => p.materialId === mId)?.status || ReadingStatus.NOT_STARTED;
+  };
+
+  const getSubjectMaterialCount = (subjectName: string) => {
+    return materials.filter(m => 
+      m.level === level && 
+      m.grade === selectedGrade && 
+      m.subject === subjectName
+    ).length;
   };
 
   const filteredMaterials = materials.filter(m => {
@@ -209,18 +214,31 @@ export const Library: React.FC<LibraryProps> = ({ onNavigate }) => {
       {activeView === 'browse' && !selectedSubject ? (
         <section className="animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {subjects.map(sub => (
-              <button
-                key={sub}
-                onClick={() => setSelectedSubject(sub)}
-                className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-2xl hover:border-emerald-200 transition-all text-left group relative overflow-hidden"
-              >
-                <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600 mb-6 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
-                </div>
-                <h4 className="font-black text-gray-800 text-sm uppercase tracking-tight">{sub}</h4>
-              </button>
-            ))}
+            {subjects.map(sub => {
+              const count = getSubjectMaterialCount(sub);
+              return (
+                <button
+                  key={sub}
+                  onClick={() => setSelectedSubject(sub)}
+                  className="bg-white p-6 md:p-8 rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-2xl hover:border-emerald-200 transition-all text-left group relative overflow-hidden flex flex-col justify-between h-full min-h-[160px]"
+                >
+                  <div>
+                    <div className="w-10 h-10 md:w-12 md:h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600 mb-4 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                      <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+                    </div>
+                    <h4 className="font-black text-gray-800 text-[11px] md:text-sm uppercase tracking-tight leading-tight">{sub}</h4>
+                  </div>
+                  <div className="mt-4 flex items-center justify-between">
+                    <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest ${count > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-400'}`}>
+                      {count} {count === 1 ? 'Resource' : 'Resources'}
+                    </span>
+                    <div className="text-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </section>
       ) : (

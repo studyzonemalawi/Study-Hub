@@ -1,10 +1,11 @@
 
-import { StudyMaterial, Message, User, UserProgress, ReadingStatus } from '../types';
+import { StudyMaterial, Message, User, UserProgress, Testimonial } from '../types';
 
 const MATERIALS_KEY = 'study_hub_materials';
 const MESSAGES_KEY = 'study_hub_messages';
 const USERS_KEY = 'study_hub_users';
 const PROGRESS_KEY = 'study_hub_progress';
+const TESTIMONIALS_KEY = 'study_hub_testimonials';
 
 export const storage = {
   getMaterials: (): StudyMaterial[] => {
@@ -134,5 +135,16 @@ export const storage = {
       return user;
     }
     return null;
+  },
+
+  getTestimonials: (): Testimonial[] => {
+    const data = localStorage.getItem(TESTIMONIALS_KEY);
+    return data ? JSON.parse(data) : [];
+  },
+
+  saveTestimonial: (testimonial: Testimonial) => {
+    const testimonials = storage.getTestimonials();
+    testimonials.unshift(testimonial);
+    localStorage.setItem(TESTIMONIALS_KEY, JSON.stringify(testimonials));
   }
 };

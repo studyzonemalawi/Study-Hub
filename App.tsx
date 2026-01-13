@@ -10,6 +10,7 @@ import { Support } from './pages/Support';
 import { RegisterProfile } from './pages/RegisterProfile';
 import { Settings } from './pages/Settings';
 import { Activity } from './pages/Activity';
+import { Testimonials } from './pages/Testimonials';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -73,6 +74,7 @@ const App: React.FC = () => {
     { id: 'home', label: 'Home' },
     { id: 'library', label: 'Library' },
     { id: 'papers', label: 'Past Papers' },
+    { id: 'testimonials', label: 'Community' },
     { id: 'activity', label: 'Activity' },
     { id: 'support', label: 'Support' },
     { id: 'settings', label: 'Settings' },
@@ -88,9 +90,10 @@ const App: React.FC = () => {
       case 'home':
         return <Home userName={user.name} onNavigate={setActiveTab} />;
       case 'library':
-        return <Library onNavigate={setActiveTab} />;
       case 'papers':
         return <Library onNavigate={setActiveTab} />;
+      case 'testimonials':
+        return <Testimonials user={user} />;
       case 'activity':
         return <Activity user={user} onNavigate={setActiveTab} />;
       case 'support':

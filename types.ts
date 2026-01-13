@@ -23,7 +23,11 @@ export enum AccountRole {
   GUARDIAN = 'Guardian'
 }
 
-export type Grade = 'Standard 5' | 'Standard 6' | 'Standard 7' | 'Standard 8' | 'Form 1' | 'Form 2' | 'Form 3' | 'Form 4' | 'Prefer not to say' | 'Not studying' | 'Other';
+// These are the standard academic grades used for material filtering
+export type Grade = 'Standard 5' | 'Standard 6' | 'Standard 7' | 'Standard 8' | 'Form 1' | 'Form 2' | 'Form 3' | 'Form 4';
+
+// Extended options only for user profile status
+export type ProfileGrade = Grade | 'Prefer not to say' | 'Not Studying' | 'Other';
 
 export interface StudyMaterial {
   id: string;
@@ -53,6 +57,17 @@ export interface Message {
   isAdmin: boolean;
 }
 
+export interface Testimonial {
+  id: string;
+  userId: string;
+  userName: string;
+  userProfilePic: string;
+  userRole: string;
+  content: string;
+  rating: number;
+  timestamp: string;
+}
+
 export interface User {
   id: string;
   phoneNumber: string;
@@ -65,7 +80,7 @@ export interface User {
   district?: string;
   reason?: string;
   schoolName?: string;
-  currentGrade?: Grade;
+  currentGrade?: ProfileGrade;
   bio?: string;
   profilePic?: string; // base64
   termsAccepted?: boolean;
@@ -91,7 +106,7 @@ export const SECONDARY_SUBJECTS = [
 
 export const PRIMARY_GRADES: Grade[] = ['Standard 5', 'Standard 6', 'Standard 7', 'Standard 8'];
 export const SECONDARY_GRADES: Grade[] = ['Form 1', 'Form 2', 'Form 3', 'Form 4'];
-export const OTHER_GRADE_OPTIONS: Grade[] = ['Prefer not to say', 'Not studying', 'Other'];
+export const OTHER_GRADE_OPTIONS: ProfileGrade[] = ['Prefer not to say', 'Not Studying', 'Other'];
 
 export const MALAWI_DISTRICTS = [
   'Balaka', 'Blantyre', 'Chikwawa', 'Chiradzulu', 'Chitipa', 'Dedza', 'Dowa', 
