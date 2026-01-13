@@ -1,0 +1,7 @@
+{
+  "name": "Study Hub Malawi",
+  "description": "A comprehensive educational platform providing primary and secondary school students in Malawi with access to notes, books, and past papers.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
