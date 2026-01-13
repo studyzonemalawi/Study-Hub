@@ -12,6 +12,7 @@ import { Settings } from './pages/Settings';
 import { Activity } from './pages/Activity';
 import { Testimonials } from './pages/Testimonials';
 import { Announcements } from './pages/Announcements';
+import { FAQs } from './pages/FAQs';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -77,6 +78,7 @@ const App: React.FC = () => {
     { id: 'library', label: 'Library' },
     { id: 'papers', label: 'Past Papers' },
     { id: 'testimonials', label: 'Community' },
+    { id: 'faqs', label: 'FAQs' },
     { id: 'activity', label: 'Activity' },
     { id: 'support', label: 'Support' },
     { id: 'settings', label: 'Settings' },
@@ -98,6 +100,8 @@ const App: React.FC = () => {
         return <Library onNavigate={setActiveTab} />;
       case 'testimonials':
         return <Testimonials user={user} />;
+      case 'faqs':
+        return <FAQs />;
       case 'activity':
         return <Activity user={user} onNavigate={setActiveTab} />;
       case 'support':
