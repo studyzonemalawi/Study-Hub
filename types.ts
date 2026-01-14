@@ -78,8 +78,9 @@ export interface Announcement {
 
 export interface User {
   id: string;
-  phoneNumber: string;
+  email: string;
   password?: string;
+  authProvider: 'email' | 'google';
   appRole: 'user' | 'admin';
   name: string;
   age?: number;
@@ -90,7 +91,7 @@ export interface User {
   schoolName?: string;
   currentGrade?: ProfileGrade;
   bio?: string;
-  profilePic?: string; // base64
+  profilePic?: string; // base64 or URL
   termsAccepted?: boolean;
   isPublic?: boolean;
   dateJoined: string;

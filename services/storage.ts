@@ -44,7 +44,7 @@ export const storage = {
 
   saveUser: (user: User) => {
     const users = storage.getUsers();
-    const existingIndex = users.findIndex(u => u.phoneNumber === user.phoneNumber);
+    const existingIndex = users.findIndex(u => u.email === user.email);
     if (existingIndex === -1) {
       users.push(user);
       localStorage.setItem(USERS_KEY, JSON.stringify(users));
@@ -144,18 +144,12 @@ export const storage = {
     localStorage.setItem(ANNOUNCEMENTS_KEY, JSON.stringify(announcements));
   },
 
-  // Mock Synchronization Method
   syncWithServer: async (userId: string) => {
-    // Simulate network delay
     await new Promise(resolve => setTimeout(resolve, 2000));
-    
     const lastSync = localStorage.getItem(LAST_SYNC_KEY);
     const progress = storage.getUserProgress(userId);
     const user = storage.getUsers().find(u => u.id === userId);
-
     console.log(`[Sync] Reconciling data for user ${userId}...`);
-    console.log(`[Sync] Progress items: ${progress.length}, Saved files: ${user?.downloadedIds.length}`);
-
     localStorage.setItem(LAST_SYNC_KEY, new Date().toISOString());
     return {
       success: true,

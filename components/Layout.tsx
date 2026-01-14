@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { User } from '../types';
 
@@ -12,8 +13,8 @@ interface LayoutProps {
 export const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, activeTab, setActiveTab }) => {
   if (!user) return <>{children}</>;
 
-  const ADMIN_NUMBER = '+265999326377';
-  const isAdmin = user.appRole === 'admin' && user.phoneNumber === ADMIN_NUMBER;
+  const ADMIN_EMAIL = 'studyhubmalawi@gmail.com';
+  const isAdmin = user.appRole === 'admin' && user.email === ADMIN_EMAIL;
 
   const navItems = [
     { id: 'home', label: 'Home', icon: '🏠' },
@@ -24,9 +25,9 @@ export const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, active
     ...(isAdmin ? [{ id: 'admin', label: 'Admin', icon: '🛡️' }] : [])
   ];
 
-  const getInitials = (name: string) => {
-    if (!name) return '?';
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  const getInitials = (name: string, email: string) => {
+    if (name) return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    return email[0].toUpperCase();
   };
 
   return (
@@ -41,11 +42,11 @@ export const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, active
           <div className="flex items-center space-x-5">
             <div className="hidden md:flex items-center space-x-3 text-right">
               <div>
-                <p className="text-xs font-black uppercase tracking-widest">{user.name || user.phoneNumber}</p>
+                <p className="text-xs font-black uppercase tracking-widest truncate max-w-[150px]">{user.name || user.email}</p>
                 <p className="text-[9px] text-emerald-300 font-bold uppercase tracking-widest opacity-80">{user.accountRole || 'Member'}</p>
               </div>
               <div className="w-10 h-10 rounded-xl bg-emerald-700 flex items-center justify-center text-white font-black text-xs border border-white/20 shadow-lg">
-                {getInitials(user.name || user.phoneNumber)}
+                {getInitials(user.name, user.email)}
               </div>
             </div>
             <button 

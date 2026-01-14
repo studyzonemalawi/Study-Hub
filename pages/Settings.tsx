@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { User, MALAWI_DISTRICTS, JOIN_REASONS, PRIMARY_GRADES, SECONDARY_GRADES, OTHER_GRADE_OPTIONS, Grade, AccountRole } from '../types';
 import { storage } from '../services/storage';
@@ -81,7 +82,8 @@ export const Settings: React.FC<SettingsProps> = ({ user, onUpdate, onNavigate }
                 {getInitials(user.name)}
               </div>
               <h3 className="text-xl font-black text-gray-800">{user.name}</h3>
-              <p className="text-sm text-emerald-600 font-bold">{user.phoneNumber}</p>
+              {/* Fix: Replaced the non-existent user.phoneNumber with user.email */}
+              <p className="text-sm text-emerald-600 font-bold">{user.email}</p>
               <div className="mt-4 pt-4 border-t border-gray-100 flex flex-wrap justify-center gap-2">
                 <span className="px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-[10px] font-black uppercase tracking-widest">{user.accountRole}</span>
                 <span className="px-3 py-1 bg-gray-50 text-gray-500 rounded-full text-[10px] font-black uppercase tracking-widest">{user.district}</span>
