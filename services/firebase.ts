@@ -2,6 +2,7 @@ import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 
+// Your web app's Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyCooyOsChHkNC7j7GZCqJdQ05Lw1z4MTpY",
   authDomain: "studyhubmalawi2026.firebaseapp.com",

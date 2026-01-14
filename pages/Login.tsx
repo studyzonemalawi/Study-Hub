@@ -5,8 +5,7 @@ import { auth, googleProvider } from '../services/firebase';
 import { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
-  signInWithPopup,
-  updateProfile
+  signInWithPopup
 } from 'firebase/auth';
 
 interface LoginProps {
@@ -73,7 +72,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
       onLogin(appUser);
     } catch (err: any) {
       console.error(err);
-      setError('Google authentication failed. Please try again.');
+      setError('Email or Password is incorrect');
     } finally {
       setIsLoading(false);
     }
@@ -84,7 +83,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
     setError('');
 
     if (!validateEmail(email)) {
-      setError('Please enter a valid email address.');
+      setError('Email or Password is incorrect');
       return;
     }
 
@@ -93,12 +92,12 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
     try {
       if (isRegistering) {
         if (password.length < 6) {
-          setError('Password must be at least 6 characters.');
+          setError('Email or Password is incorrect');
           setIsLoading(false);
           return;
         }
         if (password !== confirmPassword) {
-          setError('Passwords do not match.');
+          setError('Email or Password is incorrect');
           setIsLoading(false);
           return;
         }
@@ -119,19 +118,13 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
           storage.saveUser(appUser);
           onLogin(appUser);
         } catch (authErr: any) {
-          // Requirement: Display "Email or Password is incorrect" for login failures
+          // As per requirement: display specific message for incorrect credentials
           setError('Email or Password is incorrect');
         }
       }
     } catch (err: any) {
       console.error(err);
-      if (err.code === 'auth/email-already-in-use') {
-        setError('An account with this email already exists.');
-      } else if (err.code === 'auth/weak-password') {
-        setError('Password is too weak.');
-      } else if (!error) {
-        setError('An unexpected error occurred. Please try again.');
-      }
+      setError('Email or Password is incorrect');
     } finally {
       setIsLoading(false);
     }
