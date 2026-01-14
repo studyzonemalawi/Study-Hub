@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { User } from './types';
 import { Layout } from './components/Layout';
@@ -15,6 +14,8 @@ import { Announcements } from './pages/Announcements';
 import { FAQs } from './pages/FAQs';
 import { SyncIndicator } from './components/SyncIndicator';
 import { storage } from './services/storage';
+import { auth } from './services/firebase';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -29,22 +30,53 @@ const App: React.FC = () => {
   const ADMIN_EMAIL = 'studyhubmalawi@gmail.com';
 
   useEffect(() => {
-    const savedUser = localStorage.getItem('study_hub_session');
-    if (savedUser) {
-      const parsedUser = JSON.parse(savedUser);
-      if (parsedUser.email === ADMIN_EMAIL) {
-        parsedUser.appRole = 'admin';
+    // Listen for Firebase Auth changes
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        // Find existing local profile or create initial mapping
+        const existingUsers = storage.getUsers();
+        let appUser = existingUsers.find(u => u.email === firebaseUser.email);
+        
+        if (!appUser) {
+          appUser = {
+            id: firebaseUser.uid,
+            email: firebaseUser.email!,
+            authProvider: firebaseUser.providerData[0]?.providerId === 'google.com' ? 'google' : 'email',
+            appRole: firebaseUser.email === ADMIN_EMAIL ? 'admin' : 'user',
+            name: firebaseUser.displayName || '',
+            dateJoined: new Date().toISOString(),
+            lastLogin: new Date().toISOString(),
+            downloadedIds: [],
+            favoriteIds: [],
+            isProfileComplete: false,
+            isPublic: false,
+            termsAccepted: true
+          };
+          storage.saveUser(appUser);
+        } else {
+          // Sync role and update last login
+          appUser = {
+            ...appUser,
+            appRole: firebaseUser.email === ADMIN_EMAIL ? 'admin' : appUser.appRole,
+            lastLogin: new Date().toISOString()
+          };
+          storage.updateUser(appUser);
+        }
+        
+        setUser(appUser);
+        localStorage.setItem('study_hub_session', JSON.stringify(appUser));
+        if (navigator.onLine) triggerSync(appUser.id);
       } else {
-        parsedUser.appRole = 'user';
+        setUser(null);
+        localStorage.removeItem('study_hub_session');
       }
-      setUser(parsedUser);
-    }
-    setIsLoading(false);
+      setIsLoading(false);
+    });
 
     // Network Listeners
     const handleOnline = () => {
       setIsOnline(true);
-      triggerSync();
+      if (user) triggerSync(user.id);
     };
     const handleOffline = () => setIsOnline(false);
 
@@ -52,20 +84,16 @@ const App: React.FC = () => {
     window.addEventListener('offline', handleOffline);
 
     return () => {
+      unsubscribe();
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, []);
+  }, [user?.id]);
 
-  const triggerSync = async () => {
-    const savedUser = localStorage.getItem('study_hub_session');
-    if (!savedUser) return;
-    
-    const parsed = JSON.parse(savedUser);
+  const triggerSync = async (userId: string) => {
     setIsSyncing(true);
-    
     try {
-      const result = await storage.syncWithServer(parsed.id);
+      const result = await storage.syncWithServer(userId);
       if (result.success) {
         setLastSynced(result.timestamp);
       }
@@ -79,13 +107,17 @@ const App: React.FC = () => {
   const handleLogin = (u: User) => {
     setUser(u);
     localStorage.setItem('study_hub_session', JSON.stringify(u));
-    if (navigator.onLine) triggerSync();
   };
 
-  const handleLogout = () => {
-    setUser(null);
-    localStorage.removeItem('study_hub_session');
-    setActiveTab('home');
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      setUser(null);
+      localStorage.removeItem('study_hub_session');
+      setActiveTab('home');
+    } catch (err) {
+      console.error("Logout error", err);
+    }
   };
 
   const handleUpdateUser = (u: User) => {

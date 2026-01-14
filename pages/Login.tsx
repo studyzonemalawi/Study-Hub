@@ -1,7 +1,13 @@
-
 import React, { useState } from 'react';
 import { User } from '../types';
 import { storage } from '../services/storage';
+import { auth, googleProvider } from '../services/firebase';
+import { 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  signInWithPopup,
+  updateProfile
+} from 'firebase/auth';
 
 interface LoginProps {
   onLogin: (user: User) => void;
@@ -19,6 +25,8 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
+  const ADMIN_EMAIL = 'studyhubmalawi@gmail.com';
+
   const validateEmail = (email: string) => {
     return String(email)
       .toLowerCase()
@@ -27,42 +35,51 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
       );
   };
 
-  const handleGoogleLogin = () => {
-    setIsLoading(true);
-    // Simulate Google Auth Flow
-    setTimeout(() => {
-      const googleUser: User = {
-        id: 'google_' + Math.random().toString(36).substr(2, 9),
-        email: 'student@gmail.com',
-        authProvider: 'google',
-        appRole: 'user',
-        name: 'Google Learner',
-        dateJoined: new Date().toISOString(),
+  const mapFirebaseUserToAppUser = (firebaseUser: any, authProvider: 'email' | 'google'): User => {
+    const existingUsers = storage.getUsers();
+    const existing = existingUsers.find(u => u.email === firebaseUser.email);
+    
+    if (existing) {
+      return {
+        ...existing,
         lastLogin: new Date().toISOString(),
-        downloadedIds: [],
-        favoriteIds: [],
-        isProfileComplete: false,
-        isPublic: false,
-        termsAccepted: true
+        appRole: firebaseUser.email === ADMIN_EMAIL ? 'admin' : existing.appRole
       };
+    }
 
-      // Check if user already exists with this email
-      const users = storage.getUsers();
-      const existingUser = users.find(u => u.email === googleUser.email);
-      
-      if (existingUser) {
-        const updated = { ...existingUser, lastLogin: new Date().toISOString() };
-        storage.updateUser(updated);
-        onLogin(updated);
-      } else {
-        storage.saveUser(googleUser);
-        onLogin(googleUser);
-      }
-      setIsLoading(false);
-    }, 1500);
+    return {
+      id: firebaseUser.uid,
+      email: firebaseUser.email!,
+      authProvider,
+      appRole: firebaseUser.email === ADMIN_EMAIL ? 'admin' : 'user',
+      name: firebaseUser.displayName || '',
+      dateJoined: new Date().toISOString(),
+      lastLogin: new Date().toISOString(),
+      downloadedIds: [],
+      favoriteIds: [],
+      isProfileComplete: false,
+      isPublic: false,
+      termsAccepted: true
+    };
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleGoogleLogin = async () => {
+    setIsLoading(true);
+    setError('');
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const appUser = mapFirebaseUserToAppUser(result.user, 'google');
+      storage.saveUser(appUser);
+      onLogin(appUser);
+    } catch (err: any) {
+      console.error(err);
+      setError('Google authentication failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -71,65 +88,52 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
       return;
     }
 
-    const users = storage.getUsers();
-    const existingUser = users.find(u => u.email === email.toLowerCase());
+    setIsLoading(true);
 
-    if (isRegistering) {
-      if (existingUser) {
+    try {
+      if (isRegistering) {
+        if (password.length < 6) {
+          setError('Password must be at least 6 characters.');
+          setIsLoading(false);
+          return;
+        }
+        if (password !== confirmPassword) {
+          setError('Passwords do not match.');
+          setIsLoading(false);
+          return;
+        }
+        if (!acceptedTerms) {
+          setError('You must agree to the Terms and Conditions to join.');
+          setIsLoading(false);
+          return;
+        }
+
+        const result = await createUserWithEmailAndPassword(auth, email, password);
+        const appUser = mapFirebaseUserToAppUser(result.user, 'email');
+        storage.saveUser(appUser);
+        onLogin(appUser);
+      } else {
+        try {
+          const result = await signInWithEmailAndPassword(auth, email, password);
+          const appUser = mapFirebaseUserToAppUser(result.user, 'email');
+          storage.saveUser(appUser);
+          onLogin(appUser);
+        } catch (authErr: any) {
+          // Requirement: Display "Email or Password is incorrect" for login failures
+          setError('Email or Password is incorrect');
+        }
+      }
+    } catch (err: any) {
+      console.error(err);
+      if (err.code === 'auth/email-already-in-use') {
         setError('An account with this email already exists.');
-        return;
+      } else if (err.code === 'auth/weak-password') {
+        setError('Password is too weak.');
+      } else if (!error) {
+        setError('An unexpected error occurred. Please try again.');
       }
-      if (password.length < 6) {
-        setError('Password must be at least 6 characters.');
-        return;
-      }
-      if (password !== confirmPassword) {
-        setError('Passwords do not match.');
-        return;
-      }
-      if (!acceptedTerms) {
-        setError('You must agree to the Terms and Conditions to join.');
-        return;
-      }
-
-      const adminEmail = 'studyhubmalawi@gmail.com';
-      const isAdmin = email.toLowerCase() === adminEmail;
-
-      const newUser: User = {
-        id: Math.random().toString(36).substr(2, 9),
-        email: email.toLowerCase(),
-        password,
-        authProvider: 'email',
-        appRole: isAdmin ? 'admin' : 'user',
-        name: isAdmin ? 'System Admin' : '',
-        dateJoined: new Date().toISOString(),
-        lastLogin: new Date().toISOString(),
-        downloadedIds: [],
-        favoriteIds: [],
-        isProfileComplete: false,
-        isPublic: false,
-        termsAccepted: true
-      };
-
-      storage.saveUser(newUser);
-      onLogin(newUser);
-    } else {
-      if (!existingUser) {
-        setError('Account not found. Please register first.');
-        return;
-      }
-      if (existingUser.authProvider !== 'email') {
-        setError(`This account uses ${existingUser.authProvider} login. Please use that method.`);
-        return;
-      }
-      if (existingUser.password !== password) {
-        setError('Incorrect password.');
-        return;
-      }
-
-      const updatedUser = { ...existingUser, lastLogin: new Date().toISOString() };
-      storage.updateUser(updatedUser);
-      onLogin(updatedUser);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -161,6 +165,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
         <div className="space-y-3">
           <button
             onClick={handleGoogleLogin}
+            type="button"
             className="w-full flex items-center justify-center gap-3 bg-white border-2 border-gray-100 hover:border-emerald-200 py-4 rounded-2xl transition-all shadow-sm hover:shadow-md active:scale-[0.98] group"
           >
             <svg className="w-6 h-6" viewBox="0 0 24 24">
@@ -180,7 +185,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
         </div>
 
         {error && (
-          <div className="bg-red-50 text-red-600 p-4 rounded-2xl text-sm font-bold border border-red-100 animate-in shake duration-300">
+          <div className="bg-red-50 text-red-600 p-4 rounded-2xl text-sm font-bold border border-red-100 animate-shake">
             {error}
           </div>
         )}
@@ -269,6 +274,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
         <div className="text-center pt-2">
           <button
             onClick={toggleMode}
+            type="button"
             className="text-emerald-700 font-black text-xs uppercase tracking-widest hover:underline"
           >
             {isRegistering ? 'Already have an account? Login' : 'New here? Join Study Hub'}
