@@ -14,83 +14,56 @@ import { Testimonials } from './pages/Testimonials';
 import { Announcements } from './pages/Announcements';
 import { FAQs } from './pages/FAQs';
 import { SyncIndicator } from './components/SyncIndicator';
-import { storage } from './services/storage';
+import { auth } from './services/firebase';
+import { dbService } from './services/db';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState('home');
   const [isLoading, setIsLoading] = useState(true);
-  
-  // Sync & Network States
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [lastSynced, setLastSynced] = useState<string | null>(null);
-
-  const ADMIN_NUMBER = '+265999326377';
 
   useEffect(() => {
-    const savedUser = localStorage.getItem('study_hub_session');
-    if (savedUser) {
-      const parsedUser = JSON.parse(savedUser);
-      if (parsedUser.phoneNumber === ADMIN_NUMBER) {
-        parsedUser.appRole = 'admin';
+    const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        setIsSyncing(true);
+        const userData = await dbService.getUser(firebaseUser.uid);
+        if (userData) {
+          setUser(userData);
+        }
+        setIsSyncing(false);
       } else {
-        parsedUser.appRole = 'user';
+        setUser(null);
       }
-      setUser(parsedUser);
-    }
-    setIsLoading(false);
+      setIsLoading(false);
+    });
 
-    // Network Listeners
-    const handleOnline = () => {
-      setIsOnline(true);
-      triggerSync();
-    };
+    const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
-
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
     return () => {
+      unsubscribeAuth();
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
 
-  const triggerSync = async () => {
-    const savedUser = localStorage.getItem('study_hub_session');
-    if (!savedUser) return;
-    
-    const parsed = JSON.parse(savedUser);
-    setIsSyncing(true);
-    
-    try {
-      const result = await storage.syncWithServer(parsed.id);
-      if (result.success) {
-        setLastSynced(result.timestamp);
-      }
-    } catch (err) {
-      console.error("Sync failed", err);
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-
   const handleLogin = (u: User) => {
     setUser(u);
-    localStorage.setItem('study_hub_session', JSON.stringify(u));
-    if (navigator.onLine) triggerSync();
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await signOut(auth);
     setUser(null);
-    localStorage.removeItem('study_hub_session');
     setActiveTab('home');
   };
 
   const handleUpdateUser = (u: User) => {
     setUser(u);
-    localStorage.setItem('study_hub_session', JSON.stringify(u));
   };
 
   if (isLoading) {
@@ -98,7 +71,7 @@ const App: React.FC = () => {
       <div className="min-h-screen bg-emerald-700 flex items-center justify-center">
         <div className="flex flex-col items-center space-y-4">
           <div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>
-          <p className="text-white font-black animate-pulse">Loading Study Hub...</p>
+          <p className="text-white font-black animate-pulse uppercase tracking-widest text-xs">Accessing Study Hub...</p>
         </div>
       </div>
     );
@@ -112,7 +85,7 @@ const App: React.FC = () => {
     return <RegisterProfile user={user} onComplete={handleUpdateUser} />;
   }
 
-  const isAdmin = user.appRole === 'admin' && user.phoneNumber === ADMIN_NUMBER;
+  const isAdmin = user.appRole === 'admin';
 
   const availableTabs = [
     { id: 'home', label: 'Home' },
@@ -127,46 +100,27 @@ const App: React.FC = () => {
     ...(isAdmin ? [{ id: 'admin', label: 'Admin Panel' }] : [])
   ];
 
-  if (activeTab === 'admin' && !isAdmin) {
-    setActiveTab('home');
-  }
-
   const renderContent = () => {
     switch (activeTab) {
-      case 'home':
-        return <Home userName={user.name} onNavigate={setActiveTab} />;
-      case 'announcements':
-        return <Announcements />;
+      case 'home': return <Home userName={user.name} onNavigate={setActiveTab} />;
+      case 'announcements': return <Announcements />;
       case 'library':
-      case 'papers':
-        return <Library onNavigate={setActiveTab} />;
-      case 'testimonials':
-        return <Testimonials user={user} />;
-      case 'faqs':
-        return <FAQs />;
-      case 'activity':
-        return <Activity user={user} onNavigate={setActiveTab} />;
-      case 'support':
-        return <Support user={user} onNavigate={setActiveTab} />;
-      case 'settings':
-        return <Settings user={user} onUpdate={handleUpdateUser} onNavigate={setActiveTab} />;
-      case 'admin':
-        return isAdmin ? <Admin onNavigate={setActiveTab} /> : <Home userName={user.name} onNavigate={setActiveTab} />;
-      default:
-        return <Home userName={user.name} onNavigate={setActiveTab} />;
+      case 'papers': return <Library onNavigate={setActiveTab} />;
+      case 'testimonials': return <Testimonials user={user} />;
+      case 'faqs': return <FAQs />;
+      case 'activity': return <Activity user={user} onNavigate={setActiveTab} />;
+      case 'support': return <Support user={user} onNavigate={setActiveTab} />;
+      case 'settings': return <Settings user={user} onUpdate={handleUpdateUser} onNavigate={setActiveTab} />;
+      case 'admin': return isAdmin ? <Admin onNavigate={setActiveTab} /> : <Home userName={user.name} onNavigate={setActiveTab} />;
+      default: return <Home userName={user.name} onNavigate={setActiveTab} />;
     }
   };
 
   return (
-    <Layout 
-      user={user} 
-      onLogout={handleLogout} 
-      activeTab={activeTab} 
-      setActiveTab={setActiveTab}
-    >
-      <SyncIndicator isOnline={isOnline} isSyncing={isSyncing} lastSynced={lastSynced} />
+    <Layout user={user} onLogout={handleLogout} activeTab={activeTab} setActiveTab={setActiveTab}>
+      <SyncIndicator isOnline={isOnline} isSyncing={isSyncing} lastSynced={new Date().toISOString()} />
       <div className="pb-10">
-        <div className="mb-6 flex space-x-2 md:space-x-4 overflow-x-auto no-scrollbar py-2 px-1">
+        <div className="mb-6 flex space-x-2 overflow-x-auto no-scrollbar py-2 px-1">
           {availableTabs.map(tab => (
             <button
               key={tab.id}

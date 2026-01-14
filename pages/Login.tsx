@@ -1,7 +1,13 @@
 
 import React, { useState } from 'react';
 import { User } from '../types';
-import { storage } from '../services/storage';
+import { auth, facebookProvider } from '../services/firebase';
+import { dbService } from '../services/db';
+import { 
+  createUserWithEmailAndPassword, 
+  signInWithEmailAndPassword,
+  signInWithPopup
+} from 'firebase/auth';
 
 interface LoginProps {
   onLogin: (user: User) => void;
@@ -17,72 +23,110 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [isRegistering, setIsRegistering] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleFacebookLogin = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      const result = await signInWithPopup(auth, facebookProvider);
+      const firebaseUser = result.user;
+      
+      // Check if user already exists in Firestore
+      let userData = await dbService.getUser(firebaseUser.uid);
+      
+      if (!userData) {
+        // Create new profile for Facebook user
+        userData = {
+          id: firebaseUser.uid,
+          phoneNumber: firebaseUser.phoneNumber || 'Social User',
+          appRole: 'user',
+          name: firebaseUser.displayName || '',
+          dateJoined: new Date().toISOString(),
+          lastLogin: new Date().toISOString(),
+          downloadedIds: [],
+          favoriteIds: [],
+          isProfileComplete: false,
+          isPublic: false,
+          termsAccepted: true
+        };
+        await dbService.saveUser(userData);
+      } else {
+        // Update last login
+        await dbService.updateUser(userData.id, { lastLogin: new Date().toISOString() });
+      }
+      
+      onLogin(userData);
+    } catch (err: any) {
+      console.error(err);
+      if (err.code === 'auth/account-exists-with-different-credential') {
+        setError('An account already exists with the same email but different login method.');
+      } else {
+        setError('Facebook login failed. Please try again.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
 
-    // Strict 9 digits validation for Malawian numbers after prefix
     if (phone.length !== 9) {
-      setError('Phone number must be exactly 9 digits (e.g., 999123456).');
+      setError('Phone number must be 9 digits (e.g., 999123456).');
+      setLoading(false);
       return;
     }
 
     const fullPhone = `+265${phone}`;
-    const users = storage.getUsers();
-    const existingUser = users.find(u => u.phoneNumber === fullPhone);
+    const virtualEmail = `${fullPhone.replace('+', '')}@studyhub.mw`;
 
-    if (isRegistering) {
-      if (existingUser) {
-        setError('An account with this phone number already exists.');
-        return;
-      }
-      if (password.length < 6) {
-        setError('Password must be at least 6 characters.');
-        return;
-      }
-      if (password !== confirmPassword) {
-        setError('Passwords do not match.');
-        return;
-      }
-      if (!acceptedTerms) {
-        setError('You must agree to the Terms and Conditions to join.');
-        return;
-      }
+    try {
+      if (isRegistering) {
+        if (password.length < 6) throw new Error('Password must be at least 6 characters.');
+        if (password !== confirmPassword) throw new Error('Passwords do not match.');
+        if (!acceptedTerms) throw new Error('Agree to the Terms to join.');
 
-      const adminPhoneNumber = '999326377';
-      const isAdmin = phone === adminPhoneNumber;
+        const userCredential = await createUserWithEmailAndPassword(auth, virtualEmail, password);
+        const firebaseUser = userCredential.user;
 
-      const newUser: User = {
-        id: Math.random().toString(36).substr(2, 9),
-        phoneNumber: fullPhone,
-        password,
-        appRole: isAdmin ? 'admin' : 'user',
-        name: isAdmin ? 'System Admin' : '',
-        dateJoined: new Date().toISOString(),
-        lastLogin: new Date().toISOString(),
-        downloadedIds: [],
-        favoriteIds: [],
-        isProfileComplete: false,
-        isPublic: false,
-        termsAccepted: true
-      };
+        const newUser: User = {
+          id: firebaseUser.uid,
+          phoneNumber: fullPhone,
+          appRole: phone === '999326377' ? 'admin' : 'user',
+          name: phone === '999326377' ? 'System Admin' : '',
+          dateJoined: new Date().toISOString(),
+          lastLogin: new Date().toISOString(),
+          downloadedIds: [],
+          favoriteIds: [],
+          isProfileComplete: false,
+          isPublic: false,
+          termsAccepted: true
+        };
 
-      storage.saveUser(newUser);
-      onLogin(newUser);
-    } else {
-      if (!existingUser) {
-        setError('Account not found. Please register first.');
-        return;
+        await dbService.saveUser(newUser);
+        onLogin(newUser);
+      } else {
+        const userCredential = await signInWithEmailAndPassword(auth, virtualEmail, password);
+        const userData = await dbService.getUser(userCredential.user.uid);
+        
+        if (userData) {
+          const updatedLastLogin = new Date().toISOString();
+          await dbService.updateUser(userData.id, { lastLogin: updatedLastLogin });
+          onLogin({ ...userData, lastLogin: updatedLastLogin });
+        } else {
+          setError('User profile not found in database.');
+        }
       }
-      if (existingUser.password !== password) {
-        setError('Incorrect password.');
-        return;
-      }
-
-      const updatedUser = { ...existingUser, lastLogin: new Date().toISOString() };
-      storage.updateUser(updatedUser);
-      onLogin(updatedUser);
+    } catch (err: any) {
+      console.error(err);
+      if (err.code === 'auth/email-already-in-use') setError('This phone number is already registered.');
+      else if (err.code === 'auth/invalid-credential') setError('Incorrect phone number or password.');
+      else setError(err.message || 'An error occurred during authentication.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -124,7 +168,6 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 9))}
               />
             </div>
-            <p className="text-[9px] text-gray-400 mt-1 px-1 font-bold">Max 9 digits after +265</p>
           </div>
 
           <div className="relative">
@@ -140,14 +183,14 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-4 top-[38px] text-[10px] font-black uppercase text-emerald-600 hover:text-emerald-800 transition-colors"
+              className="absolute right-4 top-[38px] text-[10px] font-black uppercase text-emerald-600"
             >
               {showPassword ? "Hide" : "Show"}
             </button>
           </div>
 
           {isRegistering && (
-            <div className="relative animate-in slide-in-from-top-2 duration-300">
+            <div className="relative animate-in slide-in-from-top-2">
               <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-1">Re-enter Password</label>
               <input
                 type={showConfirmPassword ? "text" : "password"}
@@ -160,7 +203,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
               <button
                 type="button"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute right-4 top-[38px] text-[10px] font-black uppercase text-emerald-600 hover:text-emerald-800 transition-colors"
+                className="absolute right-4 top-[38px] text-[10px] font-black uppercase text-emerald-600"
               >
                 {showConfirmPassword ? "Hide" : "Show"}
               </button>
@@ -168,9 +211,9 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
           )}
 
           {isRegistering && (
-            <div className="space-y-2 pt-2 animate-in slide-in-from-top-2 duration-400">
-              <p className="text-[11px] text-gray-500 font-bold px-1 leading-relaxed">
-                By joining you agree to the <button type="button" onClick={() => setShowTermsModal(true)} className="text-emerald-700 underline hover:text-emerald-800">Terms and Conditions</button>
+            <div className="space-y-2 pt-2">
+              <p className="text-[11px] text-gray-500 font-bold px-1">
+                By joining you agree to the <button type="button" onClick={() => setShowTermsModal(true)} className="text-emerald-700 underline">Terms</button>
               </p>
               <div className="flex items-center gap-3 p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100">
                 <input 
@@ -178,9 +221,9 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                   id="agreeTermsLogin" 
                   checked={acceptedTerms}
                   onChange={(e) => setAcceptedTerms(e.target.checked)}
-                  className="w-5 h-5 accent-emerald-600 rounded cursor-pointer border-gray-300"
+                  className="w-5 h-5 accent-emerald-600"
                 />
-                <label htmlFor="agreeTermsLogin" className="text-xs text-emerald-900 font-black uppercase tracking-widest cursor-pointer">
+                <label htmlFor="agreeTermsLogin" className="text-xs text-emerald-900 font-black uppercase tracking-widest">
                   I Accept
                 </label>
               </div>
@@ -189,11 +232,32 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
           <button
             type="submit"
-            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-5 rounded-2xl shadow-xl transition-all active:scale-[0.98] text-sm uppercase tracking-widest mt-4 shadow-emerald-100"
+            disabled={loading}
+            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-5 rounded-2xl shadow-xl transition-all active:scale-[0.98] text-sm uppercase tracking-widest mt-4 disabled:opacity-70"
           >
-            {isRegistering ? 'Create Account' : 'Sign In'}
+            {loading ? 'Processing...' : (isRegistering ? 'Create Account' : 'Sign In')}
           </button>
         </form>
+
+        <div className="relative py-4">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-100"></div>
+          </div>
+          <div className="relative flex justify-center text-[10px] font-black uppercase tracking-widest">
+            <span className="bg-white px-4 text-gray-400">Or continue with</span>
+          </div>
+        </div>
+
+        <button
+          onClick={handleFacebookLogin}
+          disabled={loading}
+          className="w-full bg-[#1877F2] hover:bg-[#166fe5] text-white font-black py-4 rounded-2xl shadow-xl transition-all active:scale-[0.98] text-sm uppercase tracking-widest flex items-center justify-center gap-3 disabled:opacity-70"
+        >
+          <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+            <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+          </svg>
+          Facebook
+        </button>
 
         <div className="text-center pt-2">
           <button
@@ -203,90 +267,23 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
             {isRegistering ? 'Already have an account? Login' : 'New here? Join Study Hub'}
           </button>
         </div>
-
-        {!isRegistering && (
-          <div className="pt-6 border-t border-gray-100 text-center">
-            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Bridging Education in Malawi</p>
-          </div>
-        )}
       </div>
 
-      {/* Terms Modal */}
+      {/* Terms Modal (Simplied for context) */}
       {showTermsModal && (
-        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-[2.5rem] max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden shadow-2xl animate-in zoom-in duration-300 border border-white/20">
-            <div className="p-8 border-b border-gray-100 flex justify-between items-center bg-emerald-50/30">
-              <h3 className="text-2xl font-black text-emerald-900 tracking-tight">Terms & Conditions</h3>
-              <button onClick={() => setShowTermsModal(false)} className="text-gray-400 hover:text-red-500 transition-colors">
-                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
-            </div>
-            <div className="p-10 overflow-y-auto text-gray-600 leading-relaxed text-sm space-y-6 custom-scrollbar font-medium">
-              <div className="space-y-4">
-                <p className="font-black text-lg text-gray-800">Study Hub Malawi – Terms and Conditions</p>
-                <p>Welcome to Study Hub Malawi. By accessing or using this app, you agree to the following Terms and Conditions. Please read them carefully.</p>
-              </div>
-
-              <div className="space-y-2">
-                <p className="font-bold text-gray-800">1. About Study Hub Malawi</p>
-                <p>Study Hub Malawi is an educational mobile application that allows users to read and download notes, books, and past examination papers for learning and revision purposes only.</p>
-              </div>
-
-              <div className="space-y-2">
-                <p className="font-bold text-gray-800">2. Acceptance of Terms</p>
-                <p>By creating an account or using this app, you confirm that you have read and understood these Terms and Conditions and agree to comply with them. If you do not agree, please do not use the app.</p>
-              </div>
-
-              <div className="space-y-2">
-                <p className="font-bold text-gray-800">3. User Eligibility</p>
-                <p>The app is intended for students, teachers, and learners. Users under the age of 18 may use the app with parent or guardian consent.</p>
-              </div>
-
-              <div className="space-y-2">
-                <p className="font-bold text-gray-800">4. User Account Responsibilities</p>
-                <p>You agree to provide accurate information when creating an account, keep your login credentials confidential, and be responsible for all activities carried out under your account. Study Hub Malawi is not responsible for losses caused by unauthorized access to your account.</p>
-              </div>
-
-              <div className="space-y-2">
-                <p className="font-bold text-gray-800">5. Use of Content</p>
-                <p>All notes, books, and past papers are provided for personal educational and revision use only. You must not sell, reproduce, distribute, share, or modify any content without permission. All content is protected by copyright and intellectual property laws.</p>
-              </div>
-
-              <div className="space-y-2">
-                <p className="font-bold text-gray-800">6. Downloads</p>
-                <p>Downloaded materials are intended for offline reading and personal revision only. Some content may have download limits. Study Hub Malawi reserves the right to remove, replace, or update content at any time.</p>
-              </div>
-
-              <div className="space-y-2">
-                <p className="font-bold text-gray-800">7. Prohibited Activities</p>
-                <p>You must NOT attempt to hack, disrupt, or damage the app, use the app for commercial or business purposes, or share or distribute copyrighted materials illegally. Violation of these rules may lead to account suspension or termination.</p>
-              </div>
-
-              <div className="space-y-2">
-                <p className="font-bold text-gray-800">8. Content Accuracy & Exam Disclaimer</p>
-                <p>While effort is made to ensure accuracy, Study Hub Malawi does not guarantee that all notes, books, or past papers are complete or error-free. Past papers are provided for revision practice only and may not reflect current examination formats. Users should always consult teachers and official examination bodies.</p>
-              </div>
-
-              <div className="space-y-2">
-                <p className="font-bold text-gray-800">9. Privacy</p>
-                <p>Your personal information is handled according to our Privacy Policy. We do not sell or misuse user data.</p>
-              </div>
-
-              <div className="space-y-2">
-                <p className="font-bold text-gray-800">10. Governing Law</p>
-                <p>These Terms are governed by the laws of the Republic of Malawi.</p>
-              </div>
-
-              <p className="pt-4 border-t border-gray-100 font-black text-emerald-800">By creating an account on Study Hub Malawi, you agree to these Terms and Conditions.</p>
-            </div>
-            <div className="p-8 bg-gray-50 border-t border-gray-100">
-              <button 
-                onClick={() => { setAcceptedTerms(true); setShowTermsModal(false); }} 
-                className="w-full bg-emerald-600 text-white font-black py-4 rounded-2xl shadow-xl hover:bg-emerald-700 transition-all uppercase tracking-widest text-sm"
-              >
-                Agree & Continue
-              </button>
-            </div>
+        <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-[2.5rem] max-w-lg w-full p-10 animate-in zoom-in duration-300">
+            <h3 className="text-2xl font-black text-gray-800 mb-4">Terms of Service</h3>
+            <p className="text-gray-600 text-sm leading-relaxed mb-8">
+              By using Study Hub Malawi, you agree to access materials for personal educational purposes only. 
+              Redistribution or commercial use of these resources is strictly prohibited.
+            </p>
+            <button 
+              onClick={() => { setAcceptedTerms(true); setShowTermsModal(false); }}
+              className="w-full bg-emerald-600 text-white font-black py-4 rounded-2xl uppercase tracking-widest text-xs"
+            >
+              I Understand & Agree
+            </button>
           </div>
         </div>
       )}
