@@ -1,5 +1,6 @@
 
 import { StudyMaterial, Message, User, UserProgress, Testimonial, Announcement, CommunityMessage, ChatRoom } from '../types';
+import { supabase } from './supabase';
 
 const MATERIALS_KEY = 'study_hub_materials';
 const MESSAGES_KEY = 'study_hub_messages';
@@ -184,13 +185,62 @@ export const storage = {
   },
 
   syncWithServer: async (userId: string) => {
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    const lastSync = localStorage.getItem(LAST_SYNC_KEY);
-    console.log(`[Sync] Reconciling data for user ${userId}...`);
-    localStorage.setItem(LAST_SYNC_KEY, new Date().toISOString());
-    return {
-      success: true,
-      timestamp: new Date().toISOString()
-    };
+    if (!navigator.onLine) return { success: false, timestamp: null };
+
+    try {
+      // 1. Sync Profile
+      const users = storage.getUsers();
+      const user = users.find(u => u.id === userId);
+      if (user) {
+        await supabase.from('profiles').upsert({
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          district: user.district,
+          school_name: user.schoolName,
+          grade: user.currentGrade,
+          role: user.accountRole,
+          bio: user.bio,
+          updated_at: new Date().toISOString()
+        });
+      }
+
+      // 2. Sync Progress
+      const userProgress = storage.getUserProgress(userId);
+      if (userProgress.length > 0) {
+        await supabase.from('user_progress').upsert(
+          userProgress.map(p => ({
+            user_id: userId,
+            material_id: p.materialId,
+            status: p.status,
+            progress_percent: p.progressPercent,
+            last_read: p.lastRead
+          }))
+        );
+      }
+
+      // 3. Sync Testimonials
+      const localTestimonials = storage.getTestimonials().filter(t => t.userId === userId);
+      if (localTestimonials.length > 0) {
+        await supabase.from('testimonials').upsert(
+          localTestimonials.map(t => ({
+            id: t.id,
+            user_id: t.userId,
+            user_name: t.userName,
+            content: t.content,
+            rating: t.rating,
+            created_at: t.timestamp
+          }))
+        );
+      }
+
+      const syncTimestamp = new Date().toISOString();
+      localStorage.setItem(LAST_SYNC_KEY, syncTimestamp);
+      console.log(`[Sync] Successfully reconciled data with Supabase for user ${userId}`);
+      return { success: true, timestamp: syncTimestamp };
+    } catch (err) {
+      console.error("[Sync] Error during Supabase synchronization:", err);
+      return { success: false, timestamp: null };
+    }
   }
 };

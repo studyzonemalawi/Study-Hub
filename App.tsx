@@ -15,8 +15,7 @@ import { Announcements } from './pages/Announcements';
 import { FAQs } from './pages/FAQs';
 import { SyncIndicator } from './components/SyncIndicator';
 import { storage } from './services/storage';
-import { auth } from './services/firebase';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { supabase } from './services/supabase';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -58,18 +57,29 @@ const App: React.FC = () => {
   }, [isDarkMode]);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      if (firebaseUser) {
+    // Initial Session Check
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      handleAuthChange(session);
+      setIsLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      handleAuthChange(session);
+    });
+
+    const handleAuthChange = (session: any) => {
+      if (session?.user) {
+        const sbUser = session.user;
         const existingUsers = storage.getUsers();
-        let appUser = existingUsers.find(u => u.email === firebaseUser.email);
+        let appUser = existingUsers.find(u => u.email === sbUser.email);
         
         if (!appUser) {
           appUser = {
-            id: firebaseUser.uid,
-            email: firebaseUser.email!,
+            id: sbUser.id,
+            email: sbUser.email!,
             authProvider: 'email',
-            appRole: firebaseUser.email === ADMIN_EMAIL ? 'admin' : 'user',
-            name: firebaseUser.displayName || '',
+            appRole: sbUser.email === ADMIN_EMAIL ? 'admin' : 'user',
+            name: sbUser.user_metadata?.full_name || '',
             dateJoined: new Date().toISOString(),
             lastLogin: new Date().toISOString(),
             downloadedIds: [],
@@ -82,7 +92,7 @@ const App: React.FC = () => {
         } else {
           appUser = {
             ...appUser,
-            appRole: firebaseUser.email === ADMIN_EMAIL ? 'admin' : appUser.appRole,
+            appRole: sbUser.email === ADMIN_EMAIL ? 'admin' : appUser.appRole,
             lastLogin: new Date().toISOString()
           };
           storage.updateUser(appUser);
@@ -95,8 +105,7 @@ const App: React.FC = () => {
         setUser(null);
         localStorage.removeItem('study_hub_session');
       }
-      setIsLoading(false);
-    });
+    };
 
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
@@ -105,7 +114,7 @@ const App: React.FC = () => {
     window.addEventListener('offline', handleOffline);
 
     return () => {
-      unsubscribe();
+      subscription.unsubscribe();
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
@@ -124,7 +133,7 @@ const App: React.FC = () => {
 
   const handleLogout = async () => {
     try {
-      await signOut(auth);
+      await supabase.auth.signOut();
       setUser(null);
       localStorage.removeItem('study_hub_session');
       setActiveTab('home');
@@ -142,7 +151,7 @@ const App: React.FC = () => {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
         <div className="flex flex-col items-center space-y-4">
-          <div className="w-12 h-12 border-4 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin"></div>
+          <div className="w-12 h-12 border-4 border-emerald-50/30 border-t-emerald-500 rounded-full animate-spin"></div>
           <p className="text-slate-600 dark:text-slate-400 font-bold animate-pulse uppercase tracking-widest text-xs">Initializing Hub...</p>
         </div>
       </div>
@@ -185,9 +194,8 @@ const App: React.FC = () => {
     >
       <SyncIndicator isOnline={isOnline} isSyncing={isSyncing} lastSynced={lastSynced} />
       <div className="pb-20">
-        {/* Simplified Breadcrumb/Mini-Nav for Subpages */}
         {activeTab !== 'home' && (
-          <div className="mb-8 flex items-center justify-between">
+          <div className="mb-8 flex items-center justify-between px-4 md:px-0">
             <button 
               onClick={() => setActiveTab('home')}
               className="flex items-center gap-2 text-slate-500 hover:text-emerald-600 transition-colors font-black uppercase text-[10px] tracking-widest"
@@ -208,5 +216,4 @@ const App: React.FC = () => {
   );
 };
 
-// Fixed: Added missing default export for App component
 export default App;

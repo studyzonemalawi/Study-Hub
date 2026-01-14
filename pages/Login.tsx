@@ -2,17 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { User } from '../types';
 import { storage } from '../services/storage';
-import { 
-  auth, 
-  setPersistence, 
-  browserLocalPersistence, 
-  browserSessionPersistence 
-} from '../services/firebase';
-import { 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword,
-  sendPasswordResetEmail
-} from 'firebase/auth';
+import { supabase } from '../services/supabase';
 
 interface LoginProps {
   onLogin: (user: User) => void;
@@ -38,7 +28,6 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
   const ADMIN_EMAIL = 'studyhubmalawi@gmail.com';
 
-  // Load remembered credentials on mount
   useEffect(() => {
     const savedEmail = localStorage.getItem(REMEMBER_EMAIL_KEY);
     const savedPass = localStorage.getItem(REMEMBER_PASS_KEY);
@@ -54,24 +43,24 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
       );
   };
 
-  const mapFirebaseUserToAppUser = (firebaseUser: any): User => {
+  const mapSupabaseUserToAppUser = (sbUser: any): User => {
     const existingUsers = storage.getUsers();
-    const existing = existingUsers.find(u => u.email === firebaseUser.email);
+    const existing = existingUsers.find(u => u.email === sbUser.email);
     
     if (existing) {
       return {
         ...existing,
         lastLogin: new Date().toISOString(),
-        appRole: firebaseUser.email === ADMIN_EMAIL ? 'admin' : existing.appRole
+        appRole: sbUser.email === ADMIN_EMAIL ? 'admin' : existing.appRole
       };
     }
 
     return {
-      id: firebaseUser.uid,
-      email: firebaseUser.email!,
+      id: sbUser.id,
+      email: sbUser.email!,
       authProvider: 'email',
-      appRole: firebaseUser.email === ADMIN_EMAIL ? 'admin' : 'user',
-      name: firebaseUser.displayName || '',
+      appRole: sbUser.email === ADMIN_EMAIL ? 'admin' : 'user',
+      name: sbUser.user_metadata?.full_name || '',
       dateJoined: new Date().toISOString(),
       lastLogin: new Date().toISOString(),
       downloadedIds: [],
@@ -94,16 +83,12 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
     setIsLoading(true);
     try {
-      await sendPasswordResetEmail(auth, email);
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      if (error) throw error;
       setSuccessMsg('A password reset link has been sent to your email.');
       setIsResettingPassword(false);
     } catch (err: any) {
-      console.error(err);
-      if (err.code === 'auth/user-not-found') {
-        setError('No account found with this email.');
-      } else {
-        setError('Failed to send reset email. Please try again.');
-      }
+      setError(err.message || 'Failed to send reset email.');
     } finally {
       setIsLoading(false);
     }
@@ -127,10 +112,6 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
     setIsLoading(true);
 
     try {
-      // Set Auth Persistence (Session level)
-      const persistenceType = rememberMe ? browserLocalPersistence : browserSessionPersistence;
-      await setPersistence(auth, persistenceType);
-
       if (isRegistering) {
         if (password.length < 6) {
           setError('Password must be at least 6 characters');
@@ -148,25 +129,29 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
           return;
         }
 
-        const result = await createUserWithEmailAndPassword(auth, email, password);
-        
-        // Handle credential storage for "Remember Me"
-        if (rememberMe) {
-          localStorage.setItem(REMEMBER_EMAIL_KEY, email);
-          localStorage.setItem(REMEMBER_PASS_KEY, password);
-        } else {
-          localStorage.removeItem(REMEMBER_EMAIL_KEY);
-          localStorage.removeItem(REMEMBER_PASS_KEY);
-        }
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+        });
 
-        const appUser = mapFirebaseUserToAppUser(result.user);
-        storage.saveUser(appUser);
-        onLogin(appUser);
+        if (error) throw error;
+        if (data.user) {
+          if (rememberMe) {
+            localStorage.setItem(REMEMBER_EMAIL_KEY, email);
+            localStorage.setItem(REMEMBER_PASS_KEY, password);
+          }
+          const appUser = mapSupabaseUserToAppUser(data.user);
+          storage.saveUser(appUser);
+          onLogin(appUser);
+        }
       } else {
-        try {
-          const result = await signInWithEmailAndPassword(auth, email, password);
-          
-          // Handle credential storage for "Remember Me"
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (error) throw error;
+        if (data.user) {
           if (rememberMe) {
             localStorage.setItem(REMEMBER_EMAIL_KEY, email);
             localStorage.setItem(REMEMBER_PASS_KEY, password);
@@ -174,17 +159,13 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
             localStorage.removeItem(REMEMBER_EMAIL_KEY);
             localStorage.removeItem(REMEMBER_PASS_KEY);
           }
-
-          const appUser = mapFirebaseUserToAppUser(result.user);
+          const appUser = mapSupabaseUserToAppUser(data.user);
           storage.saveUser(appUser);
           onLogin(appUser);
-        } catch (authErr: any) {
-          setError('Email or Password is incorrect');
         }
       }
     } catch (err: any) {
-      console.error(err);
-      setError('An error occurred during authentication. Please try again.');
+      setError(err.message || 'Authentication error. Please try again.');
     } finally {
       setIsLoading(false);
     }
