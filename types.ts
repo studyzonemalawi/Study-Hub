@@ -70,6 +70,8 @@ export interface CommunityMessage {
   senderName: string;
   senderRole: string;
   content: string;
+  imageUrl?: string;
+  audioUrl?: string;
   timestamp: string;
   isOfficial?: boolean;
 }

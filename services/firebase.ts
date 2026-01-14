@@ -1,5 +1,11 @@
+
 import { initializeApp } from "firebase/app";
-import { getAuth, setPersistence, browserLocalPersistence } from "firebase/auth";
+import { 
+  getAuth, 
+  setPersistence, 
+  browserLocalPersistence, 
+  browserSessionPersistence 
+} from "firebase/auth";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -16,10 +22,16 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
-// Set persistence to local (survives browser restart)
+// Default persistence (will be overridden in Login if "Remember Me" is unchecked)
 setPersistence(auth, browserLocalPersistence)
   .catch((error) => {
     console.error("Firebase persistence error:", error);
   });
 
-export { app, auth };
+export { 
+  app, 
+  auth, 
+  setPersistence, 
+  browserLocalPersistence, 
+  browserSessionPersistence 
+};

@@ -1,7 +1,13 @@
+
 import React, { useState } from 'react';
 import { User } from '../types';
 import { storage } from '../services/storage';
-import { auth } from '../services/firebase';
+import { 
+  auth, 
+  setPersistence, 
+  browserLocalPersistence, 
+  browserSessionPersistence 
+} from '../services/firebase';
 import { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword,
@@ -18,6 +24,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
@@ -109,6 +116,10 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
     setIsLoading(true);
 
     try {
+      // Set Auth Persistence based on Remember Me choice
+      const persistenceType = rememberMe ? browserLocalPersistence : browserSessionPersistence;
+      await setPersistence(auth, persistenceType);
+
       if (isRegistering) {
         if (password.length < 6) {
           setError('Password must be at least 6 characters');
@@ -228,15 +239,29 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
             </div>
           )}
 
-          {!isRegistering && !isResettingPassword && (
-            <div className="text-right">
-              <button
-                type="button"
-                onClick={toggleResetMode}
-                className="text-[10px] font-black uppercase text-emerald-600 hover:text-emerald-800 transition-colors"
-              >
-                Forgot Password?
-              </button>
+          {!isResettingPassword && (
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-2">
+                <input 
+                  type="checkbox" 
+                  id="rememberMe" 
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="w-4 h-4 accent-emerald-600 rounded cursor-pointer border-gray-300"
+                />
+                <label htmlFor="rememberMe" className="text-[10px] font-black uppercase text-gray-400 tracking-widest cursor-pointer hover:text-gray-600 transition-colors">
+                  Remember Me
+                </label>
+              </div>
+              {!isRegistering && (
+                <button
+                  type="button"
+                  onClick={toggleResetMode}
+                  className="text-[10px] font-black uppercase text-emerald-600 hover:text-emerald-800 transition-colors"
+                >
+                  Forgot Password?
+                </button>
+              )}
             </div>
           )}
 

@@ -2,7 +2,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Testimonial, ChatRoom, CommunityMessage } from '../types';
 import { storage } from '../services/storage';
-import { GoogleGenAI } from "@google/genai";
 
 interface CommunityProps {
   user: User;
@@ -17,7 +16,6 @@ export const Community: React.FC<CommunityProps> = ({ user }) => {
   // Testimonial States
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [newContent, setNewContent] = useState('');
-  const [rating, setRating] = useState(5);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showForm, setShowForm] = useState(false);
 
@@ -26,10 +24,36 @@ export const Community: React.FC<CommunityProps> = ({ user }) => {
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
   const [messages, setMessages] = useState<CommunityMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
-  const [isAiThinking, setIsAiThinking] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [zoomedImage, setZoomedImage] = useState<string | null>(null);
   const [isRoomDropdownOpen, setIsRoomDropdownOpen] = useState(false);
+  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
+  
+  // Simplified Image Editor States (Caption Only)
+  const [isEditingImage, setIsEditingImage] = useState(false);
+  const [imageCaptionText, setImageCaptionText] = useState('');
+  const [captionPosition, setCaptionPosition] = useState<'top' | 'middle' | 'bottom'>('bottom');
+  const [captionColor, setCaptionColor] = useState<string>('#ffffff');
+
+  // Voice Recording States
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordedAudio, setRecordedAudio] = useState<string | null>(null);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const timerIntervalRef = useRef<number | null>(null);
+
   const chatScrollRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const emojiRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const editCanvasRef = useRef<HTMLCanvasElement>(null);
+
+  const spicyEmojis = [
+    '😂', '😍', '🔥', '🙌', '💯', '🎉', '✨', '🥳', '🤩', '😎', '👏', '🤙', '💖', '🌈', '🍕', '🍦', '🎮', '⚽',
+    '🎓', '📚', '📝', '📓', '🖍️', '🧠', '🏫', '🎒', '🧪', '🎨', '📏', '💡', '📖', '🖋️', '🔍', '📐',
+    '🇲🇼', '🦁', '☀️', '🌍', '🤝', '🌽', '🚲', '🏠', '🛶', '🐘', '🦒', '🦅', '🌊', '🌄', '🌃', '⛈️', '🔋', '💪'
+  ];
 
   useEffect(() => {
     setTestimonials(storage.getTestimonials());
@@ -37,10 +61,12 @@ export const Community: React.FC<CommunityProps> = ({ user }) => {
     const defaultRoom = storage.getChatRooms()[0];
     if (defaultRoom) setActiveRoomId(defaultRoom.id);
 
-    // Close dropdown on outside click
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsRoomDropdownOpen(false);
+      }
+      if (emojiRef.current && !emojiRef.current.contains(event.target as Node)) {
+        setIsEmojiPickerOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -51,41 +77,120 @@ export const Community: React.FC<CommunityProps> = ({ user }) => {
     if (activeRoomId && hasAgreedToRules) {
       setMessages(storage.getCommunityMessages(activeRoomId));
     }
+    setIsEmojiPickerOpen(false);
+    setSelectedImage(null);
+    setIsEditingImage(false);
+    setRecordedAudio(null);
   }, [activeRoomId, hasAgreedToRules]);
 
   useEffect(() => {
     chatScrollRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, activeTab, isAiThinking]);
+  }, [messages, activeTab]);
 
-  const handlePostTestimonial = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newContent.trim() || isSubmitting) return;
+  // Image Editor Canvas Redraw
+  useEffect(() => {
+    if (isEditingImage && selectedImage && editCanvasRef.current) {
+      const canvas = editCanvasRef.current;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
 
-    setIsSubmitting(true);
-    const newTestimonial: Testimonial = {
-      id: Math.random().toString(36).substr(2, 9),
-      userId: user.id,
-      userName: user.name || 'Anonymous Learner',
-      userProfilePic: 'initials',
-      userRole: user.accountRole || 'Member',
-      content: newContent,
-      rating: rating,
-      timestamp: new Date().toISOString()
-    };
+      const img = new Image();
+      img.onload = () => {
+        const maxWidth = 800;
+        const maxHeight = 600;
+        let width = img.width;
+        let height = img.height;
 
-    setTimeout(() => {
-      storage.saveTestimonial(newTestimonial);
-      setTestimonials([newTestimonial, ...testimonials]);
-      setNewContent('');
-      setRating(5);
-      setIsSubmitting(false);
-      setShowForm(false);
-    }, 800);
+        if (width > maxWidth) {
+          height *= maxWidth / width;
+          width = maxWidth;
+        }
+        if (height > maxHeight) {
+          width *= maxHeight / height;
+          height = maxHeight;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        
+        ctx.clearRect(0, 0, width, height);
+        ctx.drawImage(img, 0, 0, width, height);
+
+        if (imageCaptionText) {
+          const fontSize = Math.max(16, Math.floor(width / 20));
+          ctx.font = `900 ${fontSize}px Inter, sans-serif`;
+          ctx.fillStyle = captionColor;
+          ctx.strokeStyle = captionColor === '#ffffff' ? '#000000' : '#ffffff';
+          ctx.lineWidth = fontSize / 8;
+          ctx.textAlign = 'center';
+
+          const x = width / 2;
+          let y = height / 2;
+          if (captionPosition === 'top') y = fontSize * 1.5;
+          if (captionPosition === 'bottom') y = height - fontSize;
+
+          ctx.strokeText(imageCaptionText, x, y);
+          ctx.fillText(imageCaptionText, x, y);
+        }
+      };
+      img.src = selectedImage;
+    }
+  }, [isEditingImage, selectedImage, imageCaptionText, captionPosition, captionColor]);
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = recorder;
+      audioChunksRef.current = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+
+      recorder.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setRecordedAudio(reader.result as string);
+        };
+        reader.readAsDataURL(audioBlob);
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      recorder.start();
+      setIsRecording(true);
+      setRecordingTime(0);
+      timerIntervalRef.current = window.setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
+    } catch (err) {
+      console.error("Mic access denied", err);
+      alert("Please allow microphone access to record voice messages.");
+    }
   };
 
-  const handleSendChatMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!chatInput.trim() || !activeRoomId || isAiThinking) return;
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+    }
+  };
+
+  const cancelRecording = () => {
+    stopRecording();
+    setRecordedAudio(null);
+  };
+
+  const handleSendChatMessage = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if ((!chatInput.trim() && !selectedImage && !recordedAudio) || !activeRoomId) return;
+
+    let finalImage = selectedImage;
+    if (isEditingImage && editCanvasRef.current) {
+      finalImage = editCanvasRef.current.toDataURL('image/png');
+    }
 
     const userMsg: CommunityMessage = {
       id: Math.random().toString(36).substr(2, 9),
@@ -94,105 +199,172 @@ export const Community: React.FC<CommunityProps> = ({ user }) => {
       senderName: user.name,
       senderRole: user.accountRole || 'Learner',
       content: chatInput,
+      imageUrl: finalImage || undefined,
+      audioUrl: recordedAudio || undefined,
       timestamp: new Date().toISOString()
     };
 
     storage.saveCommunityMessage(userMsg);
     setMessages(prev => [...prev, userMsg]);
-    const currentInput = chatInput;
     setChatInput('');
+    setSelectedImage(null);
+    setRecordedAudio(null);
+    setIsEditingImage(false);
+    setIsEmojiPickerOpen(false);
+  };
 
-    setIsAiThinking(true);
-    try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const roomInfo = rooms.find(r => r.id === activeRoomId);
-      
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: `Room: ${roomInfo?.title}
-        Student (${user.name}, Grade: ${user.currentGrade || 'Unknown'}): "${currentInput}"`,
-        config: {
-          systemInstruction: `You are StudyPal, the official AI tutor for Study Hub Malawi. 
-          Your goal is to help Malawian students in Primary (Standard 5-8) and Secondary (Form 1-4) schools.
-          
-          STYLE RULES:
-          1. Use SIMPLE ENGLISH.
-          2. MALAWI CONTEXT: Always use examples from Malawi.
-          3. CURRICULUM: Focus on the Malawian curriculum (PSLCE and MSCE).
-          4. ENCOURAGEMENT: Be like a kind Malawian teacher.
-          
-          ROOM CONTEXT:
-          - Currently in: "${roomInfo?.title}" (${roomInfo?.description}).
-          - Help the user according to the specific focus of this room.`,
-          temperature: 0.8,
-        },
-      });
-
-      const aiMsg: CommunityMessage = {
-        id: Math.random().toString(36).substr(2, 9),
-        roomId: activeRoomId,
-        senderId: 'studypal-ai',
-        senderName: 'StudyPal',
-        senderRole: 'Official AI',
-        content: response.text || "Muli bwanji! I am here to help. Could you please ask that again in a simple way?",
-        timestamp: new Date().toISOString(),
-        isOfficial: true
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        alert("Image too large. Max 2MB.");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSelectedImage(reader.result as string);
+        setIsEditingImage(true);
+        setImageCaptionText('');
       };
-
-      storage.saveCommunityMessage(aiMsg);
-      setMessages(prev => [...prev, aiMsg]);
-    } catch (error) {
-      const fallbackMsg: CommunityMessage = {
-        id: Math.random().toString(36).substr(2, 9),
-        roomId: activeRoomId,
-        senderId: 'studypal-ai',
-        senderName: 'StudyPal',
-        senderRole: 'Official AI',
-        content: "Pepani! I am a bit tired. Please try again in a moment.",
-        timestamp: new Date().toISOString(),
-        isOfficial: true
-      };
-      setMessages(prev => [...prev, fallbackMsg]);
-    } finally {
-      setIsAiThinking(false);
+      reader.readAsDataURL(file);
     }
   };
 
-  const handleAgreeToRules = () => {
-    localStorage.setItem(`study_hub_chat_rules_agreed_${user.id}`, 'true');
-    setHasAgreedToRules(true);
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const downloadImage = (dataUrl: string) => {
+    const link = document.createElement('a');
+    link.href = dataUrl;
+    link.download = `study_hub_image_${Date.now()}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const activeRoom = rooms.find(r => r.id === activeRoomId);
 
-  const rules = [
-    { title: 'Be respectful', desc: 'No insults, bullying, or abusive language.', icon: '🤝' },
-    { title: 'Keep it appropriate', desc: 'No sexual, violent, or inappropriate content.', icon: '🛡️' },
-    { title: 'Help each other', desc: 'Ask and respond politely. No mocking.', icon: '💡' },
-    { title: 'Protect your privacy', desc: 'Do not share personal details.', icon: '🔒' },
-    { title: 'Report problems', desc: 'Report abuse or unsafe messages to moderators.', icon: '📢' }
-  ];
-
   return (
-    <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500 pb-20">
+    <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500 pb-20 px-4 md:px-0">
+      {/* Refined Image Caption Editor Modal */}
+      {isEditingImage && selectedImage && (
+        <div className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-5xl rounded-[3rem] overflow-hidden shadow-2xl flex flex-col md:flex-row h-full max-h-[90vh]">
+            {/* Editor Canvas Area */}
+            <div className="flex-1 bg-slate-950 flex items-center justify-center p-4 relative overflow-hidden">
+               <canvas ref={editCanvasRef} className="max-w-full max-h-full rounded shadow-2xl" />
+               <button 
+                 onClick={() => { setSelectedImage(null); setIsEditingImage(false); }}
+                 className="absolute top-6 left-6 p-3 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all"
+               >
+                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+               </button>
+            </div>
+
+            {/* Sidebar Controls */}
+            <div className="w-full md:w-80 p-8 flex flex-col gap-6 border-l border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-y-auto">
+              <div>
+                <h3 className="text-xl font-black text-slate-900 dark:text-white">Caption Photo</h3>
+                <p className="text-[10px] font-black uppercase text-emerald-600 tracking-widest mt-1">Final touch before sending</p>
+              </div>
+
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Text Content</label>
+                  <input 
+                    type="text" 
+                    value={imageCaptionText}
+                    onChange={(e) => setImageCaptionText(e.target.value)}
+                    placeholder="Describe this picture..."
+                    className="w-full px-4 py-3 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 focus:ring-2 focus:ring-emerald-500 outline-none font-bold text-sm text-slate-900 dark:text-white transition-all"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Position</label>
+                  <div className="flex gap-2">
+                    {(['top', 'middle', 'bottom'] as const).map(pos => (
+                      <button 
+                        key={pos}
+                        onClick={() => setCaptionPosition(pos)}
+                        className={`flex-1 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all border ${captionPosition === pos ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-slate-50 dark:bg-slate-950 text-slate-400 border-slate-100 dark:border-slate-800'}`}
+                      >
+                        {pos}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Color</label>
+                  <div className="flex gap-2 flex-wrap">
+                    {['#ffffff', '#ff4444', '#10b981', '#3b82f6', '#f59e0b', '#000000'].map(c => (
+                      <button 
+                        key={c}
+                        onClick={() => setCaptionColor(c)}
+                        className={`w-8 h-8 rounded-full border-2 transition-transform ${captionColor === c ? 'scale-125 border-emerald-500 shadow-lg' : 'border-transparent opacity-80 hover:opacity-100'}`}
+                        style={{ backgroundColor: c }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-auto pt-6 flex flex-col gap-3">
+                 <button 
+                  onClick={() => handleSendChatMessage()}
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-4 rounded-2xl shadow-xl transition-all uppercase tracking-widest text-xs active:scale-95"
+                 >
+                   Send to Chat
+                 </button>
+                 <button 
+                  onClick={() => { setSelectedImage(null); setIsEditingImage(false); }}
+                  className="w-full py-4 text-slate-400 hover:text-slate-600 font-black uppercase tracking-widest text-xs transition-all"
+                 >
+                   Cancel
+                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Lightbox */}
+      {zoomedImage && (
+        <div className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-sm flex flex-col items-center justify-center p-4 animate-in fade-in zoom-in duration-300">
+           <div className="absolute top-6 right-6 flex items-center gap-4">
+              <button onClick={() => zoomedImage && downloadImage(zoomedImage)} className="p-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full shadow-2xl transition-all active:scale-90">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+              </button>
+              <button onClick={() => setZoomedImage(null)} className="p-3 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all">
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+           </div>
+           <img src={zoomedImage} alt="Zoomed" className="max-w-full max-h-[85vh] object-contain rounded-2xl border border-white/10 shadow-2xl" />
+        </div>
+      )}
+
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h2 className="text-3xl font-black text-slate-900 dark:text-slate-100 tracking-tight">Community Hub</h2>
-          <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium italic">Empowering Malawian students together.</p>
+          <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium italic">Together, Malawian learners excel.</p>
         </div>
         
-        <div className="flex p-1.5 bg-slate-200/50 dark:bg-slate-800 rounded-[2rem] border border-slate-200 dark:border-slate-700 w-fit">
+        <div className="flex p-1.5 bg-slate-200/50 dark:bg-slate-800 rounded-[2rem] border border-slate-200 dark:border-slate-700 w-fit self-center">
           <button 
             onClick={() => setActiveTab('messenger')}
             className={`px-8 py-3 rounded-[1.5rem] text-[10px] uppercase font-black tracking-widest transition-all flex items-center gap-2 ${activeTab === 'messenger' ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-xl' : 'text-slate-500'}`}
           >
-            <span>💬</span> Live Messenger
+            💬 Messenger
           </button>
           <button 
             onClick={() => setActiveTab('testimonials')}
             className={`px-8 py-3 rounded-[1.5rem] text-[10px] uppercase font-black tracking-widest transition-all flex items-center gap-2 ${activeTab === 'testimonials' ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-xl' : 'text-slate-500'}`}
           >
-            <span>📖</span> Success Stories
+            📖 Stories
           </button>
         </div>
       </div>
@@ -200,187 +372,188 @@ export const Community: React.FC<CommunityProps> = ({ user }) => {
       {activeTab === 'messenger' ? (
         <>
           {!hasAgreedToRules ? (
-            <div className="bg-white dark:bg-slate-800 rounded-[3rem] p-10 md:p-16 border border-slate-200 dark:border-slate-700 shadow-2xl flex flex-col items-center text-center max-w-3xl mx-auto animate-in zoom-in duration-500">
+            <div className="bg-white dark:bg-slate-800 rounded-[3rem] p-10 md:p-16 border border-slate-200 dark:border-slate-700 shadow-2xl flex flex-col items-center text-center max-w-3xl mx-auto animate-in zoom-in duration-300">
                <div className="w-20 h-20 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center text-4xl mb-8">⚖️</div>
-               <h3 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white mb-4">Before joining the chat, please agree to the rules</h3>
-               <div className="grid gap-4 w-full text-left mb-10">
-                  {rules.map((rule, idx) => (
-                    <div key={idx} className="flex gap-5 p-5 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-transparent hover:border-emerald-200 transition-all">
-                       <div className="text-2xl">{rule.icon}</div>
-                       <div>
-                          <h4 className="font-black text-slate-900 dark:text-slate-100 text-xs uppercase tracking-widest">{rule.title}</h4>
-                          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">{rule.desc}</p>
-                       </div>
-                    </div>
-                  ))}
-               </div>
-               <button onClick={handleAgreeToRules} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-5 rounded-2xl shadow-xl transition-all uppercase tracking-widest text-sm active:scale-95">I Agree & Join Chat</button>
+               <h3 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white mb-6">Welcome to Study Hub Community</h3>
+               <p className="text-slate-500 dark:text-slate-400 mb-10 leading-relaxed max-w-md">By entering, you agree to remain respectful, help your peers, and protect your personal information.</p>
+               <button onClick={() => { localStorage.setItem(`study_hub_chat_rules_agreed_${user.id}`, 'true'); setHasAgreedToRules(true); }} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-5 rounded-2xl shadow-xl transition-all uppercase tracking-widest text-sm active:scale-[0.98]">I Agree & Join</button>
             </div>
           ) : (
-            <div className="flex flex-col bg-white dark:bg-slate-800 rounded-[3rem] border border-slate-200/60 dark:border-slate-700 overflow-hidden shadow-2xl shadow-slate-200/50 dark:shadow-none h-[calc(100vh-18rem)]">
-                 {/* Unified Chat Header with Dropdown */}
-                 <div className="bg-slate-900 dark:bg-slate-950 p-6 md:px-8 md:py-6 text-white flex flex-col md:flex-row md:items-center justify-between gap-4 flex-none border-b border-white/5">
+            <div className="flex flex-col bg-white dark:bg-slate-800 rounded-[3rem] border border-slate-200/60 dark:border-slate-700 overflow-hidden shadow-2xl h-[calc(100vh-20rem)] min-h-[450px]">
+                 {/* Chat Header */}
+                 <div className="bg-slate-900 dark:bg-slate-950 p-6 md:px-8 text-white flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/5 flex-none">
                     <div className="flex items-center gap-5">
                        <div className="w-12 h-12 rounded-2xl bg-emerald-600 flex items-center justify-center text-2xl shadow-lg flex-none">
                           {activeRoom?.icon || '🗨️'}
                        </div>
-                       <div className="min-w-0 relative" ref={dropdownRef}>
-                          <p className="text-emerald-400 text-[9px] font-black uppercase tracking-widest mb-1.5 opacity-80">Select Discussion Room:</p>
-                          <button 
-                            onClick={() => setIsRoomDropdownOpen(!isRoomDropdownOpen)}
-                            className="flex items-center gap-3 group focus:outline-none"
-                          >
-                            <h3 className="text-xl md:text-2xl font-black tracking-tight leading-none group-hover:text-emerald-400 transition-colors truncate">
-                              {activeRoom?.title}
-                            </h3>
-                            <svg className={`w-5 h-5 text-emerald-500 transition-transform duration-300 ${isRoomDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" />
-                            </svg>
+                       <div className="relative" ref={dropdownRef}>
+                          <button onClick={() => setIsRoomDropdownOpen(!isRoomDropdownOpen)} className="flex items-center gap-3 transition-colors hover:text-emerald-400">
+                            <h3 className="text-xl md:text-2xl font-black tracking-tight">{activeRoom?.title}</h3>
+                            <svg className={`w-5 h-5 text-emerald-500 transition-transform ${isRoomDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" /></svg>
                           </button>
-
-                          {/* Dropdown Menu */}
                           {isRoomDropdownOpen && (
-                            <div className="absolute top-full left-0 mt-4 w-72 md:w-96 bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-800 z-[100] p-3 animate-in fade-in slide-in-from-top-2 duration-200">
-                              <div className="grid gap-1.5">
-                                {rooms.map(room => (
-                                  <button
-                                    key={room.id}
-                                    onClick={() => {
-                                      setActiveRoomId(room.id);
-                                      setIsRoomDropdownOpen(false);
-                                    }}
-                                    className={`w-full p-4 rounded-2xl text-left transition-all flex items-center gap-4 ${
-                                      activeRoomId === room.id 
-                                        ? 'bg-emerald-600 text-white' 
-                                        : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200'
-                                    }`}
-                                  >
-                                    <span className="text-xl flex-none">{room.icon}</span>
-                                    <div className="min-w-0">
-                                      <p className="font-black text-sm truncate">{room.title}</p>
-                                      <p className={`text-[9px] font-bold uppercase tracking-widest mt-0.5 ${activeRoomId === room.id ? 'text-emerald-100' : 'text-slate-400'}`}>
-                                        {room.activeUsers} Students Active
-                                      </p>
-                                    </div>
-                                  </button>
-                                ))}
-                              </div>
+                            <div className="absolute top-full left-0 mt-4 w-72 md:w-80 bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-800 z-[100] p-3 animate-in slide-in-from-top-2">
+                              {rooms.map(room => (
+                                <button key={room.id} onClick={() => { setActiveRoomId(room.id); setIsRoomDropdownOpen(false); }} className={`w-full p-4 rounded-2xl text-left transition-all flex items-center gap-4 ${activeRoomId === room.id ? 'bg-emerald-600 text-white' : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200'}`}>
+                                  <span className="text-xl">{room.icon}</span>
+                                  <div>
+                                    <p className="font-black text-sm">{room.title}</p>
+                                    <p className={`text-[9px] font-bold uppercase tracking-widest ${activeRoomId === room.id ? 'text-emerald-100' : 'text-slate-400'}`}>{room.activeUsers} Students</p>
+                                  </div>
+                                </button>
+                              ))}
                             </div>
                           )}
                        </div>
                     </div>
-                    <div className="flex items-center gap-6">
-                      <div className="hidden sm:flex items-center gap-3 bg-white/5 px-4 py-2 rounded-full border border-white/5">
-                         <span className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></span>
-                         <span className="text-[9px] font-black uppercase tracking-widest text-emerald-100">Live Server</span>
-                      </div>
+                    <div className="hidden sm:flex items-center gap-3 bg-white/5 px-4 py-2 rounded-full border border-white/5">
+                      <span className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></span>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-emerald-100">Live Support Active</span>
                     </div>
                  </div>
 
                  {/* Chat Feed */}
-                 <div className="flex-1 overflow-y-auto p-8 space-y-6 custom-scrollbar bg-slate-50/50 dark:bg-slate-900/40">
-                    {messages.length === 0 ? (
-                      <div className="h-full flex flex-col items-center justify-center text-center py-20">
-                         <div className="w-24 h-24 bg-emerald-100 dark:bg-emerald-900/20 rounded-full flex items-center justify-center text-4xl mb-6">🎓</div>
-                         <h4 className="text-2xl font-black text-slate-800 dark:text-white">Welcome to the Hub!</h4>
-                         <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mt-2 max-w-xs mx-auto">
-                            Ask a question about your studies in {activeRoom?.title}.
-                         </p>
+                 <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-6 bg-slate-50/50 dark:bg-slate-900/40 custom-scrollbar">
+                    {messages.map((msg) => (
+                      <div key={msg.id} className={`flex ${msg.senderId === user.id ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-2 duration-300`}>
+                         <div className={`max-w-[85%] sm:max-w-[70%] flex flex-col ${msg.senderId === user.id ? 'items-end' : 'items-start'}`}>
+                            <div className={`flex items-center gap-2 mb-2 px-1 ${msg.senderId === user.id ? 'flex-row-reverse' : ''}`}>
+                               <span className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-wider">{msg.senderName}</span>
+                               <span className="px-2 py-0.5 rounded-[4px] text-[8px] font-black uppercase tracking-widest bg-slate-200 dark:bg-slate-700 text-slate-500">{msg.senderRole}</span>
+                            </div>
+                            <div className={`p-4 md:p-5 rounded-[2rem] shadow-sm border text-sm font-medium leading-relaxed ${
+                               msg.senderId === user.id ? 'bg-emerald-600 text-white border-emerald-500 rounded-tr-none' : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border-slate-100 dark:border-slate-700 rounded-tl-none'
+                            }`}>
+                               {msg.content && <div className="mb-2 whitespace-pre-wrap">{msg.content}</div>}
+                               {msg.imageUrl && (
+                                 <div className="relative group rounded-2xl overflow-hidden border border-white/10 shadow-lg cursor-zoom-in mt-2">
+                                    <img src={msg.imageUrl} alt="Shared" onClick={() => setZoomedImage(msg.imageUrl || null)} className="max-w-full h-auto object-cover max-h-80 transition-transform hover:scale-[1.01]" />
+                                    <button onClick={(e) => { e.stopPropagation(); msg.imageUrl && downloadImage(msg.imageUrl); }} className="absolute bottom-3 right-3 p-2 bg-black/60 text-white rounded-xl backdrop-blur-md opacity-0 group-hover:opacity-100 transition-all shadow-xl">
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                                    </button>
+                                 </div>
+                               )}
+                               {msg.audioUrl && (
+                                 <div className="mt-2 min-w-[180px] sm:min-w-[240px]">
+                                   <audio controls src={msg.audioUrl} className="w-full h-10 filter dark:invert" />
+                                 </div>
+                               )}
+                            </div>
+                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mt-2 px-2">
+                               {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                         </div>
                       </div>
-                    ) : (
-                      messages.map((msg) => (
-                        <div key={msg.id} className={`flex ${msg.senderId === user.id ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-2 duration-300`}>
-                           <div className={`max-w-[85%] flex flex-col ${msg.senderId === user.id ? 'items-end' : 'items-start'}`}>
-                              <div className={`flex items-center gap-2 mb-2 px-1 ${msg.senderId === user.id ? 'flex-row-reverse' : ''}`}>
-                                 <span className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-wider">{msg.senderName}</span>
-                                 <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${
-                                   msg.isOfficial ? 'bg-emerald-600 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-500'
-                                 }`}>
-                                    {msg.senderRole}
-                                 </span>
-                              </div>
-                              <div className={`p-5 rounded-[2rem] shadow-sm border text-sm font-medium leading-relaxed ${
-                                 msg.senderId === user.id 
-                                   ? 'bg-emerald-600 text-white border-emerald-500 rounded-tr-none' 
-                                   : msg.senderId === 'studypal-ai'
-                                   ? 'bg-emerald-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 border-emerald-200 dark:border-emerald-900/40 rounded-tl-none shadow-emerald-100/50'
-                                   : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border-slate-100 dark:border-slate-700 rounded-tl-none'
-                              }`}>
-                                 {msg.content}
-                              </div>
-                              <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mt-2 px-2">
-                                 {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                              </p>
-                           </div>
-                        </div>
-                      ))
-                    )}
-                    {isAiThinking && (
-                      <div className="flex justify-start animate-in fade-in duration-300">
-                        <div className="bg-emerald-50 dark:bg-slate-900/60 p-4 rounded-2xl flex items-center gap-3 border border-emerald-100 dark:border-emerald-900/20">
-                          <div className="flex gap-1">
-                            <span className="w-1.5 h-1.5 bg-emerald-600 rounded-full animate-bounce"></span>
-                            <span className="w-1.5 h-1.5 bg-emerald-600 rounded-full animate-bounce [animation-delay:0.2s]"></span>
-                            <span className="w-1.5 h-1.5 bg-emerald-600 rounded-full animate-bounce [animation-delay:0.4s]"></span>
-                          </div>
-                          <span className="text-[9px] font-black text-emerald-700 dark:text-emerald-400 uppercase tracking-widest">StudyPal is thinking...</span>
-                        </div>
-                      </div>
-                    )}
+                    ))}
                     <div ref={chatScrollRef} />
                  </div>
 
-                 {/* Chat Input */}
-                 <form onSubmit={handleSendChatMessage} className="p-6 md:p-8 bg-white dark:bg-slate-800 border-t border-slate-100 dark:border-slate-700 flex items-center gap-4">
-                    <input
-                      type="text"
-                      disabled={isAiThinking}
-                      value={chatInput}
-                      onChange={(e) => setChatInput(e.target.value)}
-                      placeholder={`Ask StudyPal about ${activeRoom?.title}...`}
-                      className="flex-1 px-6 py-5 rounded-[1.8rem] border border-slate-200 dark:border-slate-700 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none bg-slate-50 dark:bg-slate-900 font-bold text-sm transition-all text-slate-900 dark:text-white disabled:opacity-50"
-                    />
-                    <button 
-                      type="submit"
-                      disabled={!chatInput.trim() || isAiThinking}
-                      className="bg-emerald-600 text-white p-5 rounded-[1.8rem] hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-100 dark:shadow-none active:scale-95 disabled:opacity-50 flex-none"
-                    >
-                      <svg className="w-6 h-6 transform rotate-90" fill="currentColor" viewBox="0 0 20 20"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"></path></svg>
-                    </button>
-                 </form>
+                 {/* Chat Input Area */}
+                 <div className="relative flex-none">
+                    {/* Recording UI */}
+                    {isRecording && (
+                      <div className="absolute inset-0 z-[120] bg-emerald-600 text-white flex items-center justify-between px-6 md:px-12 animate-in slide-in-from-bottom-full duration-300">
+                        <div className="flex items-center gap-6">
+                           <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.8)]"></div>
+                           <span className="text-xl font-black tabular-nums">{formatTime(recordingTime)}</span>
+                           <span className="hidden md:inline text-[10px] font-black uppercase tracking-widest opacity-80">Capturing Audio...</span>
+                        </div>
+                        <div className="flex gap-4">
+                           <button onClick={cancelRecording} className="px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/20 transition-all font-black uppercase text-[10px] tracking-widest">Cancel</button>
+                           <button onClick={stopRecording} className="px-6 md:px-10 py-3 md:py-4 rounded-2xl bg-white text-emerald-600 font-black uppercase text-[10px] tracking-widest shadow-2xl active:scale-95">Finish</button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Preview UI */}
+                    {recordedAudio && !isRecording && (
+                      <div className="absolute inset-0 z-[120] bg-slate-900 text-white flex items-center justify-between px-6 md:px-12 animate-in slide-in-from-bottom-full duration-300">
+                         <div className="flex items-center gap-6 flex-1 min-w-0">
+                            <span className="text-2xl hidden sm:inline">🎙️</span>
+                            <audio controls src={recordedAudio} className="h-10 w-full max-w-xs md:max-w-md filter invert" />
+                         </div>
+                         <div className="flex gap-4 ml-4">
+                            <button onClick={() => setRecordedAudio(null)} className="px-4 py-3 rounded-2xl bg-white/5 hover:bg-white/10 text-white font-black uppercase text-[10px] tracking-widest">Discard</button>
+                            <button onClick={() => handleSendChatMessage()} className="px-6 md:px-10 py-3 md:py-4 rounded-2xl bg-emerald-600 text-white font-black uppercase text-[10px] tracking-widest shadow-2xl active:scale-95">Send</button>
+                         </div>
+                      </div>
+                    )}
+
+                    {/* Emoji Picker */}
+                    {isEmojiPickerOpen && activeRoomId === 'general-chat' && (
+                      <div ref={emojiRef} className="absolute bottom-full left-4 md:left-24 mb-4 p-5 bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-slate-700 z-[110] animate-in slide-in-from-bottom-4 duration-300 w-[calc(100%-2rem)] max-w-[420px]">
+                        <div className="flex flex-wrap gap-2.5 overflow-y-auto max-h-48 custom-scrollbar">
+                          {spicyEmojis.map(emoji => (
+                            <button key={emoji} onClick={() => setChatInput(prev => prev + emoji)} className="text-2xl hover:scale-125 transition-transform p-1.5 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl">{emoji}</button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Refined Form with Vertical Button Column */}
+                    <form onSubmit={handleSendChatMessage} className="p-4 md:p-6 bg-white dark:bg-slate-800 border-t border-slate-100 dark:border-slate-700 flex items-end gap-3 md:gap-5">
+                      {/* Integrated Action Column */}
+                      <div className="flex flex-col items-center gap-2 mb-1">
+                        {activeRoomId === 'general-chat' && (
+                          <button type="button" onClick={() => setIsEmojiPickerOpen(!isEmojiPickerOpen)} className={`p-3 rounded-full transition-all ${isEmojiPickerOpen ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-50 dark:bg-slate-900 text-slate-400 hover:text-emerald-500'}`} title="Emoji">
+                            <span className="text-xl leading-none">😀</span>
+                          </button>
+                        )}
+                        <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImageSelect} className="hidden" />
+                        <button type="button" onClick={() => fileInputRef.current?.click()} className="p-3 rounded-full bg-slate-50 dark:bg-slate-900 text-slate-400 hover:text-emerald-500 transition-all" title="Attach Image">
+                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                        </button>
+                        <button type="button" onClick={startRecording} className="p-3 rounded-full bg-slate-50 dark:bg-slate-900 text-slate-400 hover:text-red-500 transition-all group" title="Voice Message">
+                          <svg className="w-6 h-6 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 10v2a7 7 0 01-14 0v-2m14 0a2 2 0 002-2V8a2 2 0 00-2-2m-14 0a2 2 0 00-2 2v2a2 2 0 002 2m14 0L12 21" /></svg>
+                        </button>
+                      </div>
+
+                      {/* Input and Send Button */}
+                      <div className="flex-1 flex flex-col md:flex-row items-center gap-3">
+                        <textarea 
+                          rows={1}
+                          value={chatInput} 
+                          onChange={(e) => { setChatInput(e.target.value); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }} 
+                          placeholder={`Message in ${activeRoom?.title}...`} 
+                          className="w-full px-6 py-4 rounded-[1.8rem] border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 font-bold text-sm transition-all focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none text-slate-900 dark:text-white resize-none max-h-32" 
+                        />
+                        <button 
+                          type="submit" 
+                          disabled={!chatInput.trim() && !selectedImage && !recordedAudio} 
+                          className="w-full md:w-auto bg-emerald-600 text-white px-8 py-4 md:py-4 rounded-[1.8rem] shadow-xl active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3 transition-all hover:bg-emerald-700"
+                        >
+                          <span className="md:hidden font-black uppercase text-xs tracking-widest">Send</span>
+                          <svg className="w-5 h-5 transform rotate-90" fill="currentColor" viewBox="0 0 20 20"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"></path></svg>
+                        </button>
+                      </div>
+                    </form>
+                 </div>
               </div>
           )}
         </>
       ) : (
-        <div className="space-y-10">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="flex justify-between items-center px-2">
             <h3 className="text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">Community Stories</h3>
-            {!showForm && (
-              <button onClick={() => setShowForm(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white font-black px-8 py-4 rounded-2xl shadow-xl transition-all uppercase tracking-widest text-xs flex items-center gap-3">
-                <span className="text-xl">✍️</span> Share My Story
-              </button>
-            )}
+            {!showForm && <button onClick={() => setShowForm(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white font-black px-8 py-4 rounded-2xl shadow-xl transition-all active:scale-95 text-xs uppercase tracking-widest">Share My Story</button>}
           </div>
           {showForm && (
-            <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] p-10 border border-slate-100 dark:border-slate-700 shadow-2xl animate-in zoom-in duration-300">
-              <form onSubmit={handlePostTestimonial} className="space-y-6">
-                <textarea 
-                  value={newContent}
-                  onChange={(e) => setNewContent(e.target.value)}
-                  required
-                  placeholder="How has Study Hub helped you?"
-                  className="w-full p-6 rounded-3xl border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:ring-2 focus:ring-emerald-500 outline-none h-40 font-medium transition-all"
-                />
-                <button type="submit" disabled={isSubmitting || !newContent.trim()} className="w-full bg-emerald-600 text-white font-black py-5 rounded-2xl shadow-xl uppercase tracking-widest text-sm disabled:opacity-50 transition-all">Post Story</button>
-              </form>
-            </div>
+             <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] p-8 border border-slate-100 dark:border-slate-700 shadow-2xl animate-in zoom-in duration-300">
+               <form onSubmit={(e) => { e.preventDefault(); if(newContent.trim()) { storage.saveTestimonial({ id: Math.random().toString(36).substr(2, 9), userId: user.id, userName: user.name, userProfilePic: 'initials', userRole: user.accountRole || 'Member', content: newContent, rating: 5, timestamp: new Date().toISOString() }); setTestimonials(storage.getTestimonials()); setNewContent(''); setShowForm(false); } }} className="space-y-6">
+                 <textarea value={newContent} onChange={(e) => setNewContent(e.target.value)} required placeholder="How has Study Hub helped your education?" className="w-full p-6 rounded-3xl border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:ring-2 focus:ring-emerald-500 outline-none h-40 font-medium transition-all" />
+                 <div className="flex gap-4">
+                   <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-4 text-slate-400 font-black uppercase tracking-widest text-xs">Cancel</button>
+                   <button type="submit" className="flex-[2] bg-emerald-600 text-white font-black py-4 rounded-2xl shadow-xl uppercase tracking-widest text-xs">Post Story</button>
+                 </div>
+               </form>
+             </div>
           )}
           <div className="grid md:grid-cols-2 gap-8">
             {testimonials.map(t => (
-              <div key={t.id} className="bg-white dark:bg-slate-800 p-8 rounded-[2.5rem] border border-slate-50 dark:border-slate-700 shadow-sm border-b-8 border-b-emerald-600">
-                <p className="text-slate-700 dark:text-slate-300 font-medium leading-relaxed italic text-lg">"{t.content}"</p>
-                <div className="mt-8 flex items-center gap-4 border-t border-slate-50 dark:border-slate-700 pt-6">
-                  <div className="w-12 h-12 rounded-2xl bg-emerald-700 flex items-center justify-center text-white font-black text-xs">{(t.userName || '?')[0].toUpperCase()}</div>
+              <div key={t.id} className="bg-white dark:bg-slate-800 p-8 rounded-[2.5rem] border border-slate-50 dark:border-slate-700 shadow-sm border-b-8 border-b-emerald-600 transition-all hover:shadow-xl hover:-translate-y-1">
+                <p className="text-slate-700 dark:text-slate-300 font-medium italic leading-relaxed text-lg">"{t.content}"</p>
+                <div className="mt-8 flex items-center gap-4 pt-6 border-t border-slate-50 dark:border-slate-700/50">
+                  <div className="w-12 h-12 bg-emerald-700 rounded-2xl flex items-center justify-center text-white font-black text-xs shadow-inner">{(t.userName || '?')[0].toUpperCase()}</div>
                   <div className="min-w-0">
                     <h4 className="font-black text-slate-800 dark:text-slate-100 text-sm truncate">{t.userName}</h4>
                     <p className="text-[9px] font-black uppercase text-emerald-600 tracking-widest">{t.userRole}</p>
