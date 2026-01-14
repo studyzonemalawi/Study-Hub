@@ -1,6 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
-import { getAuth, GoogleAuthProvider } from "firebase/auth";
+import { getAuth, setPersistence, browserLocalPersistence } from "firebase/auth";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -15,8 +14,12 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-const analytics = typeof window !== 'undefined' ? getAnalytics(app) : null;
 const auth = getAuth(app);
-const googleProvider = new GoogleAuthProvider();
 
-export { app, analytics, auth, googleProvider };
+// Set persistence to local (survives browser restart)
+setPersistence(auth, browserLocalPersistence)
+  .catch((error) => {
+    console.error("Firebase persistence error:", error);
+  });
+
+export { app, auth };

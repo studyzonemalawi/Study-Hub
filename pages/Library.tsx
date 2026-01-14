@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   EducationLevel, 
@@ -149,44 +148,44 @@ export const Library: React.FC<LibraryProps> = ({ onNavigate }) => {
   }, {} as Record<Category, StudyMaterial[]>);
 
   return (
-    <div className="space-y-8 pb-32 animate-in fade-in duration-500">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+    <div className="space-y-10 pb-32 animate-in fade-in duration-500">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-8">
         <div>
-          <h2 className="text-3xl font-black text-gray-800">
-            {activeView === 'browse' ? 'Library' : 'My Downloads'}
+          <h2 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
+            {activeView === 'browse' ? 'Academic Library' : 'My Saved Resources'}
           </h2>
-          <p className="text-gray-500">
-            {activeView === 'browse' ? `Explore educational resources for ${level} School.` : 'Quickly access files you saved for offline reading.'}
+          <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">
+            {activeView === 'browse' ? `Access premium Malawian education content for ${level} students.` : 'Manage your offline materials for gapless learning.'}
           </p>
         </div>
         
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex p-1 bg-gray-100 rounded-2xl w-fit">
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex p-1.5 bg-slate-200/50 dark:bg-slate-800 rounded-2xl w-fit border border-slate-200 dark:border-slate-700">
             <button 
               onClick={() => setActiveView('browse')}
-              className={`px-5 py-2 rounded-xl text-[10px] uppercase font-black tracking-widest transition-all ${activeView === 'browse' ? 'bg-white shadow-sm text-emerald-700' : 'text-gray-400'}`}
+              className={`px-6 py-2.5 rounded-xl text-[10px] uppercase font-black tracking-widest transition-all ${activeView === 'browse' ? 'bg-white dark:bg-slate-700 shadow-sm text-emerald-700 dark:text-emerald-400' : 'text-slate-500 hover:text-slate-700 dark:text-slate-500'}`}
             >
               Browse
             </button>
             <button 
               onClick={() => setActiveView('downloads')}
-              className={`px-5 py-2 rounded-xl text-[10px] uppercase font-black tracking-widest transition-all ${activeView === 'downloads' ? 'bg-white shadow-sm text-emerald-700' : 'text-gray-400'}`}
+              className={`px-6 py-2.5 rounded-xl text-[10px] uppercase font-black tracking-widest transition-all ${activeView === 'downloads' ? 'bg-white dark:bg-slate-700 shadow-sm text-emerald-700 dark:text-emerald-400' : 'text-slate-500 hover:text-slate-700 dark:text-slate-500'}`}
             >
-              Downloads ({currentUser?.downloadedIds.length || 0})
+              Offline ({currentUser?.downloadedIds.length || 0})
             </button>
           </div>
           
           {activeView === 'browse' && (
-            <div className="flex p-1 bg-gray-100 rounded-2xl w-fit">
+            <div className="flex p-1.5 bg-slate-200/50 dark:bg-slate-800 rounded-2xl w-fit border border-slate-200 dark:border-slate-700">
               <button 
                 onClick={() => { setLevel(EducationLevel.PRIMARY); setSelectedGrade(PRIMARY_GRADES[0]); }}
-                className={`px-4 py-2 rounded-xl text-[10px] uppercase font-black tracking-widest transition-all ${level === EducationLevel.PRIMARY ? 'bg-white shadow-sm text-emerald-700' : 'text-gray-400'}`}
+                className={`px-5 py-2.5 rounded-xl text-[10px] uppercase font-black tracking-widest transition-all ${level === EducationLevel.PRIMARY ? 'bg-white dark:bg-slate-700 shadow-sm text-emerald-700 dark:text-emerald-400' : 'text-slate-500 hover:text-slate-700 dark:text-slate-500'}`}
               >
                 Primary
               </button>
               <button 
                 onClick={() => { setLevel(EducationLevel.SECONDARY); setSelectedGrade(SECONDARY_GRADES[0]); }}
-                className={`px-4 py-2 rounded-xl text-[10px] uppercase font-black tracking-widest transition-all ${level === EducationLevel.SECONDARY ? 'bg-white shadow-sm text-emerald-700' : 'text-gray-400'}`}
+                className={`px-5 py-2.5 rounded-xl text-[10px] uppercase font-black tracking-widest transition-all ${level === EducationLevel.SECONDARY ? 'bg-white dark:bg-slate-700 shadow-sm text-emerald-700 dark:text-emerald-400' : 'text-slate-500 hover:text-slate-700 dark:text-slate-500'}`}
               >
                 Secondary
               </button>
@@ -196,13 +195,13 @@ export const Library: React.FC<LibraryProps> = ({ onNavigate }) => {
       </div>
 
       {activeView === 'browse' && (
-        <div className="flex flex-wrap gap-2 overflow-x-auto no-scrollbar pb-2">
+        <div className="flex flex-wrap gap-3 overflow-x-auto no-scrollbar pb-2">
           {grades.map(g => (
             <button
               key={g}
               onClick={() => setSelectedGrade(g)}
-              className={`flex-shrink-0 px-5 py-2.5 rounded-2xl border text-[10px] font-black uppercase tracking-widest transition-all ${
-                selectedGrade === g ? 'bg-emerald-600 border-emerald-600 text-white shadow-xl shadow-emerald-100' : 'bg-white border-gray-100 text-gray-400 hover:border-emerald-200'
+              className={`flex-shrink-0 px-6 py-3 rounded-2xl border-2 text-[10px] font-black uppercase tracking-widest transition-all ${
+                selectedGrade === g ? 'bg-emerald-600 border-emerald-600 text-white shadow-xl shadow-emerald-100 dark:shadow-none' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-emerald-300'
               }`}
             >
               {g}
@@ -213,27 +212,27 @@ export const Library: React.FC<LibraryProps> = ({ onNavigate }) => {
 
       {activeView === 'browse' && !selectedSubject ? (
         <section className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {subjects.map(sub => {
               const count = getSubjectMaterialCount(sub);
               return (
                 <button
                   key={sub}
                   onClick={() => setSelectedSubject(sub)}
-                  className="bg-white p-6 md:p-8 rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-2xl hover:border-emerald-200 transition-all text-left group relative overflow-hidden flex flex-col justify-between h-full min-h-[160px]"
+                  className="bg-white dark:bg-slate-800 p-8 md:p-10 rounded-[3rem] border border-slate-200/60 dark:border-slate-700 shadow-sm hover:shadow-2xl hover:border-emerald-300 dark:hover:border-emerald-500/30 transition-all text-left group relative overflow-hidden flex flex-col justify-between h-full min-h-[180px]"
                 >
                   <div>
-                    <div className="w-10 h-10 md:w-12 md:h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600 mb-4 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-                      <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+                    <div className="w-12 h-12 md:w-14 md:h-14 bg-slate-50 dark:bg-slate-700 rounded-2xl flex items-center justify-center text-slate-600 dark:text-slate-300 mb-6 group-hover:bg-emerald-600 group-hover:text-white transition-all duration-300 shadow-inner">
+                      <svg className="w-6 h-6 md:w-7 md:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
                     </div>
-                    <h4 className="font-black text-gray-800 text-[11px] md:text-sm uppercase tracking-tight leading-tight">{sub}</h4>
+                    <h4 className="font-black text-slate-900 dark:text-slate-100 text-xs md:text-sm uppercase tracking-[0.05em] leading-tight pr-4">{sub}</h4>
                   </div>
-                  <div className="mt-4 flex items-center justify-between">
-                    <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest ${count > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-400'}`}>
-                      {count} {count === 1 ? 'Resource' : 'Resources'}
+                  <div className="mt-6 flex items-center justify-between">
+                    <span className={`text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest ${count > 0 ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-slate-100 text-slate-400 dark:bg-slate-900/40'}`}>
+                      {count} {count === 1 ? 'Entry' : 'Entries'}
                     </span>
-                    <div className="text-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
+                    <div className="text-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity translate-x-2 group-hover:translate-x-0">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
                     </div>
                   </div>
                 </button>
@@ -243,45 +242,45 @@ export const Library: React.FC<LibraryProps> = ({ onNavigate }) => {
         </section>
       ) : (
         <section className="animate-in fade-in slide-in-from-left-4 duration-500">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
-            <div className="flex items-center space-x-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-10 gap-6">
+            <div className="flex items-center space-x-6">
               {activeView === 'browse' && (
                 <button 
                   onClick={() => setSelectedSubject(null)}
-                  className="p-3 bg-white hover:bg-gray-50 border border-gray-100 rounded-2xl transition-all shadow-sm group"
+                  className="p-4 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-2xl transition-all shadow-sm group"
                 >
-                  <svg className="w-6 h-6 text-gray-600 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
+                  <svg className="w-6 h-6 text-slate-600 dark:text-slate-400 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
                 </button>
               )}
               <div>
-                <h3 className="text-2xl font-black text-gray-800">{activeView === 'browse' ? selectedSubject : 'Offline Resources'}</h3>
-                <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">
-                  {filteredMaterials.length} materials found
+                <h3 className="text-2xl font-black text-slate-900 dark:text-slate-100">{activeView === 'browse' ? selectedSubject : 'Saved Resources'}</h3>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 font-black uppercase tracking-widest mt-1">
+                  {filteredMaterials.length} materials matching selection
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-4">
               <button 
                 onClick={() => {
                   setIsSelectionMode(!isSelectionMode);
                   setSelectedIds(new Set());
                 }}
-                className={`px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border ${
-                  isSelectionMode ? 'bg-orange-100 border-orange-200 text-orange-700' : 'bg-white border-gray-100 text-gray-500 hover:border-emerald-200'
+                className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border-2 ${
+                  isSelectionMode ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-500 text-orange-700 dark:text-orange-400' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-emerald-300'
                 }`}
               >
-                {isSelectionMode ? 'Cancel Selection' : 'Select Multiple'}
+                {isSelectionMode ? 'Cancel Selection' : 'Bulk Select'}
               </button>
             </div>
           </div>
 
-          <div className="space-y-12">
+          <div className="space-y-16">
             {filteredMaterials.length === 0 ? (
-              <div className="bg-white rounded-[2.5rem] p-20 text-center border border-dashed border-gray-200 shadow-sm">
-                <div className="text-6xl mb-6 grayscale opacity-20">📁</div>
-                <h3 className="text-2xl font-black text-gray-700">No Materials Found</h3>
-                <p className="text-gray-400 mt-2 font-medium">Try checking other categories or subjects.</p>
+              <div className="bg-white dark:bg-slate-800 rounded-[3rem] p-24 text-center border-2 border-dashed border-slate-200 dark:border-slate-700 shadow-sm">
+                <div className="text-7xl mb-8 opacity-20 grayscale">📂</div>
+                <h3 className="text-2xl font-black text-slate-800 dark:text-slate-200">No Content Found</h3>
+                <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium">Try checking another category or academic year.</p>
               </div>
             ) : (
               (Object.values(Category) as Category[]).map(cat => {
@@ -289,12 +288,12 @@ export const Library: React.FC<LibraryProps> = ({ onNavigate }) => {
                 if (!items || items.length === 0) return null;
 
                 return (
-                  <div key={cat} className="space-y-6">
-                    <h4 className="text-lg font-black text-gray-800 flex items-center gap-3">
-                      <span className="w-2 h-6 bg-emerald-500 rounded-full"></span>
+                  <div key={cat} className="space-y-8">
+                    <h4 className="text-xl font-black text-slate-900 dark:text-slate-100 flex items-center gap-4">
+                      <span className="w-1.5 h-8 bg-emerald-500 rounded-full"></span>
                       {cat}
                     </h4>
-                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
                       {items.map(m => {
                         const readingStatus = getStatusForMaterial(m.id);
                         const isSelected = selectedIds.has(m.id);
@@ -304,63 +303,63 @@ export const Library: React.FC<LibraryProps> = ({ onNavigate }) => {
                           <div 
                             key={m.id} 
                             onClick={() => isSelectionMode && toggleSelection(m.id)}
-                            className={`bg-white p-6 rounded-[2.5rem] border-2 shadow-sm hover:shadow-2xl transition-all group flex flex-col relative overflow-hidden border-b-4 ${
-                              isSelected ? 'border-orange-500 bg-orange-50/30' : 'border-transparent border-b-emerald-600'
-                            } ${isSelectionMode ? 'cursor-pointer' : ''}`}
+                            className={`bg-white dark:bg-slate-800 p-8 rounded-[3rem] border-2 shadow-sm hover:shadow-2xl transition-all group flex flex-col relative overflow-hidden border-b-8 ${
+                              isSelected ? 'border-orange-500 bg-orange-50/20 dark:bg-orange-900/10' : 'border-transparent border-b-emerald-600/20 dark:border-b-emerald-500/20'
+                            } ${isSelectionMode ? 'cursor-pointer active:scale-95' : ''}`}
                           >
                             {isSelectionMode && (
-                              <div className="absolute top-4 left-4 z-10">
-                                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
-                                  isSelected ? 'bg-orange-500 border-orange-500 text-white' : 'bg-white border-gray-200'
+                              <div className="absolute top-6 left-6 z-10">
+                                <div className={`w-8 h-8 rounded-xl border-2 flex items-center justify-center transition-all ${
+                                  isSelected ? 'bg-orange-500 border-orange-500 text-white' : 'bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600'
                                 }`}>
-                                  {isSelected && <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>}
+                                  {isSelected && <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>}
                                 </div>
                               </div>
                             )}
 
                             {readingStatus !== ReadingStatus.NOT_STARTED && !isSelectionMode && (
-                              <div className={`absolute top-0 right-0 px-5 py-2 rounded-bl-[1.5rem] text-[9px] font-black uppercase tracking-widest text-white shadow-lg ${
-                                readingStatus === ReadingStatus.COMPLETED ? 'bg-green-500' : 'bg-orange-500'
+                              <div className={`absolute top-0 right-0 px-6 py-2.5 rounded-bl-[2rem] text-[9px] font-black uppercase tracking-[0.2em] text-white shadow-xl ${
+                                readingStatus === ReadingStatus.COMPLETED ? 'bg-emerald-500' : 'bg-orange-500'
                               }`}>
                                 {readingStatus}
                               </div>
                             )}
 
-                            <div className="flex justify-between items-start mb-6">
-                              <div className="p-4 bg-emerald-50 rounded-[1.5rem] text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors duration-500">
+                            <div className="flex justify-between items-start mb-8">
+                              <div className="p-4 bg-slate-100 dark:bg-slate-700 rounded-2xl text-slate-500 dark:text-slate-400 group-hover:bg-emerald-600 group-hover:text-white transition-all duration-500 shadow-inner">
                                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
                               </div>
                               {isDownloaded && !isSelectionMode && (
-                                <span className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border border-emerald-200">
-                                  Saved Offline
+                                <span className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border border-emerald-200/50 dark:border-emerald-500/20">
+                                  Saved
                                 </span>
                               )}
                             </div>
                             
-                            <h4 className="font-black text-gray-800 text-lg line-clamp-2 min-h-[3.5rem] leading-tight group-hover:text-emerald-900 transition-colors">{m.title}</h4>
-                            <p className="text-[10px] text-gray-400 mt-4 mb-8 font-bold uppercase tracking-wider">Added: {new Date(m.uploadedAt).toLocaleDateString('en-GB')}</p>
+                            <h4 className="font-black text-slate-900 dark:text-slate-100 text-lg line-clamp-2 min-h-[3.5rem] leading-tight group-hover:text-emerald-700 transition-colors duration-300">{m.title}</h4>
+                            <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-4 mb-10 font-black uppercase tracking-[0.1em]">Added: {new Date(m.uploadedAt).toLocaleDateString('en-GB')}</p>
                             
                             {!isSelectionMode && (
                               <div className="mt-auto flex flex-col gap-3">
                                 <button 
                                   onClick={() => handleReadOnline(m)}
-                                  className="w-full bg-emerald-600 text-white hover:bg-emerald-700 font-black py-4 rounded-2xl transition-all flex items-center justify-center gap-3 shadow-xl shadow-emerald-100 text-xs uppercase tracking-widest"
+                                  className="w-full bg-slate-900 dark:bg-slate-700 text-white hover:bg-emerald-600 dark:hover:bg-emerald-600 font-black py-4 rounded-2xl transition-all flex items-center justify-center gap-3 shadow-xl shadow-slate-200 dark:shadow-none text-[10px] uppercase tracking-widest"
                                 >
-                                  Read Online
+                                  Start Reading
                                 </button>
                                 {activeView === 'browse' ? (
                                   <button 
                                     onClick={() => handleDownload(m)}
-                                    className="w-full bg-white text-gray-500 hover:bg-gray-50 hover:text-emerald-700 font-black py-3 rounded-2xl transition-all flex items-center justify-center gap-2 border border-gray-100 text-[10px] uppercase tracking-widest"
+                                    className="w-full bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 font-black py-3 rounded-2xl transition-all flex items-center justify-center gap-2 border border-slate-200 dark:border-slate-700 text-[9px] uppercase tracking-[0.1em]"
                                   >
-                                    Save Offline
+                                    Offline Copy
                                   </button>
                                 ) : (
                                   <button 
                                     onClick={() => removeDownload(m.id)}
-                                    className="w-full bg-white text-red-400 hover:bg-red-50 hover:text-red-600 font-black py-3 rounded-2xl transition-all flex items-center justify-center gap-2 border border-red-50 text-[10px] uppercase tracking-widest"
+                                    className="w-full bg-red-50 dark:bg-red-900/10 text-red-500 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/20 font-black py-3 rounded-2xl transition-all flex items-center justify-center gap-2 border border-red-100 dark:border-red-900/20 text-[9px] uppercase tracking-[0.1em]"
                                   >
-                                    Remove from Downloads
+                                    Discard Offline
                                   </button>
                                 )}
                               </div>
@@ -379,21 +378,21 @@ export const Library: React.FC<LibraryProps> = ({ onNavigate }) => {
 
       {/* Bulk Action Bar */}
       {isSelectionMode && selectedIds.size > 0 && (
-        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[80] w-[90%] max-w-lg bg-gray-900 text-white rounded-3xl p-6 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-4 animate-in slide-in-from-bottom-10 border border-white/10 backdrop-blur-xl">
-          <div className="flex items-center gap-4">
-            <div className="bg-orange-500 text-white w-10 h-10 rounded-xl flex items-center justify-center font-black">
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[80] w-[90%] max-w-lg bg-slate-900 text-white rounded-[2.5rem] p-8 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-6 animate-in slide-in-from-bottom-10 border border-white/10 backdrop-blur-2xl">
+          <div className="flex items-center gap-5">
+            <div className="bg-emerald-500 text-white w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg">
               {selectedIds.size}
             </div>
             <div>
-              <p className="font-black uppercase tracking-widest text-xs">Items Selected</p>
-              <p className="text-[10px] text-gray-400 font-bold">Ready for bulk download</p>
+              <p className="font-black uppercase tracking-widest text-[10px]">Resources Selected</p>
+              <p className="text-[10px] text-slate-400 font-bold mt-0.5">Ready for collective download</p>
             </div>
           </div>
           <button 
             onClick={handleBulkDownload}
-            className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl transition-all active:scale-95"
+            className="w-full sm:w-auto bg-white text-slate-900 hover:bg-emerald-400 hover:text-white px-10 py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-xl transition-all active:scale-95"
           >
-            Download Selected
+            Download Pack
           </button>
         </div>
       )}

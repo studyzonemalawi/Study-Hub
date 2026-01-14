@@ -23,10 +23,8 @@ export enum AccountRole {
   GUARDIAN = 'Guardian'
 }
 
-// These are the standard academic grades used for material filtering
 export type Grade = 'Standard 5' | 'Standard 6' | 'Standard 7' | 'Standard 8' | 'Form 1' | 'Form 2' | 'Form 3' | 'Form 4';
 
-// Extended options only for user profile status
 export type ProfileGrade = Grade | 'Prefer not to say' | 'Not Studying' | 'Other';
 
 export interface StudyMaterial {
@@ -55,6 +53,25 @@ export interface Message {
   content: string;
   timestamp: string;
   isAdmin: boolean;
+}
+
+export interface ChatRoom {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  activeUsers: number;
+}
+
+export interface CommunityMessage {
+  id: string;
+  roomId: string;
+  senderId: string;
+  senderName: string;
+  senderRole: string;
+  content: string;
+  timestamp: string;
+  isOfficial?: boolean;
 }
 
 export interface Testimonial {
@@ -91,7 +108,7 @@ export interface User {
   schoolName?: string;
   currentGrade?: ProfileGrade;
   bio?: string;
-  profilePic?: string; // base64 or URL
+  profilePic?: string;
   termsAccepted?: boolean;
   isPublic?: boolean;
   dateJoined: string;

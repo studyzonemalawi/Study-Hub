@@ -1,34 +1,29 @@
-
 import React, { useState, useEffect } from 'react';
-import { StudyMaterial, ReadingStatus, UserProgress } from '../types';
+import { StudyMaterial, ReadingStatus, UserProgress, User } from '../types';
 import { storage } from '../services/storage';
 import { PdfViewer } from '../components/PdfViewer';
 
 interface HomeProps {
   onNavigate: (tab: string) => void;
-  userName: string;
+  user: User;
 }
 
-export const Home: React.FC<HomeProps> = ({ onNavigate, userName }) => {
+export const Home: React.FC<HomeProps> = ({ onNavigate, user }) => {
   const [recentMaterials, setRecentMaterials] = useState<StudyMaterial[]>([]);
   const [activeReading, setActiveReading] = useState<(StudyMaterial & { progress: UserProgress })[]>([]);
   const [viewingMaterial, setViewingMaterial] = useState<StudyMaterial | null>(null);
 
-  const userStr = localStorage.getItem('study_hub_session');
-  const user = userStr ? JSON.parse(userStr) : null;
   const userId = user?.id || 'guest';
 
   useEffect(() => {
     const all = storage.getMaterials();
     const progress = storage.getUserProgress(userId);
 
-    // Sort by date descending and take top 5
     const sorted = [...all].sort((a, b) => 
       new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
     ).slice(0, 5);
     setRecentMaterials(sorted);
 
-    // Filter for items currently being read
     const readingItems = all
       .map(m => ({ 
         ...m, 
@@ -36,7 +31,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, userName }) => {
       }))
       .filter(m => m.progress && m.progress.status === ReadingStatus.READING)
       .sort((a, b) => new Date(b.progress!.lastRead).getTime() - new Date(a.progress!.lastRead).getTime())
-      .slice(0, 3) as (StudyMaterial & { progress: UserProgress })[];
+      .slice(0, 1) as (StudyMaterial & { progress: UserProgress })[];
 
     setActiveReading(readingItems);
   }, [userId, viewingMaterial]);
@@ -62,125 +57,123 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, userName }) => {
     document.body.style.overflow = 'auto';
   };
 
-  const handleDownload = (m: StudyMaterial) => {
-    const link = document.createElement('a');
-    link.href = m.fileUrl;
-    link.download = m.fileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+  const modules = [
+    { id: 'library', title: 'Notes Library', desc: 'Books & Resources', icon: '📚', color: 'bg-indigo-600' },
+    { id: 'papers', title: 'Past Papers', desc: 'Exam Bank', icon: '📝', color: 'bg-emerald-600' },
+    { id: 'announcements', title: 'Updates', desc: 'Latest News', icon: '📢', color: 'bg-orange-500' },
+    { id: 'activity', title: 'My Progress', desc: 'Study Stats', icon: '📈', color: 'bg-blue-600' },
+    { id: 'support', title: 'Support', desc: 'Talk to Admin', icon: '💬', color: 'bg-purple-600' },
+    { id: 'testimonials', title: 'Community', desc: 'Success Stories', icon: '👥', color: 'bg-pink-600' },
+    { id: 'faqs', title: 'FAQs', desc: 'Quick Answers', icon: '❓', color: 'bg-slate-700' },
+    { id: 'settings', title: 'Settings', desc: 'Account Control', icon: '⚙️', color: 'bg-slate-500' }
+  ];
+
+  if (user.appRole === 'admin') {
+    modules.push({ id: 'admin', title: 'Admin Hub', desc: 'System Control', icon: '🛡️', color: 'bg-red-600' });
+  }
 
   return (
-    <div className="space-y-10 pb-20 md:pb-0 animate-in fade-in slide-in-from-bottom-2 duration-500">
-      <section className="bg-emerald-800 text-white rounded-[2.5rem] p-10 shadow-2xl relative overflow-hidden">
-        <div className="relative z-10">
-          <h2 className="text-4xl font-black mb-2">Muli bwanji, {userName}!</h2>
-          <p className="text-emerald-100 text-xl opacity-90 max-w-md">Your personalized learning dashboard is ready. What are we studying today?</p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <span className="bg-white/10 backdrop-blur-md px-5 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest border border-white/20">MANEB 2024 Prep</span>
-            <span className="bg-white/10 backdrop-blur-md px-5 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest border border-white/20">Active Study</span>
+    <div className="max-w-6xl mx-auto space-y-12 animate-in fade-in slide-in-from-bottom-2 duration-700">
+      
+      {/* Professional Hero Section */}
+      <section className="relative overflow-hidden bg-slate-900 dark:bg-[#020617] rounded-[3rem] p-10 md:p-20 text-center border border-white/5 shadow-2xl shadow-slate-900/20">
+        <div className="relative z-10 max-w-3xl mx-auto space-y-6">
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-[10px] font-bold text-emerald-400 uppercase tracking-[0.2em]">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            Official Study Hub
           </div>
+          <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-white leading-[1.1] tracking-tight">
+            Largest digital repository for <span className="text-emerald-500">Primary</span> and <span className="text-emerald-500">Secondary</span> education in Malawi
+          </h1>
+          <div className="h-1 w-20 bg-emerald-500 mx-auto rounded-full"></div>
         </div>
-        <div className="absolute top-0 right-0 p-8 opacity-5">
-          <span className="text-[12rem] rotate-12 inline-block">🎓</span>
+        
+        {/* Background Elements for Depth */}
+        <div className="absolute top-0 left-0 w-full h-full opacity-[0.03] pointer-events-none select-none overflow-hidden">
+          <div className="absolute -top-24 -left-24 w-96 h-96 bg-emerald-500 rounded-full blur-[100px]"></div>
+          <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-blue-500 rounded-full blur-[100px]"></div>
         </div>
       </section>
 
-      {/* Continue Reading Section */}
-      {activeReading.length > 0 && (
-        <section className="animate-in slide-in-from-left-4 duration-700 delay-200">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-2xl font-black text-gray-800 flex items-center gap-3">
-              <span className="w-2 h-8 bg-orange-500 rounded-full"></span>
-              Continue Reading
-            </h3>
-            <button onClick={() => onNavigate('library')} className="text-emerald-600 font-bold text-sm hover:underline">See Library</button>
-          </div>
-          <div className="grid md:grid-cols-3 gap-6">
-            {activeReading.map((m) => (
-              <div key={m.id} className="bg-white p-6 rounded-[2rem] border border-orange-100 shadow-sm hover:shadow-xl transition-all group border-b-4 border-b-orange-400">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="p-2 bg-orange-50 text-orange-600 rounded-xl">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
-                  </div>
-                  <span className="text-[10px] font-black text-orange-500 uppercase tracking-widest">In Progress</span>
-                </div>
-                <h4 className="font-bold text-gray-800 line-clamp-1 mb-2">{m.title}</h4>
-                <p className="text-xs text-gray-400 mb-6">{m.subject} • {m.grade}</p>
-                <button 
-                  onClick={() => handleReadOnline(m)}
-                  className="w-full py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-2xl font-bold text-sm transition-all shadow-lg shadow-orange-100"
-                >
-                  Resume
-                </button>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      <div className="grid md:grid-cols-3 gap-6">
-        {[
-          { title: 'Notes Library', desc: 'Standards 5-8 & Forms 1-4', icon: '📚', tab: 'library', color: 'bg-blue-600' },
-          { title: 'Past Papers', desc: 'MANEB & District Exams', icon: '📝', tab: 'papers', color: 'bg-emerald-600' },
-          { title: 'Support Chat', desc: 'Speak with Study Hub Admins', icon: '💬', tab: 'support', color: 'bg-purple-600' }
-        ].map((card, idx) => (
+      {/* Module Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8">
+        {/* Active Reading Resume (If any) */}
+        {activeReading.length > 0 && (
           <button
-            key={idx}
-            onClick={() => onNavigate(card.tab)}
-            className="group bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100 hover:shadow-2xl hover:-translate-y-1 transition-all text-left flex flex-col justify-between"
+            onClick={() => handleReadOnline(activeReading[0])}
+            className="col-span-2 bg-white dark:bg-slate-800 p-8 rounded-[2.5rem] shadow-sm border border-orange-200 dark:border-orange-900/30 hover:shadow-xl transition-all text-left flex flex-col justify-between group border-b-8 border-b-orange-500"
           >
             <div>
-              <div className={`${card.color} w-14 h-14 rounded-2xl flex items-center justify-center text-3xl mb-6 text-white shadow-2xl shadow-${card.color.split('-')[1]}-200`}>
-                {card.icon}
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-[9px] font-black uppercase tracking-widest text-orange-500 bg-orange-50 dark:bg-orange-900/20 px-3 py-1 rounded-lg">Resume Reading</span>
               </div>
-              <h3 className="text-2xl font-black text-gray-800 mb-2">{card.title}</h3>
-              <p className="text-gray-500 text-sm leading-relaxed">{card.desc}</p>
+              <h3 className="text-xl md:text-2xl font-black text-slate-900 dark:text-white mb-1 line-clamp-1">{activeReading[0].title}</h3>
+              <p className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wide">{activeReading[0].subject} • {activeReading[0].grade}</p>
             </div>
-            <div className="mt-8 flex items-center text-emerald-600 font-black text-sm group-hover:gap-3 gap-2 transition-all">
-              GO NOW <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+            <div className="mt-8 flex items-center gap-2 text-orange-600 dark:text-orange-400 font-black text-[10px] uppercase tracking-widest group-hover:gap-4 transition-all">
+              Return to Book <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
             </div>
+          </button>
+        )}
+
+        {/* Standard Modules */}
+        {modules.map((mod) => (
+          <button
+            key={mod.id}
+            onClick={() => onNavigate(mod.id)}
+            className="group bg-white dark:bg-slate-800 p-6 md:p-10 rounded-[2.5rem] shadow-sm border border-slate-200/60 dark:border-slate-700 hover:shadow-2xl hover:-translate-y-1 transition-all text-center flex flex-col items-center justify-center min-h-[160px] md:min-h-[240px]"
+          >
+            <div className={`${mod.color} w-12 h-12 md:w-16 md:h-16 rounded-[1.2rem] md:rounded-[1.5rem] flex items-center justify-center text-2xl md:text-3xl mb-4 md:mb-6 text-white shadow-xl shadow-${mod.color.split('-')[1]}-100 dark:shadow-none transition-all group-hover:scale-110 group-hover:rotate-3`}>
+              {mod.icon}
+            </div>
+            <h3 className="text-sm md:text-lg font-black text-slate-900 dark:text-slate-100 mb-1 tracking-tight">{mod.title}</h3>
+            <p className="hidden md:block text-slate-500 dark:text-slate-400 text-[9px] font-black uppercase tracking-widest opacity-60">{mod.desc}</p>
           </button>
         ))}
       </div>
 
-      <section className="bg-white rounded-[2.5rem] p-10 border border-gray-100 shadow-xl">
-        <h3 className="text-2xl font-black text-gray-800 mb-8 flex items-center gap-3">
-          <span className="w-2 h-8 bg-emerald-500 rounded-full"></span>
-          Newly Released
-        </h3>
+      {/* Footer-aligned Section: Recent Materials */}
+      <section className="bg-white dark:bg-slate-800 rounded-[3rem] p-8 md:p-12 border border-slate-200/60 dark:border-slate-700 shadow-xl">
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-6">
+          <div>
+            <h3 className="text-2xl font-black text-slate-900 dark:text-white flex items-center gap-3">
+              <span className="w-1.5 h-8 bg-emerald-500 rounded-full"></span>
+              Newly Released
+            </h3>
+            <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mt-1">Latest academic resources added to the bank.</p>
+          </div>
+          <button 
+            onClick={() => onNavigate('library')} 
+            className="text-emerald-600 dark:text-emerald-400 font-black text-[10px] uppercase tracking-[0.2em] hover:underline"
+          >
+            Full Collection
+          </button>
+        </div>
+
         <div className="grid gap-4">
           {recentMaterials.length === 0 ? (
-            <div className="text-center py-20 text-gray-400 border border-dashed border-gray-200 rounded-[2rem]">
-              <span className="text-4xl block mb-4">✨</span>
-              <p className="font-bold">No new uploads today.</p>
-              <p className="text-xs">Stay tuned for Malawian academic excellence!</p>
+            <div className="text-center py-12 text-slate-400 font-black uppercase tracking-widest text-[10px]">
+              No recent uploads.
             </div>
           ) : (
             recentMaterials.map((m) => (
-              <div key={m.id} className="flex flex-col md:flex-row md:items-center justify-between p-6 bg-gray-50 rounded-3xl hover:bg-emerald-50 transition-all border border-transparent hover:border-emerald-100 group">
-                <div className="flex items-center space-x-5 mb-4 md:mb-0">
-                  <div className="p-3 bg-white rounded-2xl text-emerald-600 font-black border border-emerald-100 shadow-sm">PDF</div>
+              <div key={m.id} className="group bg-slate-50 dark:bg-slate-900/50 p-5 rounded-[2rem] border border-transparent hover:border-emerald-200 dark:hover:border-emerald-900/30 transition-all flex items-center justify-between">
+                <div className="flex items-center gap-5">
+                  <div className="w-10 h-10 bg-white dark:bg-slate-800 rounded-xl flex items-center justify-center text-[10px] font-black text-emerald-600 border border-slate-200 dark:border-slate-700">PDF</div>
                   <div>
-                    <h4 className="font-bold text-gray-800 group-hover:text-emerald-900">{m.title}</h4>
-                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">{m.level} • {m.grade} • {m.subject}</p>
+                    <h4 className="font-bold text-slate-800 dark:text-slate-100 group-hover:text-emerald-600 transition-colors">{m.title}</h4>
+                    <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest mt-1">{m.grade} • {m.subject}</p>
                   </div>
                 </div>
-                <div className="flex items-center space-x-3">
-                  <button 
-                    onClick={() => handleReadOnline(m)}
-                    className="flex-1 md:flex-none px-6 py-3 bg-emerald-600 text-white rounded-2xl text-sm font-black hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100"
-                  >
-                    Open
-                  </button>
-                  <button 
-                    onClick={() => handleDownload(m)}
-                    className="p-3 bg-white text-emerald-600 border border-emerald-100 rounded-2xl hover:bg-emerald-50 transition-all"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                  </button>
-                </div>
+                <button 
+                  onClick={() => handleReadOnline(m)}
+                  className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-100 dark:shadow-none transition-all"
+                >
+                  Open
+                </button>
               </div>
             ))
           )}

@@ -1,8 +1,9 @@
 
-import { StudyMaterial, Message, User, UserProgress, Testimonial, Announcement } from '../types';
+import { StudyMaterial, Message, User, UserProgress, Testimonial, Announcement, CommunityMessage, ChatRoom } from '../types';
 
 const MATERIALS_KEY = 'study_hub_materials';
 const MESSAGES_KEY = 'study_hub_messages';
+const COMMUNITY_MESSAGES_KEY = 'study_hub_community_messages';
 const USERS_KEY = 'study_hub_users';
 const PROGRESS_KEY = 'study_hub_progress';
 const TESTIMONIALS_KEY = 'study_hub_testimonials';
@@ -35,6 +36,30 @@ export const storage = {
     const messages = storage.getMessages();
     messages.push(msg);
     localStorage.setItem(MESSAGES_KEY, JSON.stringify(messages));
+  },
+
+  getCommunityMessages: (roomId: string): CommunityMessage[] => {
+    const data = localStorage.getItem(COMMUNITY_MESSAGES_KEY);
+    const all = data ? JSON.parse(data) : [];
+    return all.filter((m: CommunityMessage) => m.roomId === roomId);
+  },
+
+  saveCommunityMessage: (msg: CommunityMessage) => {
+    const data = localStorage.getItem(COMMUNITY_MESSAGES_KEY);
+    const all = data ? JSON.parse(data) : [];
+    all.push(msg);
+    localStorage.setItem(COMMUNITY_MESSAGES_KEY, JSON.stringify(all));
+  },
+
+  getChatRooms: (): ChatRoom[] => {
+    return [
+      { id: 'difficult-topics', title: 'Understanding difficult topics', description: 'Break down complex concepts with your peers.', icon: '🧠', activeUsers: 156 },
+      { id: 'homework-help', title: 'Homework Help', description: 'Stuck on a problem? Ask the community for a hand.', icon: '📚', activeUsers: 203 },
+      { id: 'exam-talk', title: 'Exam Talk/Question & Answer', description: 'Strategies, past paper discussions, and exam tips.', icon: '📝', activeUsers: 342 },
+      { id: 'wellbeing', title: 'Student Life & Wellbeing', description: 'Balance, mental health, and life as a student in Malawi.', icon: '🌱', activeUsers: 89 },
+      { id: 'careers', title: 'Careers & Life After School', description: 'Discuss university choices, jobs, and future paths.', icon: '🚀', activeUsers: 124 },
+      { id: 'general-chat', title: 'General chat', description: 'Casual conversation and connecting with other students.', icon: '💬', activeUsers: 412 }
+    ];
   },
 
   getUsers: (): User[] => {
@@ -147,8 +172,6 @@ export const storage = {
   syncWithServer: async (userId: string) => {
     await new Promise(resolve => setTimeout(resolve, 2000));
     const lastSync = localStorage.getItem(LAST_SYNC_KEY);
-    const progress = storage.getUserProgress(userId);
-    const user = storage.getUsers().find(u => u.id === userId);
     console.log(`[Sync] Reconciling data for user ${userId}...`);
     localStorage.setItem(LAST_SYNC_KEY, new Date().toISOString());
     return {
