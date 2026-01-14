@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Message } from '../types';
 import { storage } from '../services/storage';
@@ -7,7 +8,12 @@ interface SupportProps {
   onNavigate: (tab: string) => void;
 }
 
+type Language = 'English' | 'Chichewa';
+
 export const Support: React.FC<SupportProps> = ({ user, onNavigate }) => {
+  const [lang, setLang] = useState<Language>(() => {
+    return (localStorage.getItem('study_hub_chat_lang') as Language) || 'English';
+  });
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -23,6 +29,12 @@ export const Support: React.FC<SupportProps> = ({ user, onNavigate }) => {
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  const toggleLanguage = () => {
+    const newLang = lang === 'English' ? 'Chichewa' : 'English';
+    setLang(newLang);
+    localStorage.setItem('study_hub_chat_lang', newLang);
+  };
 
   const sendMessage = (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,20 +54,41 @@ export const Support: React.FC<SupportProps> = ({ user, onNavigate }) => {
     setInput('');
   };
 
+  const t = {
+    title: lang === 'English' ? 'Direct Support' : 'Thandizo Lachindunji',
+    sub: lang === 'English' ? 'Study Hub Admin Desk' : 'Ofesi ya Thandizo ya Study Hub',
+    exit: lang === 'English' ? 'Exit Chat' : 'Tulukani',
+    adminLabel: lang === 'English' ? 'Admin Desk' : 'Ofesi ya Thandizo',
+    consultant: lang === 'English' ? 'Consultant Online' : 'Wothandiza Alipo',
+    placeholder: lang === 'English' ? 'Describe your issue or ask a question...' : 'Fotokozani vuto lanu kapena funsani funso...',
+    greeting: lang === 'English' ? `Muli bwanji, ${user.name}!` : `Muli bwanji, ${user.name}!`,
+    intro: lang === 'English' ? 'How can we support your learning goals today?' : 'Kodi tingakuthandizeni bwanji pamaphunziro anu lero?',
+    startMsg: lang === 'English' ? 'Send a message to start.' : 'Tumizani uthenga kuti tiyambe.',
+  };
+
   return (
     <div className="max-w-4xl mx-auto flex flex-col h-[calc(100vh-16rem)] animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex justify-between items-center mb-6 px-2">
         <div>
-           <h2 className="text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">Direct Support</h2>
-           <p className="text-[10px] text-slate-500 dark:text-slate-400 font-black uppercase tracking-widest mt-0.5">Study Hub Admin Desk</p>
+           <h2 className="text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">{t.title}</h2>
+           <p className="text-[10px] text-slate-500 dark:text-slate-400 font-black uppercase tracking-widest mt-0.5">{t.sub}</p>
         </div>
-        <button 
-          onClick={() => onNavigate('home')}
-          className="p-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-2xl transition-all flex items-center gap-3 group border border-slate-200 dark:border-slate-700 shadow-sm"
-        >
-          <svg className="w-5 h-5 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
-          <span className="text-[10px] font-black uppercase tracking-widest pr-1">Exit Chat</span>
-        </button>
+        
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={toggleLanguage}
+            className="px-3 py-1 bg-white dark:bg-slate-800 rounded-xl text-[9px] font-black uppercase tracking-widest text-emerald-600 border border-emerald-200/50 transition-all hover:bg-emerald-50"
+          >
+            🌐 {lang}
+          </button>
+          <button 
+            onClick={() => onNavigate('home')}
+            className="p-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-2xl transition-all flex items-center gap-3 group border border-slate-200 dark:border-slate-700 shadow-sm"
+          >
+            <svg className="w-5 h-5 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+            <span className="text-[10px] font-black uppercase tracking-widest pr-1">{t.exit}</span>
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 flex flex-col bg-white dark:bg-slate-800 rounded-[3rem] shadow-2xl border border-slate-200/60 dark:border-slate-700 overflow-hidden">
@@ -63,13 +96,13 @@ export const Support: React.FC<SupportProps> = ({ user, onNavigate }) => {
           <div className="flex items-center gap-5">
             <div className="w-12 h-12 rounded-2xl bg-emerald-600 flex items-center justify-center text-2xl shadow-lg">🛡️</div>
             <div>
-              <h2 className="text-xl font-black tracking-tight leading-none">Admin Desk</h2>
+              <h2 className="text-xl font-black tracking-tight leading-none">{t.adminLabel}</h2>
               <p className="text-emerald-400 text-[10px] font-black uppercase tracking-widest mt-1.5">Malawian Academic Support</p>
             </div>
           </div>
           <div className="flex items-center space-x-3 bg-slate-800 dark:bg-slate-900 px-4 py-2 rounded-full border border-slate-700/50">
             <span className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(34,197,94,0.5)]"></span>
-            <span className="text-[10px] font-black uppercase tracking-widest text-emerald-100">Consultant Online</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-emerald-100">{t.consultant}</span>
           </div>
         </div>
 
@@ -78,8 +111,8 @@ export const Support: React.FC<SupportProps> = ({ user, onNavigate }) => {
             <div className="h-full flex flex-col items-center justify-center text-center space-y-6 py-12">
               <div className="text-7xl animate-bounce grayscale opacity-20">👋</div>
               <div className="max-w-xs space-y-3">
-                <h3 className="text-2xl font-black text-slate-800 dark:text-slate-100">Muli bwanji, {user.name}!</h3>
-                <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed font-medium">How can we support your learning goals today? Send a message to start.</p>
+                <h3 className="text-2xl font-black text-slate-800 dark:text-slate-100">{t.greeting}</h3>
+                <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed font-medium">{t.intro} {t.startMsg}</p>
               </div>
             </div>
           ) : (
@@ -112,7 +145,7 @@ export const Support: React.FC<SupportProps> = ({ user, onNavigate }) => {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Describe your issue or ask a question..."
+            placeholder={t.placeholder}
             className="flex-1 px-6 py-5 rounded-[1.5rem] border border-slate-200 dark:border-slate-700 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none bg-slate-50 dark:bg-slate-900 font-bold text-sm transition-all text-slate-900 dark:text-white"
           />
           <button 

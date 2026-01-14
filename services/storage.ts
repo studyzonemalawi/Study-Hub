@@ -8,7 +8,17 @@ const USERS_KEY = 'study_hub_users';
 const PROGRESS_KEY = 'study_hub_progress';
 const TESTIMONIALS_KEY = 'study_hub_testimonials';
 const ANNOUNCEMENTS_KEY = 'study_hub_announcements';
+const CHAT_ROOMS_KEY = 'study_hub_chat_rooms';
 const LAST_SYNC_KEY = 'study_hub_last_sync';
+
+const DEFAULT_ROOMS: ChatRoom[] = [
+  { id: 'difficult-topics', title: 'Understanding difficult topics', description: 'Break down complex concepts with your peers.', icon: '🧠', activeUsers: 156 },
+  { id: 'homework-help', title: 'Homework Help', description: 'Stuck on a problem? Ask the community for a hand.', icon: '📚', activeUsers: 203 },
+  { id: 'exam-talk', title: 'Exam Talk/Question & Answer', description: 'Strategies, past paper discussions, and exam tips.', icon: '📝', activeUsers: 342 },
+  { id: 'wellbeing', title: 'Student Life & Wellbeing', description: 'Balance, mental health, and life as a student in Malawi.', icon: '🌱', activeUsers: 89 },
+  { id: 'careers', title: 'Careers & Life After School', description: 'Discuss university choices, jobs, and future paths.', icon: '🚀', activeUsers: 124 },
+  { id: 'general-chat', title: 'General chat', description: 'Casual conversation and connecting with other students.', icon: '💬', activeUsers: 412 }
+];
 
 export const storage = {
   getMaterials: (): StudyMaterial[] => {
@@ -52,14 +62,18 @@ export const storage = {
   },
 
   getChatRooms: (): ChatRoom[] => {
-    return [
-      { id: 'difficult-topics', title: 'Understanding difficult topics', description: 'Break down complex concepts with your peers.', icon: '🧠', activeUsers: 156 },
-      { id: 'homework-help', title: 'Homework Help', description: 'Stuck on a problem? Ask the community for a hand.', icon: '📚', activeUsers: 203 },
-      { id: 'exam-talk', title: 'Exam Talk/Question & Answer', description: 'Strategies, past paper discussions, and exam tips.', icon: '📝', activeUsers: 342 },
-      { id: 'wellbeing', title: 'Student Life & Wellbeing', description: 'Balance, mental health, and life as a student in Malawi.', icon: '🌱', activeUsers: 89 },
-      { id: 'careers', title: 'Careers & Life After School', description: 'Discuss university choices, jobs, and future paths.', icon: '🚀', activeUsers: 124 },
-      { id: 'general-chat', title: 'General chat', description: 'Casual conversation and connecting with other students.', icon: '💬', activeUsers: 412 }
-    ];
+    const data = localStorage.getItem(CHAT_ROOMS_KEY);
+    if (!data) {
+      localStorage.setItem(CHAT_ROOMS_KEY, JSON.stringify(DEFAULT_ROOMS));
+      return DEFAULT_ROOMS;
+    }
+    return JSON.parse(data);
+  },
+
+  saveChatRoom: (room: ChatRoom) => {
+    const rooms = storage.getChatRooms();
+    rooms.push(room);
+    localStorage.setItem(CHAT_ROOMS_KEY, JSON.stringify(rooms));
   },
 
   getUsers: (): User[] => {

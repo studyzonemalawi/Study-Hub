@@ -7,7 +7,12 @@ interface CommunityProps {
   user: User;
 }
 
+type Language = 'English' | 'Chichewa';
+
 export const Community: React.FC<CommunityProps> = ({ user }) => {
+  const [lang, setLang] = useState<Language>(() => {
+    return (localStorage.getItem('study_hub_chat_lang') as Language) || 'English';
+  });
   const [activeTab, setActiveTab] = useState<'messenger' | 'testimonials'>('messenger');
   const [hasAgreedToRules, setHasAgreedToRules] = useState(() => {
     return localStorage.getItem(`study_hub_chat_rules_agreed_${user.id}`) === 'true';
@@ -29,6 +34,18 @@ export const Community: React.FC<CommunityProps> = ({ user }) => {
   const [isRoomDropdownOpen, setIsRoomDropdownOpen] = useState(false);
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   
+  // Create Room States
+  const [isCreateRoomModalOpen, setIsCreateRoomModalOpen] = useState(false);
+  const [newRoomTitle, setNewRoomTitle] = useState('');
+  const [newRoomDesc, setNewRoomDesc] = useState('');
+  const [newRoomIcon, setNewRoomIcon] = useState('🎓');
+
+  // Emoji selection groups for Room Creation
+  const roomEmojiGroups = {
+    Education: ['🎓', '📚', '📝', '📓', '🖍️', '🧠', '🏫', '🎒', '🧪', '🎨', '📏', '💡', '📖', '🖋️', '🔍', '📐', '🧪', '🧬', '🌍', '💻', '🎼', '🎭', '🏀', '⚽'],
+    Essential: ['🔥', '💯', '📌', '🚀', '💎', '🎯', '✅', '🔔', '⚡', '🤝', '🔋', '💪', '🇲🇼', '🦁', '☀️', '🌊', '🤝', '🛖', '🌽']
+  };
+
   // Simplified Image Editor States (Caption Only)
   const [isEditingImage, setIsEditingImage] = useState(false);
   const [imageCaptionText, setImageCaptionText] = useState('');
@@ -55,10 +72,47 @@ export const Community: React.FC<CommunityProps> = ({ user }) => {
     '🇲🇼', '🦁', '☀️', '🌍', '🤝', '🌽', '🚲', '🏠', '🛶', '🐘', '🦒', '🦅', '🌊', '🌄', '🌃', '⛈️', '🔋', '💪'
   ];
 
+  // UI Strings Translation
+  const t = {
+    messenger: lang === 'English' ? 'Chat Rooms' : 'Macheza',
+    stories: lang === 'English' ? 'Share my Testimony' : 'Umboni wanga',
+    hubTitle: lang === 'English' ? 'Community Hub' : 'Bwalo la Ophunzira',
+    hubSub: lang === 'English' ? 'Together, Malawian learners excel.' : 'Pamodzi, ophunzira a m’Malawi apambana.',
+    rulesTitle: lang === 'English' ? 'Welcome to Study Hub Community' : 'Takulandirani ku Gulu la Study Hub',
+    rulesSub: lang === 'English' ? 'By entering, you agree to remain respectful, help your peers, and protect your personal information.' : 'Mukalowa, mukuvomera kulemekezana, kuthandiza anzanu, komanso kusunga zinsinsi zanu.',
+    agreeBtn: lang === 'English' ? 'I Agree & Join' : 'Ndikuvomereza & Lowani',
+    liveSupport: lang === 'English' ? 'Live Community' : 'Gulu Lamoyo',
+    createNewRoom: lang === 'English' ? 'Create New Room' : 'Pangani Chipinda Chatsopano',
+    createRoomTitle: lang === 'English' ? 'Create Room' : 'Pangani Chipinda',
+    createRoomSub: lang === 'English' ? 'Start a new study thread' : 'Yambani nkhani yatsopano yophunzirira',
+    chooseIcon: lang === 'English' ? 'Choose an Icon' : 'Sankhani Chizindikiro',
+    roomTitle: lang === 'English' ? 'Room Title' : 'Dzina la Chipinda',
+    roomDesc: lang === 'English' ? 'Description (Optional)' : 'Kufotokozera (Ngati kulipo)',
+    launchBtn: lang === 'English' ? 'Launch Study Room' : 'Yambitsani Chipinda Chophunzirira',
+    placeholder: lang === 'English' ? 'Message in...' : 'Lembani uthenga mu...',
+    send: lang === 'English' ? 'Send' : 'Tumizani',
+    capturing: lang === 'English' ? 'Capturing Audio...' : 'Tikujambula mawu...',
+    cancel: lang === 'English' ? 'Cancel' : 'Letsani',
+    finish: lang === 'English' ? 'Finish' : 'Malizani',
+    discard: lang === 'English' ? 'Discard' : 'Tayani',
+    captionTitle: lang === 'English' ? 'Caption Photo' : 'Lembani pa Chithunzi',
+    captionSub: lang === 'English' ? 'Final touch before sending' : 'Malizitsani musanatumize',
+    textContent: lang === 'English' ? 'Text Content' : 'Zolemba',
+    position: lang === 'English' ? 'Position' : 'Malo',
+    color: lang === 'English' ? 'Color' : 'Mtundu',
+    sendToChat: lang === 'English' ? 'Send to Chat' : 'Tumizani ku Kukambirana',
+    shareStory: lang === 'English' ? 'Share My Story' : 'Uzani Ena Nkhani Yanga',
+    postStory: lang === 'English' ? 'Post Story' : 'Tumizani Nkhani',
+    communityStories: lang === 'English' ? 'Community Testimonies' : 'Umboni wa Ophunzira',
+    storyPrompt: lang === 'English' ? 'How has Study Hub helped your education?' : 'Kodi Study Hub yakuthandizani bwanji pamaphunziro anu?',
+    active: lang === 'English' ? 'Active' : 'Amoyo',
+  };
+
   useEffect(() => {
+    const storedRooms = storage.getChatRooms();
     setTestimonials(storage.getTestimonials());
-    setRooms(storage.getChatRooms());
-    const defaultRoom = storage.getChatRooms()[0];
+    setRooms(storedRooms);
+    const defaultRoom = storedRooms[0];
     if (defaultRoom) setActiveRoomId(defaultRoom.id);
 
     const handleClickOutside = (event: MouseEvent) => {
@@ -86,6 +140,12 @@ export const Community: React.FC<CommunityProps> = ({ user }) => {
   useEffect(() => {
     chatScrollRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, activeTab]);
+
+  const toggleLanguage = () => {
+    const newLang = lang === 'English' ? 'Chichewa' : 'English';
+    setLang(newLang);
+    localStorage.setItem('study_hub_chat_lang', newLang);
+  };
 
   // Image Editor Canvas Redraw
   useEffect(() => {
@@ -245,15 +305,114 @@ export const Community: React.FC<CommunityProps> = ({ user }) => {
     document.body.removeChild(link);
   };
 
+  const handleCreateRoom = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newRoomTitle.trim()) return;
+
+    const newRoom: ChatRoom = {
+      id: `room-${Math.random().toString(36).substr(2, 9)}`,
+      title: newRoomTitle,
+      description: newRoomDesc,
+      icon: newRoomIcon || '💬',
+      activeUsers: 1
+    };
+
+    storage.saveChatRoom(newRoom);
+    setRooms(storage.getChatRooms());
+    setActiveRoomId(newRoom.id);
+    setIsCreateRoomModalOpen(false);
+    setNewRoomTitle('');
+    setNewRoomDesc('');
+    setNewRoomIcon('🎓');
+  };
+
   const activeRoom = rooms.find(r => r.id === activeRoomId);
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500 pb-20 px-4 md:px-0">
-      {/* Refined Image Caption Editor Modal */}
+      {/* Enhanced Create Room Modal */}
+      {isCreateRoomModalOpen && (
+        <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in duration-300 flex flex-col max-h-[90vh]">
+            <div className="bg-emerald-800 p-8 text-white flex justify-between items-center flex-none">
+              <div>
+                <h3 className="text-2xl font-black">{t.createRoomTitle}</h3>
+                <p className="text-[10px] uppercase font-bold text-emerald-300 tracking-widest mt-1">{t.createRoomSub}</p>
+              </div>
+              <button onClick={() => setIsCreateRoomModalOpen(false)} className="text-white/60 hover:text-white transition-colors">
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            
+            <form onSubmit={handleCreateRoom} className="p-8 space-y-8 overflow-y-auto custom-scrollbar flex-1">
+              <div className="flex flex-col items-center">
+                 <div className="w-24 h-24 rounded-3xl bg-emerald-50 dark:bg-emerald-950/30 border-2 border-emerald-100 dark:border-emerald-800 flex items-center justify-center text-5xl shadow-inner mb-6">
+                    {newRoomIcon}
+                 </div>
+                 
+                 <div className="w-full space-y-6">
+                    <div>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 block px-1">{t.chooseIcon}</label>
+                      <div className="space-y-4">
+                         {Object.entries(roomEmojiGroups).map(([group, emojis]) => (
+                           <div key={group} className="space-y-2">
+                             <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest px-1">{group}</p>
+                             <div className="flex flex-wrap gap-2">
+                                {emojis.map(e => (
+                                  <button 
+                                    key={e} 
+                                    type="button" 
+                                    onClick={() => setNewRoomIcon(e)}
+                                    className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl transition-all ${newRoomIcon === e ? 'bg-emerald-600 text-white scale-110 shadow-lg' : 'bg-slate-50 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-900/50'}`}
+                                  >
+                                    {e}
+                                  </button>
+                                ))}
+                             </div>
+                           </div>
+                         ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{t.roomTitle}</label>
+                      <input 
+                        type="text" 
+                        required
+                        value={newRoomTitle}
+                        onChange={(e) => setNewRoomTitle(e.target.value)}
+                        className="w-full p-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 font-bold outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+                        placeholder={lang === 'English' ? "e.g. Standard 8 Math Squad" : "Mwachitsanzo: Gulu la Masamu"}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{t.roomDesc}</label>
+                      <textarea 
+                        value={newRoomDesc}
+                        onChange={(e) => setNewRoomDesc(e.target.value)}
+                        className="w-full p-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 font-medium h-24 resize-none outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+                        placeholder={lang === 'English' ? "What will students discuss here?" : "Kodi ophunzira akambirana chiyani muno?"}
+                      />
+                    </div>
+                 </div>
+              </div>
+
+              <button 
+                type="submit"
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-5 rounded-2xl shadow-xl transition-all uppercase tracking-widest text-xs active:scale-95 shadow-emerald-100 dark:shadow-none"
+              >
+                {t.launchBtn}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Image Caption Editor Modal */}
       {isEditingImage && selectedImage && (
         <div className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 w-full max-w-5xl rounded-[3rem] overflow-hidden shadow-2xl flex flex-col md:flex-row h-full max-h-[90vh]">
-            {/* Editor Canvas Area */}
             <div className="flex-1 bg-slate-950 flex items-center justify-center p-4 relative overflow-hidden">
                <canvas ref={editCanvasRef} className="max-w-full max-h-full rounded shadow-2xl" />
                <button 
@@ -264,27 +423,26 @@ export const Community: React.FC<CommunityProps> = ({ user }) => {
                </button>
             </div>
 
-            {/* Sidebar Controls */}
             <div className="w-full md:w-80 p-8 flex flex-col gap-6 border-l border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-y-auto">
               <div>
-                <h3 className="text-xl font-black text-slate-900 dark:text-white">Caption Photo</h3>
-                <p className="text-[10px] font-black uppercase text-emerald-600 tracking-widest mt-1">Final touch before sending</p>
+                <h3 className="text-xl font-black text-slate-900 dark:text-white">{t.captionTitle}</h3>
+                <p className="text-[10px] font-black uppercase text-emerald-600 tracking-widest mt-1">{t.captionSub}</p>
               </div>
 
               <div className="space-y-6">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Text Content</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.textContent}</label>
                   <input 
                     type="text" 
                     value={imageCaptionText}
                     onChange={(e) => setImageCaptionText(e.target.value)}
-                    placeholder="Describe this picture..."
+                    placeholder={lang === 'English' ? "Describe this picture..." : "Fotokozani chithunzi ichi..."}
                     className="w-full px-4 py-3 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 focus:ring-2 focus:ring-emerald-500 outline-none font-bold text-sm text-slate-900 dark:text-white transition-all"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Position</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.position}</label>
                   <div className="flex gap-2">
                     {(['top', 'middle', 'bottom'] as const).map(pos => (
                       <button 
@@ -292,14 +450,14 @@ export const Community: React.FC<CommunityProps> = ({ user }) => {
                         onClick={() => setCaptionPosition(pos)}
                         className={`flex-1 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all border ${captionPosition === pos ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-slate-50 dark:bg-slate-950 text-slate-400 border-slate-100 dark:border-slate-800'}`}
                       >
-                        {pos}
+                        {pos === 'top' ? (lang === 'English' ? 'Top' : 'Pamwamba') : pos === 'middle' ? (lang === 'English' ? 'Middle' : 'Pakati') : (lang === 'English' ? 'Bottom' : 'Pansi')}
                       </button>
                     ))}
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Color</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.color}</label>
                   <div className="flex gap-2 flex-wrap">
                     {['#ffffff', '#ff4444', '#10b981', '#3b82f6', '#f59e0b', '#000000'].map(c => (
                       <button 
@@ -318,13 +476,13 @@ export const Community: React.FC<CommunityProps> = ({ user }) => {
                   onClick={() => handleSendChatMessage()}
                   className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-4 rounded-2xl shadow-xl transition-all uppercase tracking-widest text-xs active:scale-95"
                  >
-                   Send to Chat
+                   {t.sendToChat}
                  </button>
                  <button 
                   onClick={() => { setSelectedImage(null); setIsEditingImage(false); }}
                   className="w-full py-4 text-slate-400 hover:text-slate-600 font-black uppercase tracking-widest text-xs transition-all"
                  >
-                   Cancel
+                   {t.cancel}
                  </button>
               </div>
             </div>
@@ -349,23 +507,32 @@ export const Community: React.FC<CommunityProps> = ({ user }) => {
 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h2 className="text-3xl font-black text-slate-900 dark:text-slate-100 tracking-tight">Community Hub</h2>
-          <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium italic">Together, Malawian learners excel.</p>
+          <h2 className="text-3xl font-black text-slate-900 dark:text-slate-100 tracking-tight">{t.hubTitle}</h2>
+          <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium italic">{t.hubSub}</p>
         </div>
         
-        <div className="flex p-1.5 bg-slate-200/50 dark:bg-slate-800 rounded-[2rem] border border-slate-200 dark:border-slate-700 w-fit self-center">
+        <div className="flex items-center gap-4 flex-wrap justify-center">
           <button 
-            onClick={() => setActiveTab('messenger')}
-            className={`px-8 py-3 rounded-[1.5rem] text-[10px] uppercase font-black tracking-widest transition-all flex items-center gap-2 ${activeTab === 'messenger' ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-xl' : 'text-slate-500'}`}
+            onClick={toggleLanguage}
+            className="px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl text-[10px] font-black uppercase tracking-widest text-emerald-600 border border-emerald-200/50 flex items-center gap-2 hover:bg-emerald-50 transition-all"
           >
-            💬 Messenger
+            🌐 {lang}
           </button>
-          <button 
-            onClick={() => setActiveTab('testimonials')}
-            className={`px-8 py-3 rounded-[1.5rem] text-[10px] uppercase font-black tracking-widest transition-all flex items-center gap-2 ${activeTab === 'testimonials' ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-xl' : 'text-slate-500'}`}
-          >
-            📖 Stories
-          </button>
+
+          <div className="flex p-1.5 bg-slate-200/50 dark:bg-slate-800 rounded-[2rem] border border-slate-200 dark:border-slate-700 w-fit">
+            <button 
+              onClick={() => setActiveTab('messenger')}
+              className={`px-8 py-3 rounded-[1.5rem] text-[10px] uppercase font-black tracking-widest transition-all flex items-center gap-2 ${activeTab === 'messenger' ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-xl' : 'text-slate-500'}`}
+            >
+              💬 {t.messenger}
+            </button>
+            <button 
+              onClick={() => setActiveTab('testimonials')}
+              className={`px-8 py-3 rounded-[1.5rem] text-[10px] uppercase font-black tracking-widest transition-all flex items-center gap-2 ${activeTab === 'testimonials' ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-xl' : 'text-slate-500'}`}
+            >
+              📖 {t.stories}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -374,9 +541,9 @@ export const Community: React.FC<CommunityProps> = ({ user }) => {
           {!hasAgreedToRules ? (
             <div className="bg-white dark:bg-slate-800 rounded-[3rem] p-10 md:p-16 border border-slate-200 dark:border-slate-700 shadow-2xl flex flex-col items-center text-center max-w-3xl mx-auto animate-in zoom-in duration-300">
                <div className="w-20 h-20 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center text-4xl mb-8">⚖️</div>
-               <h3 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white mb-6">Welcome to Study Hub Community</h3>
-               <p className="text-slate-500 dark:text-slate-400 mb-10 leading-relaxed max-w-md">By entering, you agree to remain respectful, help your peers, and protect your personal information.</p>
-               <button onClick={() => { localStorage.setItem(`study_hub_chat_rules_agreed_${user.id}`, 'true'); setHasAgreedToRules(true); }} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-5 rounded-2xl shadow-xl transition-all uppercase tracking-widest text-sm active:scale-[0.98]">I Agree & Join</button>
+               <h3 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white mb-6">{t.rulesTitle}</h3>
+               <p className="text-slate-500 dark:text-slate-400 mb-10 leading-relaxed max-w-md">{t.rulesSub}</p>
+               <button onClick={() => { localStorage.setItem(`study_hub_chat_rules_agreed_${user.id}`, 'true'); setHasAgreedToRules(true); }} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-5 rounded-2xl shadow-xl transition-all uppercase tracking-widest text-sm active:scale-[0.98]">{t.agreeBtn}</button>
             </div>
           ) : (
             <div className="flex flex-col bg-white dark:bg-slate-800 rounded-[3rem] border border-slate-200/60 dark:border-slate-700 overflow-hidden shadow-2xl h-[calc(100vh-20rem)] min-h-[450px]">
@@ -393,22 +560,33 @@ export const Community: React.FC<CommunityProps> = ({ user }) => {
                           </button>
                           {isRoomDropdownOpen && (
                             <div className="absolute top-full left-0 mt-4 w-72 md:w-80 bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-800 z-[100] p-3 animate-in slide-in-from-top-2">
-                              {rooms.map(room => (
-                                <button key={room.id} onClick={() => { setActiveRoomId(room.id); setIsRoomDropdownOpen(false); }} className={`w-full p-4 rounded-2xl text-left transition-all flex items-center gap-4 ${activeRoomId === room.id ? 'bg-emerald-600 text-white' : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200'}`}>
-                                  <span className="text-xl">{room.icon}</span>
-                                  <div>
-                                    <p className="font-black text-sm">{room.title}</p>
-                                    <p className={`text-[9px] font-bold uppercase tracking-widest ${activeRoomId === room.id ? 'text-emerald-100' : 'text-slate-400'}`}>{room.activeUsers} Students</p>
-                                  </div>
+                              <div className="max-h-64 overflow-y-auto custom-scrollbar">
+                                {rooms.map(room => (
+                                  <button key={room.id} onClick={() => { setActiveRoomId(room.id); setIsRoomDropdownOpen(false); }} className={`w-full p-4 rounded-2xl text-left transition-all flex items-center gap-4 ${activeRoomId === room.id ? 'bg-emerald-600 text-white' : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200'}`}>
+                                    <span className="text-xl">{room.icon}</span>
+                                    <div className="min-w-0 flex-1">
+                                      <p className="font-black text-sm truncate">{room.title}</p>
+                                      <p className={`text-[9px] font-bold uppercase tracking-widest ${activeRoomId === room.id ? 'text-emerald-100' : 'text-slate-400'}`}>{room.activeUsers} {t.active}</p>
+                                    </div>
+                                  </button>
+                                ))}
+                              </div>
+                              <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                                <button 
+                                  onClick={() => { setIsCreateRoomModalOpen(true); setIsRoomDropdownOpen(false); }}
+                                  className="w-full p-4 rounded-2xl flex items-center gap-4 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-all group"
+                                >
+                                  <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center text-xl transition-transform group-hover:rotate-90">＋</div>
+                                  <span className="font-black text-[10px] uppercase tracking-widest">{t.createNewRoom}</span>
                                 </button>
-                              ))}
+                              </div>
                             </div>
                           )}
                        </div>
                     </div>
                     <div className="hidden sm:flex items-center gap-3 bg-white/5 px-4 py-2 rounded-full border border-white/5">
                       <span className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></span>
-                      <span className="text-[10px] font-black uppercase tracking-widest text-emerald-100">Live Support Active</span>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-emerald-100">{t.liveSupport}</span>
                     </div>
                  </div>
 
@@ -456,11 +634,11 @@ export const Community: React.FC<CommunityProps> = ({ user }) => {
                         <div className="flex items-center gap-6">
                            <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.8)]"></div>
                            <span className="text-xl font-black tabular-nums">{formatTime(recordingTime)}</span>
-                           <span className="hidden md:inline text-[10px] font-black uppercase tracking-widest opacity-80">Capturing Audio...</span>
+                           <span className="hidden md:inline text-[10px] font-black uppercase tracking-widest opacity-80">{t.capturing}</span>
                         </div>
                         <div className="flex gap-4">
-                           <button onClick={cancelRecording} className="px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/20 transition-all font-black uppercase text-[10px] tracking-widest">Cancel</button>
-                           <button onClick={stopRecording} className="px-6 md:px-10 py-3 md:py-4 rounded-2xl bg-white text-emerald-600 font-black uppercase text-[10px] tracking-widest shadow-2xl active:scale-95">Finish</button>
+                           <button onClick={cancelRecording} className="px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/20 transition-all font-black uppercase text-[10px] tracking-widest">{t.cancel}</button>
+                           <button onClick={stopRecording} className="px-6 md:px-10 py-3 md:py-4 rounded-2xl bg-white text-emerald-600 font-black uppercase text-[10px] tracking-widest shadow-2xl active:scale-95">{t.finish}</button>
                         </div>
                       </div>
                     )}
@@ -473,8 +651,8 @@ export const Community: React.FC<CommunityProps> = ({ user }) => {
                             <audio controls src={recordedAudio} className="h-10 w-full max-w-xs md:max-w-md filter invert" />
                          </div>
                          <div className="flex gap-4 ml-4">
-                            <button onClick={() => setRecordedAudio(null)} className="px-4 py-3 rounded-2xl bg-white/5 hover:bg-white/10 text-white font-black uppercase text-[10px] tracking-widest">Discard</button>
-                            <button onClick={() => handleSendChatMessage()} className="px-6 md:px-10 py-3 md:py-4 rounded-2xl bg-emerald-600 text-white font-black uppercase text-[10px] tracking-widest shadow-2xl active:scale-95">Send</button>
+                            <button onClick={() => setRecordedAudio(null)} className="px-4 py-3 rounded-2xl bg-white/5 hover:bg-white/10 text-white font-black uppercase text-[10px] tracking-widest">{t.discard}</button>
+                            <button onClick={() => handleSendChatMessage()} className="px-6 md:px-10 py-3 md:py-4 rounded-2xl bg-emerald-600 text-white font-black uppercase text-[10px] tracking-widest shadow-2xl active:scale-95">{t.send}</button>
                          </div>
                       </div>
                     )}
@@ -492,7 +670,6 @@ export const Community: React.FC<CommunityProps> = ({ user }) => {
 
                     {/* Refined Form with Vertical Button Column */}
                     <form onSubmit={handleSendChatMessage} className="p-4 md:p-6 bg-white dark:bg-slate-800 border-t border-slate-100 dark:border-slate-700 flex items-end gap-3 md:gap-5">
-                      {/* Integrated Action Column */}
                       <div className="flex flex-col items-center gap-2 mb-1">
                         {activeRoomId === 'general-chat' && (
                           <button type="button" onClick={() => setIsEmojiPickerOpen(!isEmojiPickerOpen)} className={`p-3 rounded-full transition-all ${isEmojiPickerOpen ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-50 dark:bg-slate-900 text-slate-400 hover:text-emerald-500'}`} title="Emoji">
@@ -508,13 +685,12 @@ export const Community: React.FC<CommunityProps> = ({ user }) => {
                         </button>
                       </div>
 
-                      {/* Input and Send Button */}
                       <div className="flex-1 flex flex-col md:flex-row items-center gap-3">
                         <textarea 
                           rows={1}
                           value={chatInput} 
                           onChange={(e) => { setChatInput(e.target.value); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }} 
-                          placeholder={`Message in ${activeRoom?.title}...`} 
+                          placeholder={`${t.placeholder} ${activeRoom?.title}...`} 
                           className="w-full px-6 py-4 rounded-[1.8rem] border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 font-bold text-sm transition-all focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none text-slate-900 dark:text-white resize-none max-h-32" 
                         />
                         <button 
@@ -522,7 +698,7 @@ export const Community: React.FC<CommunityProps> = ({ user }) => {
                           disabled={!chatInput.trim() && !selectedImage && !recordedAudio} 
                           className="w-full md:w-auto bg-emerald-600 text-white px-8 py-4 md:py-4 rounded-[1.8rem] shadow-xl active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3 transition-all hover:bg-emerald-700"
                         >
-                          <span className="md:hidden font-black uppercase text-xs tracking-widest">Send</span>
+                          <span className="md:hidden font-black uppercase text-xs tracking-widest">{t.send}</span>
                           <svg className="w-5 h-5 transform rotate-90" fill="currentColor" viewBox="0 0 20 20"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"></path></svg>
                         </button>
                       </div>
@@ -534,16 +710,16 @@ export const Community: React.FC<CommunityProps> = ({ user }) => {
       ) : (
         <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="flex justify-between items-center px-2">
-            <h3 className="text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">Community Stories</h3>
-            {!showForm && <button onClick={() => setShowForm(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white font-black px-8 py-4 rounded-2xl shadow-xl transition-all active:scale-95 text-xs uppercase tracking-widest">Share My Story</button>}
+            <h3 className="text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">{t.communityStories}</h3>
+            {!showForm && <button onClick={() => setShowForm(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white font-black px-8 py-4 rounded-2xl shadow-xl transition-all active:scale-95 text-xs uppercase tracking-widest">{t.shareStory}</button>}
           </div>
           {showForm && (
              <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] p-8 border border-slate-100 dark:border-slate-700 shadow-2xl animate-in zoom-in duration-300">
                <form onSubmit={(e) => { e.preventDefault(); if(newContent.trim()) { storage.saveTestimonial({ id: Math.random().toString(36).substr(2, 9), userId: user.id, userName: user.name, userProfilePic: 'initials', userRole: user.accountRole || 'Member', content: newContent, rating: 5, timestamp: new Date().toISOString() }); setTestimonials(storage.getTestimonials()); setNewContent(''); setShowForm(false); } }} className="space-y-6">
-                 <textarea value={newContent} onChange={(e) => setNewContent(e.target.value)} required placeholder="How has Study Hub helped your education?" className="w-full p-6 rounded-3xl border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:ring-2 focus:ring-emerald-500 outline-none h-40 font-medium transition-all" />
+                 <textarea value={newContent} onChange={(e) => setNewContent(e.target.value)} required placeholder={t.storyPrompt} className="w-full p-6 rounded-3xl border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:ring-2 focus:ring-emerald-500 outline-none h-40 font-medium transition-all" />
                  <div className="flex gap-4">
-                   <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-4 text-slate-400 font-black uppercase tracking-widest text-xs">Cancel</button>
-                   <button type="submit" className="flex-[2] bg-emerald-600 text-white font-black py-4 rounded-2xl shadow-xl uppercase tracking-widest text-xs">Post Story</button>
+                   <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-4 text-slate-400 font-black uppercase tracking-widest text-xs">{t.cancel}</button>
+                   <button type="submit" className="flex-[2] bg-emerald-600 text-white font-black py-4 rounded-2xl shadow-xl uppercase tracking-widest text-xs">{t.postStory}</button>
                  </div>
                </form>
              </div>
