@@ -55,7 +55,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
     return {
       id: sbUser.id,
       email: userEmail,
-      authProvider: sbUser.app_metadata?.provider === 'facebook' ? 'facebook' : 'email',
+      authProvider: 'email',
       appRole: userEmail === ADMIN_EMAIL ? 'admin' : 'user',
       name: sbUser.user_metadata?.full_name || '',
       dateJoined: new Date().toISOString(),
@@ -66,32 +66,6 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
       isPublic: false,
       termsAccepted: true
     };
-  };
-
-  const handleFacebookLogin = async () => {
-    setIsLoading(true);
-    setError('');
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'facebook',
-        options: {
-          redirectTo: window.location.origin,
-          scopes: 'email'
-        }
-      });
-      
-      if (error) {
-        // Specifically detect if provider is not enabled in Supabase dashboard
-        if (error.message.includes("provider is not enabled") || (error as any).status === 400) {
-          throw new Error("Facebook Login is not yet enabled in your Supabase Dashboard. Go to Authentication > Providers > Facebook and enter your Meta App ID and Secret.");
-        }
-        throw error;
-      }
-    } catch (err: any) {
-      console.error("Facebook Auth Error:", err);
-      setError(err.message || 'Failed to connect to Facebook. Please check your Supabase configuration.');
-      setIsLoading(false);
-    }
   };
 
   const handleResetPassword = async (e: React.FormEvent) => {
@@ -231,8 +205,8 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
               <span className="text-3xl font-black text-emerald-600">SH</span>
             </div>
           </div>
-          <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-none">Welcome</h1>
-          <p className="text-slate-500 dark:text-slate-400 font-medium">Gateway to Malawian Excellence</p>
+          <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-none">Study Hub</h1>
+          <p className="text-slate-500 dark:text-slate-400 font-medium italic">Malawi Academic Repository</p>
         </div>
 
         {error && (
@@ -363,36 +337,15 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
           </button>
         </form>
 
-        {!isResettingPassword && (
-          <div className="space-y-6">
-            <div className="flex items-center gap-4">
-              <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800"></div>
-              <span className="text-[9px] font-black uppercase text-slate-300 dark:text-slate-600 tracking-[0.3em]">OR</span>
-              <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800"></div>
-            </div>
-
-            <button
-              onClick={handleFacebookLogin}
-              type="button"
-              className="w-full flex items-center justify-center gap-3 bg-[#1877F2] hover:bg-[#166fe5] text-white font-black py-4 rounded-2xl transition-all shadow-lg group active:scale-[0.98]"
-            >
-              <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
-                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-              </svg>
-              <span className="text-[10px] uppercase tracking-widest">Login with Facebook</span>
-            </button>
-
-            <div className="text-center">
-              <button
-                onClick={toggleMode}
-                type="button"
-                className="text-emerald-700 dark:text-emerald-400 font-black text-[10px] uppercase tracking-[0.15em] hover:underline"
-              >
-                {isRegistering ? 'Already a member? Login' : 'New here? Join the hub'}
-              </button>
-            </div>
-          </div>
-        )}
+        <div className="text-center pt-4">
+          <button
+            onClick={toggleMode}
+            type="button"
+            className="text-emerald-700 dark:text-emerald-400 font-black text-[10px] uppercase tracking-[0.15em] hover:underline"
+          >
+            {isRegistering ? 'Already a member? Login' : 'New here? Join the hub'}
+          </button>
+        </div>
 
         <div className="pt-6 border-t border-slate-50 dark:border-slate-800 text-center">
           <p className="text-[9px] text-slate-300 dark:text-slate-600 font-black uppercase tracking-[0.3em]">United for Malawian Education</p>

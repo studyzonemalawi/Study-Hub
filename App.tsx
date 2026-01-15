@@ -71,7 +71,6 @@ const App: React.FC = () => {
       if (session?.user) {
         const sbUser = session.user;
         const email = sbUser.email || '';
-        const provider = sbUser.app_metadata?.provider || 'email';
 
         const existingUsers = storage.getUsers();
         let appUser = existingUsers.find(u => u.id === sbUser.id || (u.email === email));
@@ -80,7 +79,7 @@ const App: React.FC = () => {
           appUser = {
             id: sbUser.id,
             email: email,
-            authProvider: (provider === 'facebook' ? 'facebook' : 'email') as 'email' | 'facebook',
+            authProvider: 'email',
             appRole: (email === ADMIN_EMAIL) ? 'admin' : 'user',
             name: sbUser.user_metadata?.full_name || '',
             dateJoined: new Date().toISOString(),

@@ -99,7 +99,7 @@ export interface User {
   id: string;
   email: string;
   password?: string;
-  authProvider: 'email' | 'facebook';
+  authProvider: 'email';
   appRole: 'user' | 'admin';
   name: string;
   age?: number;
