@@ -36,21 +36,12 @@ export const aiService = {
     const ai = getAI();
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: `You are an expert Malawian educator. You are reviewing a specific textbook: "${title}" for ${grade} ${subject}.
-      
-      Here is a snippet of text from the first few pages of the document:
-      """
-      ${docContext}
-      """
-      
-      Based on this context and your knowledge of the Malawian curriculum, identify the main chapters/topics covered in this book.
-      Generate a comprehensive study quiz divided into chapters. 
-      For EACH chapter found:
-      - Create 3 multiple choice questions (MCQs).
-      - Create at least 3 challenging comprehension questions that require deep understanding.
-      
-      Ensure the questions are specific to the content of this document.`,
+      contents: `You are an expert Malawian educator. Review textbook: "${title}" for ${grade} ${subject}.
+      Context: ${docContext}
+      Generate a study quiz divided into chapters. 
+      Each chapter needs: 3 MCQs and 3 comprehension questions.`,
       config: {
+        thinkingConfig: { thinkingBudget: 0 },
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -67,15 +58,11 @@ export const aiService = {
                       type: Type.OBJECT,
                       properties: {
                         id: { type: Type.STRING },
-                        type: { type: Type.STRING, description: "Must be 'mcq' or 'comprehension'" },
+                        type: { type: Type.STRING },
                         question: { type: Type.STRING },
-                        options: { 
-                          type: Type.ARRAY, 
-                          items: { type: Type.STRING },
-                          description: "Only for MCQ. Provide exactly 4 options."
-                        },
-                        correctAnswer: { type: Type.STRING, description: "For MCQ, the full text of correct option. For comprehension, a concise model answer." },
-                        explanation: { type: Type.STRING, description: "Specific context from the book explaining why this is correct." }
+                        options: { type: Type.ARRAY, items: { type: Type.STRING } },
+                        correctAnswer: { type: Type.STRING },
+                        explanation: { type: Type.STRING }
                       },
                       required: ["id", "type", "question", "correctAnswer", "explanation"]
                     }
@@ -91,42 +78,49 @@ export const aiService = {
     });
 
     try {
-      const text = response.text;
-      const data = JSON.parse(text || '{"chapters": []}');
+      const data = JSON.parse(response.text || '{"chapters": []}');
       return data.chapters;
     } catch (e) {
-      console.error("Failed to parse AI response", e);
+      console.error("AI parse failed", e);
       return [];
     }
   },
 
   generateExam: async (level: string, grade: string, subject: string, context: string): Promise<ExamQuestion[]> => {
     const ai = getAI();
+    // Optimization: Precise instructions and strict constraints for 10-15 questions.
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: `You are a curriculum expert for Malawi National Examinations Board. 
-      Formulate an online examination for ${level} students in ${grade} for the subject ${subject}.
-      Base the exam on the following information:
+      contents: `ACT AS: Senior Curriculum Examiner for the Malawi National Examinations Board (MANEB).
+      TASK: Formulate a ${subject} examination for ${level} students in ${grade}.
+      SOURCE CONTENT:
       """
       ${context}
       """
-      Generate between 10 and 15 high-quality Multiple Choice Questions. 
-      Ensure they cover both basic recall and critical thinking application.`,
+      CONSTRAINTS:
+      1. EXACTLY 12-15 high-quality Multiple Choice Questions.
+      2. Content must be factually accurate based ONLY on provided context.
+      3. Questions must range from simple recall to complex reasoning.
+      4. Distractors must be plausible but clearly incorrect.
+      5. Provide a "Focused Tip" for each question explaining the concept clearly.`,
       config: {
+        thinkingConfig: { thinkingBudget: 0 },
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
           properties: {
             questions: {
               type: Type.ARRAY,
+              minItems: 10,
+              maxItems: 15,
               items: {
                 type: Type.OBJECT,
                 properties: {
                   id: { type: Type.STRING },
                   question: { type: Type.STRING },
-                  options: { type: Type.ARRAY, items: { type: Type.STRING } },
+                  options: { type: Type.ARRAY, items: { type: Type.STRING }, minItems: 4, maxItems: 4 },
                   correctAnswer: { type: Type.STRING },
-                  explanation: { type: Type.STRING, description: "A focused study tip related to this question." }
+                  explanation: { type: Type.STRING, description: "Focused educational tip for this question." }
                 },
                 required: ["id", "question", "options", "correctAnswer", "explanation"]
               }
@@ -141,23 +135,25 @@ export const aiService = {
       const data = JSON.parse(response.text || '{"questions": []}');
       return data.questions;
     } catch (e) {
-      console.error("Exam generation failed", e);
-      return [];
+      console.error("Exam generation error", e);
+      throw new Error("Could not process exam content. Please ensure the text is clear.");
     }
   },
 
   evaluateExam: async (questions: ExamQuestion[], userAnswers: Record<string, string>): Promise<any> => {
     const ai = getAI();
+    // Optimization: Batch evaluation logic to reduce latency and improve consistency.
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: `You are an AI examiner. Grade the following exam results.
-      Questions and Correct Answers:
-      ${JSON.stringify(questions)}
-      User Answers:
-      ${JSON.stringify(userAnswers)}
+      contents: `ACT AS: Automated Exam Marking System.
+      Mark these results for a Malawian student.
+      REFERENCE DATA: ${JSON.stringify(questions)}
+      STUDENT ATTEMPT: ${JSON.stringify(userAnswers)}
       
-      For each question, determine if the user was correct. Provide the correct answer and a "Focused Tip" for improvement.`,
+      SCORING: 100 points scale. 
+      FEEDBACK: For every question, verify correctness and provide a high-value "Study Tip".`,
       config: {
+        thinkingConfig: { thinkingBudget: 0 },
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -184,7 +180,7 @@ export const aiService = {
     try {
       return JSON.parse(response.text || '{}');
     } catch (e) {
-      console.error("Evaluation failed", e);
+      console.error("Marking error", e);
       return null;
     }
   },
@@ -193,15 +189,13 @@ export const aiService = {
     const ai = getAI();
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: `You are a helpful and encouraging Malawian teacher. 
-      Evaluate a student's answer to this specific question from their textbook: "${question}"
-      
-      User's Answer: "${userAnswer}"
-      Correct Model Answer: "${modelAnswer}"
-      Key points to check for: "${pointsToCover}"
-      
-      Provide a constructive evaluation with a score out of 100.`,
+      contents: `Evaluate student's comprehension answer. 
+      Q: ${question}
+      User: ${userAnswer}
+      Key: ${modelAnswer}
+      Points: ${pointsToCover}`,
       config: {
+        thinkingConfig: { thinkingBudget: 0 },
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -217,16 +211,9 @@ export const aiService = {
     });
 
     try {
-      const text = response.text;
-      return JSON.parse(text || '{}');
+      return JSON.parse(response.text || '{}');
     } catch (e) {
-      console.error("Failed to parse evaluation response", e);
-      return {
-        score: 0,
-        strengths: [],
-        improvements: ["Evaluation failed."],
-        feedbackSummary: "Sorry, I couldn't evaluate your answer right now."
-      };
+      return { score: 0, strengths: [], improvements: ["Failed to mark."], feedbackSummary: "Error in AI marking." };
     }
   }
 };
