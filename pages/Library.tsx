@@ -34,6 +34,9 @@ export const Library: React.FC<LibraryProps> = ({ onNavigate }) => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [activeView, setActiveView] = useState<'browse' | 'downloads'>('browse');
 
+  // Feedback State
+  const [notification, setNotification] = useState<{ type: 'success' | 'info', text: string } | null>(null);
+
   const userStr = localStorage.getItem('study_hub_session');
   const sessionUser = userStr ? JSON.parse(userStr) : null;
   const userId = sessionUser?.id || 'guest';
@@ -52,11 +55,10 @@ export const Library: React.FC<LibraryProps> = ({ onNavigate }) => {
     setSelectedIds(new Set());
   }, [level, selectedGrade, activeView]);
 
-  const grades = level === EducationLevel.PRIMARY 
-    ? PRIMARY_GRADES 
-    : SECONDARY_GRADES;
-    
-  const subjects = level === EducationLevel.PRIMARY ? PRIMARY_SUBJECTS : SECONDARY_SUBJECTS;
+  const triggerNotification = (text: string, type: 'success' | 'info' = 'success') => {
+    setNotification({ text, type });
+    setTimeout(() => setNotification(null), 3500);
+  };
 
   const handleDownload = (m: StudyMaterial) => {
     const link = document.createElement('a');
@@ -66,6 +68,9 @@ export const Library: React.FC<LibraryProps> = ({ onNavigate }) => {
     link.click();
     document.body.removeChild(link);
     storage.recordDownload(userId, m.id);
+    
+    triggerNotification(`Downloading: ${m.title}`);
+    
     const updatedUsers = storage.getUsers();
     const found = updatedUsers.find(u => u.id === userId);
     if (found) setCurrentUser(found);
@@ -73,13 +78,25 @@ export const Library: React.FC<LibraryProps> = ({ onNavigate }) => {
 
   const handleBulkDownload = () => {
     const selectedMaterials = materials.filter(m => selectedIds.has(m.id));
+    triggerNotification(`Preparing pack of ${selectedMaterials.length} files...`, 'info');
+    
     selectedMaterials.forEach((m, index) => {
       setTimeout(() => {
-        handleDownload(m);
-      }, index * 500);
+        const link = document.createElement('a');
+        link.href = m.fileUrl;
+        link.download = m.fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        storage.recordDownload(userId, m.id);
+      }, index * 800);
     });
-    setIsSelectionMode(false);
-    setSelectedIds(new Set());
+    
+    setTimeout(() => {
+        setIsSelectionMode(false);
+        setSelectedIds(new Set());
+        triggerNotification(`All ${selectedMaterials.length} downloads initiated!`);
+    }, selectedMaterials.length * 800);
   };
 
   const toggleSelection = (id: string) => {
@@ -93,8 +110,9 @@ export const Library: React.FC<LibraryProps> = ({ onNavigate }) => {
   };
 
   const removeDownload = (mId: string) => {
-    if (window.confirm('Remove this file from your offline list? (This won\'t delete the file from your device)')) {
+    if (window.confirm('Remove this file from your offline list?')) {
       storage.removeDownload(userId, mId);
+      triggerNotification('Resource removed from offline access');
       const updatedUsers = storage.getUsers();
       const found = updatedUsers.find(u => u.id === userId);
       if (found) setCurrentUser(found);
@@ -135,6 +153,10 @@ export const Library: React.FC<LibraryProps> = ({ onNavigate }) => {
     ).length;
   };
 
+  // FIX: Define grades and subjects based on selected education level
+  const grades = level === EducationLevel.PRIMARY ? PRIMARY_GRADES : SECONDARY_GRADES;
+  const subjects = level === EducationLevel.PRIMARY ? PRIMARY_SUBJECTS : SECONDARY_SUBJECTS;
+
   const filteredMaterials = materials.filter(m => {
     if (activeView === 'downloads') {
       return currentUser?.downloadedIds.includes(m.id);
@@ -149,7 +171,19 @@ export const Library: React.FC<LibraryProps> = ({ onNavigate }) => {
   }, {} as Record<Category, StudyMaterial[]>);
 
   return (
-    <div className="space-y-10 pb-32 animate-in fade-in duration-500">
+    <div className="space-y-10 pb-32 animate-in fade-in duration-500 relative">
+      
+      {/* Dynamic Success Toast */}
+      {notification && (
+        <div className={`fixed top-24 left-1/2 -translate-x-1/2 z-[200] px-8 py-4 rounded-3xl shadow-2xl border flex items-center gap-4 animate-in slide-in-from-top-4 duration-300 ${
+          notification.type === 'success' ? 'bg-emerald-600 border-emerald-500 text-white' : 'bg-slate-900 border-slate-700 text-white'
+        }`}>
+            <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center font-black text-xs">SH</div>
+            <span className="text-[10px] font-black uppercase tracking-widest">{notification.text}</span>
+            <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse ml-2"></div>
+        </div>
+      )}
+
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-8">
         <div>
           <h2 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-slate-100 tracking-tight">

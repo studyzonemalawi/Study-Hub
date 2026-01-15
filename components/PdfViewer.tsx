@@ -309,7 +309,8 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
              Array.from({ length: numPages }).map((_, i) => (
                <div key={i} className="relative shadow-2xl rounded-sm overflow-hidden bg-white border border-white/10 group">
                   <canvas 
-                    ref={el => pageRefs.current[i] = el}
+                    /* FIX: Ensure ref callback doesn't return value to avoid TS error */
+                    ref={el => { pageRefs.current[i] = el; }}
                     className="max-w-full h-auto block"
                   />
                   <div className="absolute top-4 right-4 bg-black/20 backdrop-blur-md text-[9px] font-black text-white px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity uppercase tracking-widest">
@@ -456,7 +457,7 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
           <div className="bg-white rounded-[3rem] p-10 max-w-sm w-full shadow-2xl border border-white/20 animate-in zoom-in duration-200">
             <div className="w-20 h-20 bg-emerald-50 rounded-3xl flex items-center justify-center text-4xl mx-auto mb-8 shadow-inner">🔖</div>
             <h3 className="text-2xl font-black mb-2 text-slate-900 text-center">Save Progress?</h3>
-            <p className="text-slate-500 mb-10 font-medium text-center leading-relaxed">We've bookmarked your page. You can pick up exactly where you left off next time.</p>
+            <p className="text-slate-500 mb-10 font-medium text-center leading-relaxed"> We've bookmarked your page. You can pick up exactly where you left off next time.</p>
             <div className="space-y-4">
               <button 
                 onClick={onClose} 

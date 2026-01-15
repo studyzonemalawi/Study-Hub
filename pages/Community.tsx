@@ -276,8 +276,9 @@ export const Community: React.FC<CommunityProps> = ({ user }) => {
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        alert("Image too large. Max 2MB.");
+      // Increased size check to 10MB (10 * 1024 * 1024 bytes)
+      if (file.size > 10 * 1024 * 1024) {
+        alert(lang === 'English' ? "Image too large. Max 10MB." : "Chithunzi ndi chachikulu kwambiri. Osapitirira 10MB.");
         return;
       }
       const reader = new FileReader();
@@ -492,7 +493,7 @@ export const Community: React.FC<CommunityProps> = ({ user }) => {
 
       {/* Lightbox */}
       {zoomedImage && (
-        <div className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-sm flex flex-col items-center justify-center p-4 animate-in fade-in zoom-in duration-300">
+        <div className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-md flex flex-col items-center justify-center p-4 animate-in fade-in zoom-in duration-300">
            <div className="absolute top-6 right-6 flex items-center gap-4">
               <button onClick={() => zoomedImage && downloadImage(zoomedImage)} className="p-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full shadow-2xl transition-all active:scale-90">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>

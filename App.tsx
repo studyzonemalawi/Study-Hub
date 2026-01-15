@@ -50,13 +50,11 @@ const App: React.FC = () => {
       const sbUser = session.user;
       const email = sbUser.email || '';
 
-      // Try to get profile from Supabase first
       const cloudProfile = await storage.getUserFromCloud(sbUser.id);
       const existingUsers = storage.getUsers();
       let appUser = existingUsers.find(u => u.id === sbUser.id);
       
       if (cloudProfile) {
-        // Hydrate from cloud
         appUser = {
           ...appUser,
           ...cloudProfile,
@@ -66,7 +64,6 @@ const App: React.FC = () => {
           lastLogin: new Date().toISOString()
         } as User;
       } else if (!appUser) {
-        // Create new if nothing exists
         appUser = {
           id: sbUser.id,
           email: email,
@@ -201,7 +198,7 @@ const App: React.FC = () => {
       <SyncIndicator isOnline={isOnline} isSyncing={isSyncing} lastSynced={lastSynced} />
       <div className="pb-20">
         {activeTab !== 'home' && (
-          <div className="mb-8 flex items-center justify-between px-4 md:px-0">
+          <div className="mb-8 flex items-center justify-between px-4 md:px-0 animate-in fade-in slide-in-from-left-2 duration-300">
             <button 
               onClick={() => setActiveTab('home')}
               className="flex items-center gap-2 text-slate-500 hover:text-emerald-600 transition-colors font-black uppercase text-[10px] tracking-widest"
@@ -216,7 +213,11 @@ const App: React.FC = () => {
             </div>
           </div>
         )}
-        {renderContent()}
+        
+        {/* KEYed container for smooth transitions */}
+        <div key={activeTab} className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+          {renderContent()}
+        </div>
       </div>
     </Layout>
   );
