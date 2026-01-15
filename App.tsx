@@ -150,6 +150,24 @@ const App: React.FC = () => {
     if (navigator.onLine) triggerSync(u.id);
   };
 
+  const isAdmin = user?.appRole === 'admin';
+
+  const renderContent = () => {
+    if (!user) return null;
+    switch (activeTab) {
+      case 'home': return <Home user={user} onNavigate={setActiveTab} />;
+      case 'announcements': return <Announcements />;
+      case 'library': case 'papers': return <Library onNavigate={setActiveTab} />;
+      case 'testimonials': return <Community user={user} />;
+      case 'faqs': return <FAQs onNavigate={setActiveTab} />;
+      case 'activity': return <Activity user={user} onNavigate={setActiveTab} />;
+      case 'support': return <Support user={user} onNavigate={setActiveTab} />;
+      case 'settings': return <Settings user={user} onUpdate={handleUpdateUser} onNavigate={setActiveTab} />;
+      case 'admin': return isAdmin ? <Admin onNavigate={setActiveTab} /> : <Home user={user} onNavigate={setActiveTab} />;
+      default: return <Home user={user} onNavigate={setActiveTab} />;
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
@@ -168,23 +186,6 @@ const App: React.FC = () => {
   if (user.appRole !== 'admin' && !user.isProfileComplete) {
     return <RegisterProfile user={user} onComplete={handleUpdateUser} />;
   }
-
-  const isAdmin = user.appRole === 'admin';
-
-  const renderContent = () => {
-    switch (activeTab) {
-      case 'home': return <Home user={user} onNavigate={setActiveTab} />;
-      case 'announcements': return <Announcements />;
-      case 'library': case 'papers': return <Library onNavigate={setActiveTab} />;
-      case 'testimonials': return <Community user={user} />;
-      case 'faqs': return <FAQs />;
-      case 'activity': return <Activity user={user} onNavigate={setActiveTab} />;
-      case 'support': return <Support user={user} onNavigate={setActiveTab} />;
-      case 'settings': return <Settings user={user} onUpdate={handleUpdateUser} onNavigate={setActiveTab} />;
-      case 'admin': return isAdmin ? <Admin onNavigate={setActiveTab} /> : <Home user={user} onNavigate={setActiveTab} />;
-      default: return <Home user={user} onNavigate={setActiveTab} />;
-    }
-  };
 
   return (
     <Layout 
@@ -214,7 +215,6 @@ const App: React.FC = () => {
           </div>
         )}
         
-        {/* KEYed container for smooth transitions */}
         <div key={activeTab} className="animate-in fade-in slide-in-from-bottom-4 duration-500">
           {renderContent()}
         </div>

@@ -28,10 +28,6 @@ export const Library: React.FC<LibraryProps> = ({ onNavigate }) => {
   const [viewingMaterial, setViewingMaterial] = useState<StudyMaterial | null>(null);
   const [userProgress, setUserProgress] = useState<UserProgress[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  
-  // Selection Mode States
-  const [isSelectionMode, setIsSelectionMode] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [activeView, setActiveView] = useState<'browse' | 'downloads'>('browse');
 
   // Feedback State
@@ -51,8 +47,6 @@ export const Library: React.FC<LibraryProps> = ({ onNavigate }) => {
 
   useEffect(() => {
     setSelectedSubject(null);
-    setIsSelectionMode(false);
-    setSelectedIds(new Set());
   }, [level, selectedGrade, activeView]);
 
   const triggerNotification = (text: string, type: 'success' | 'info' = 'success') => {
@@ -74,39 +68,6 @@ export const Library: React.FC<LibraryProps> = ({ onNavigate }) => {
     const updatedUsers = storage.getUsers();
     const found = updatedUsers.find(u => u.id === userId);
     if (found) setCurrentUser(found);
-  };
-
-  const handleBulkDownload = () => {
-    const selectedMaterials = materials.filter(m => selectedIds.has(m.id));
-    triggerNotification(`Preparing pack of ${selectedMaterials.length} files...`, 'info');
-    
-    selectedMaterials.forEach((m, index) => {
-      setTimeout(() => {
-        const link = document.createElement('a');
-        link.href = m.fileUrl;
-        link.download = m.fileName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        storage.recordDownload(userId, m.id);
-      }, index * 800);
-    });
-    
-    setTimeout(() => {
-        setIsSelectionMode(false);
-        setSelectedIds(new Set());
-        triggerNotification(`All ${selectedMaterials.length} downloads initiated!`);
-    }, selectedMaterials.length * 800);
-  };
-
-  const toggleSelection = (id: string) => {
-    const newSelected = new Set(selectedIds);
-    if (newSelected.has(id)) {
-      newSelected.delete(id);
-    } else {
-      newSelected.add(id);
-    }
-    setSelectedIds(newSelected);
   };
 
   const removeDownload = (mId: string) => {
@@ -153,7 +114,6 @@ export const Library: React.FC<LibraryProps> = ({ onNavigate }) => {
     ).length;
   };
 
-  // FIX: Define grades and subjects based on selected education level
   const grades = level === EducationLevel.PRIMARY ? PRIMARY_GRADES : SECONDARY_GRADES;
   const subjects = level === EducationLevel.PRIMARY ? PRIMARY_SUBJECTS : SECONDARY_SUBJECTS;
 
@@ -294,20 +254,6 @@ export const Library: React.FC<LibraryProps> = ({ onNavigate }) => {
                 </p>
               </div>
             </div>
-
-            <div className="flex items-center gap-4">
-              <button 
-                onClick={() => {
-                  setIsSelectionMode(!isSelectionMode);
-                  setSelectedIds(new Set());
-                }}
-                className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border-2 ${
-                  isSelectionMode ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-500 text-orange-700 dark:text-orange-400' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-emerald-300'
-                }`}
-              >
-                {isSelectionMode ? 'Cancel Selection' : 'Bulk Select'}
-              </button>
-            </div>
           </div>
 
           <div className="space-y-16">
@@ -331,28 +277,14 @@ export const Library: React.FC<LibraryProps> = ({ onNavigate }) => {
                     <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
                       {items.map(m => {
                         const readingStatus = getStatusForMaterial(m.id);
-                        const isSelected = selectedIds.has(m.id);
                         const isDownloaded = currentUser?.downloadedIds.includes(m.id);
                         
                         return (
                           <div 
                             key={m.id} 
-                            onClick={() => isSelectionMode && toggleSelection(m.id)}
-                            className={`bg-white dark:bg-slate-800 p-8 rounded-[3rem] border-2 shadow-sm hover:shadow-2xl transition-all group flex flex-col relative overflow-hidden border-b-8 ${
-                              isSelected ? 'border-orange-500 bg-orange-50/20 dark:bg-orange-900/10' : 'border-transparent border-b-emerald-600/20 dark:border-b-emerald-500/20'
-                            } ${isSelectionMode ? 'cursor-pointer active:scale-95' : ''}`}
+                            className="bg-white dark:bg-slate-800 p-8 rounded-[3rem] border-2 shadow-sm hover:shadow-2xl transition-all group flex flex-col relative overflow-hidden border-b-8 border-transparent border-b-emerald-600/20 dark:border-b-emerald-500/20"
                           >
-                            {isSelectionMode && (
-                              <div className="absolute top-6 left-6 z-10">
-                                <div className={`w-8 h-8 rounded-xl border-2 flex items-center justify-center transition-all ${
-                                  isSelected ? 'bg-orange-500 border-orange-500 text-white' : 'bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600'
-                                }`}>
-                                  {isSelected && <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>}
-                                </div>
-                              </div>
-                            )}
-
-                            {readingStatus !== ReadingStatus.NOT_STARTED && !isSelectionMode && (
+                            {readingStatus !== ReadingStatus.NOT_STARTED && (
                               <div className={`absolute top-0 right-0 px-6 py-2.5 rounded-bl-[2rem] text-[9px] font-black uppercase tracking-[0.2em] text-white shadow-xl ${
                                 readingStatus === ReadingStatus.COMPLETED ? 'bg-emerald-500' : 'bg-orange-500'
                               }`}>
@@ -364,7 +296,7 @@ export const Library: React.FC<LibraryProps> = ({ onNavigate }) => {
                               <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-2xl flex items-center justify-center group-hover:scale-105 transition-all duration-500 shadow-md">
                                 <span className="font-black text-xs text-white">SH</span>
                               </div>
-                              {isDownloaded && !isSelectionMode && (
+                              {isDownloaded && (
                                 <span className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border border-emerald-200/50 dark:border-emerald-500/20">
                                   Saved
                                 </span>
@@ -374,31 +306,29 @@ export const Library: React.FC<LibraryProps> = ({ onNavigate }) => {
                             <h4 className="font-black text-slate-900 dark:text-slate-100 text-lg line-clamp-2 min-h-[3.5rem] leading-tight group-hover:text-emerald-700 transition-colors duration-300">{m.title}</h4>
                             <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-4 mb-10 font-black uppercase tracking-[0.1em]">Added: {new Date(m.uploadedAt).toLocaleDateString('en-GB')}</p>
                             
-                            {!isSelectionMode && (
-                              <div className="mt-auto flex flex-col gap-3">
+                            <div className="mt-auto flex flex-col gap-3">
+                              <button 
+                                onClick={() => handleReadOnline(m)}
+                                className="w-full bg-slate-900 dark:bg-slate-700 text-white hover:bg-emerald-600 dark:hover:bg-emerald-600 font-black py-4 rounded-2xl transition-all flex items-center justify-center gap-3 shadow-xl shadow-slate-200 dark:shadow-none text-[10px] uppercase tracking-widest"
+                              >
+                                Start Reading
+                              </button>
+                              {activeView === 'browse' ? (
                                 <button 
-                                  onClick={() => handleReadOnline(m)}
-                                  className="w-full bg-slate-900 dark:bg-slate-700 text-white hover:bg-emerald-600 dark:hover:bg-emerald-600 font-black py-4 rounded-2xl transition-all flex items-center justify-center gap-3 shadow-xl shadow-slate-200 dark:shadow-none text-[10px] uppercase tracking-widest"
+                                  onClick={() => handleDownload(m)}
+                                  className="w-full bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 font-black py-3 rounded-2xl transition-all flex items-center justify-center gap-2 border border-slate-200 dark:border-slate-700 text-[9px] uppercase tracking-[0.1em]"
                                 >
-                                  Start Reading
+                                  Offline Copy
                                 </button>
-                                {activeView === 'browse' ? (
-                                  <button 
-                                    onClick={() => handleDownload(m)}
-                                    className="w-full bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 font-black py-3 rounded-2xl transition-all flex items-center justify-center gap-2 border border-slate-200 dark:border-slate-700 text-[9px] uppercase tracking-[0.1em]"
-                                  >
-                                    Offline Copy
-                                  </button>
-                                ) : (
-                                  <button 
-                                    onClick={() => removeDownload(m.id)}
-                                    className="w-full bg-red-50 dark:bg-red-900/10 text-red-500 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/20 font-black py-3 rounded-2xl transition-all flex items-center justify-center gap-2 border border-red-100 dark:border-red-900/20 text-[9px] uppercase tracking-[0.1em]"
-                                  >
-                                    Discard Offline
-                                  </button>
-                                )}
-                              </div>
-                            )}
+                              ) : (
+                                <button 
+                                  onClick={() => removeDownload(m.id)}
+                                  className="w-full bg-red-50 dark:bg-red-900/10 text-red-500 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/20 font-black py-3 rounded-2xl transition-all flex items-center justify-center gap-2 border border-red-100 dark:border-red-900/20 text-[9px] uppercase tracking-[0.1em]"
+                                >
+                                  Discard Offline
+                                </button>
+                              )}
+                            </div>
                           </div>
                         );
                       })}
@@ -409,27 +339,6 @@ export const Library: React.FC<LibraryProps> = ({ onNavigate }) => {
             )}
           </div>
         </section>
-      )}
-
-      {/* Bulk Action Bar */}
-      {isSelectionMode && selectedIds.size > 0 && (
-        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[80] w-[90%] max-w-lg bg-slate-900 text-white rounded-[2.5rem] p-8 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-6 animate-in slide-in-from-bottom-10 border border-white/10 backdrop-blur-2xl">
-          <div className="flex items-center gap-5">
-            <div className="bg-emerald-500 text-white w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg">
-              {selectedIds.size}
-            </div>
-            <div>
-              <p className="font-black uppercase tracking-widest text-[10px]">Resources Selected</p>
-              <p className="text-[10px] text-slate-400 font-bold mt-0.5">Ready for collective download</p>
-            </div>
-          </div>
-          <button 
-            onClick={handleBulkDownload}
-            className="w-full sm:w-auto bg-white text-slate-900 hover:bg-emerald-400 hover:text-white px-10 py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-xl transition-all active:scale-95"
-          >
-            Download Pack
-          </button>
-        </div>
       )}
 
       {viewingMaterial && (

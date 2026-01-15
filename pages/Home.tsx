@@ -73,34 +73,80 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, user }) => {
     modules.push({ id: 'admin', title: 'Admin Hub', desc: 'Management', icon: '🛡️', color: 'bg-red-600' });
   }
 
+  const getFirstName = (fullName: string) => {
+    return fullName ? fullName.split(' ')[0] : 'Learner';
+  };
+
   return (
     <div className="max-w-6xl mx-auto space-y-12 animate-in fade-in slide-in-from-bottom-2 duration-700 pb-16 px-4 md:px-0">
       
-      {/* Dynamic Hero Section */}
-      <section className="relative overflow-hidden bg-slate-900 dark:bg-[#020617] rounded-[3rem] p-10 md:p-16 lg:p-24 text-center border border-white/5 shadow-2xl">
-        <div className="relative z-10 max-w-4xl mx-auto space-y-8">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-[10px] font-black text-emerald-400 uppercase tracking-[0.2em]">
-            <div className="w-5 h-5 bg-emerald-600 rounded flex items-center justify-center mr-2 shadow-lg">
-                <span className="text-white text-[8px] font-black">SH</span>
+      {/* Redesigned Dashboard Hero Section */}
+      <section className="relative overflow-hidden bg-white dark:bg-slate-800 rounded-[3rem] p-8 md:p-12 border border-slate-100 dark:border-slate-700 shadow-2xl">
+        <div className="relative z-10 flex flex-col md:flex-row items-center gap-10 md:gap-16">
+          {/* Left Side: Personalized Greeting */}
+          <div className="flex-1 text-center md:text-left space-y-6">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-800 rounded-2xl text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-[0.2em] shadow-sm">
+              <span className="animate-pulse">🇲🇼</span>
+              Malawi Academic Hub
             </div>
-            Official Digital Repository
+            
+            <div className="space-y-2">
+              <h1 className="text-4xl md:text-6xl font-black text-slate-900 dark:text-white leading-[1.1] tracking-tighter">
+                Takulandirani,<br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-blue-600 dark:from-emerald-400 dark:to-blue-400">
+                  {getFirstName(user.name)}!
+                </span>
+              </h1>
+              <p className="text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest text-[10px] md:text-xs">
+                {user.currentGrade} • {user.district} District
+              </p>
+            </div>
+
+            <div className="flex flex-wrap justify-center md:justify-start gap-4 pt-4">
+              <button 
+                onClick={() => onNavigate('library')} 
+                className="group px-8 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black rounded-2xl shadow-xl hover:shadow-emerald-500/10 transition-all active:scale-95 uppercase tracking-widest text-xs flex items-center gap-3"
+              >
+                <span>Browse Materials</span>
+                <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+              </button>
+              <button 
+                onClick={() => onNavigate('activity')} 
+                className="px-8 py-4 bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-200 font-black rounded-2xl border border-slate-200 dark:border-slate-600 hover:bg-slate-50 transition-all active:scale-95 uppercase tracking-widest text-xs"
+              >
+                My Progress
+              </button>
+            </div>
           </div>
-          <h1 className="text-3xl md:text-5xl lg:text-7xl font-black text-white leading-[1.1] tracking-tighter">
-            Elevate your <span className="text-emerald-500 underline decoration-emerald-500/30 underline-offset-8">Academic Journey</span> in Malawi
-          </h1>
-          <p className="text-slate-400 text-sm md:text-lg max-w-2xl mx-auto font-medium leading-relaxed">
-            Access the nation's largest library of primary and secondary school resources, completely digitized for modern learners.
-          </p>
-          <div className="flex flex-wrap justify-center gap-4">
-             <button onClick={() => onNavigate('library')} className="px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-2xl shadow-xl transition-all active:scale-95 uppercase tracking-widest text-xs">Start Browsing</button>
-             <button onClick={() => onNavigate('testimonials')} className="px-8 py-4 bg-white/10 hover:bg-white/20 text-white font-black rounded-2xl backdrop-blur-md transition-all active:scale-95 uppercase tracking-widest text-xs border border-white/10">Community Hub</button>
+
+          {/* Right Side: Visual Quick Stats Box */}
+          <div className="w-full md:w-80 flex-none grid grid-cols-2 gap-4">
+            <div className="p-6 bg-emerald-50 dark:bg-emerald-950/20 rounded-[2rem] border border-emerald-100 dark:border-emerald-900/30 flex flex-col items-center justify-center text-center shadow-sm">
+                <span className="text-2xl mb-2">📚</span>
+                <span className="text-xl font-black text-emerald-900 dark:text-emerald-100">{recentMaterials.length}</span>
+                <span className="text-[8px] font-black uppercase tracking-widest text-emerald-600/60">New Adds</span>
+            </div>
+            <div className="p-6 bg-blue-50 dark:bg-blue-950/20 rounded-[2rem] border border-blue-100 dark:border-blue-900/30 flex flex-col items-center justify-center text-center shadow-sm">
+                <span className="text-2xl mb-2">📥</span>
+                <span className="text-xl font-black text-blue-900 dark:text-blue-100">{user.downloadedIds.length}</span>
+                <span className="text-[8px] font-black uppercase tracking-widest text-blue-600/60">Offline</span>
+            </div>
+            <div className="p-6 bg-orange-50 dark:bg-orange-950/20 rounded-[2rem] border border-orange-100 dark:border-orange-900/30 flex flex-col items-center justify-center text-center shadow-sm">
+                <span className="text-2xl mb-2">🔥</span>
+                <span className="text-xl font-black text-orange-900 dark:text-orange-100">Distinction</span>
+                <span className="text-[8px] font-black uppercase tracking-widest text-orange-600/60">Goal</span>
+            </div>
+            <div className="p-6 bg-pink-50 dark:bg-pink-950/20 rounded-[2rem] border border-pink-100 dark:border-pink-900/30 flex flex-col items-center justify-center text-center shadow-sm">
+                <span className="text-2xl mb-2">🦁</span>
+                <span className="text-xl font-black text-pink-900 dark:text-pink-100">Hub</span>
+                <span className="text-[8px] font-black uppercase tracking-widest text-pink-600/60">Member</span>
+            </div>
           </div>
         </div>
         
-        <div className="absolute top-0 left-0 w-full h-full opacity-[0.05] pointer-events-none overflow-hidden">
-          <div className="absolute -top-24 -left-24 w-96 h-96 bg-emerald-500 rounded-full blur-[120px]"></div>
-          <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-blue-500 rounded-full blur-[120px]"></div>
-        </div>
+        {/* Background Decor */}
+        <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-emerald-50/30 dark:from-emerald-900/10 to-transparent pointer-events-none"></div>
+        <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none"></div>
       </section>
 
       {/* Responsive Module Grid */}

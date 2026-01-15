@@ -93,18 +93,6 @@ export const Announcements: React.FC = () => {
           ))
         )}
       </div>
-
-      <div className="bg-emerald-800 text-white p-10 rounded-[3rem] flex flex-col md:flex-row items-center justify-between gap-8 shadow-2xl relative overflow-hidden">
-        <div className="relative z-10 text-center md:text-left">
-           <h3 className="text-2xl font-black mb-2">Want to ask a question? 🙋‍♂️</h3>
-           <p className="text-emerald-100 opacity-70 text-sm">Our support desk is always open for academic inquiries. 📚🧠</p>
-        </div>
-        <button className="relative z-10 bg-white text-emerald-900 px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl transition-all active:scale-95 flex items-center gap-2">
-           <span>Chat With Us</span>
-           <span>💬</span>
-        </button>
-        <div className="absolute top-0 left-0 p-8 opacity-5 text-9xl">💬</div>
-      </div>
     </div>
   );
 };

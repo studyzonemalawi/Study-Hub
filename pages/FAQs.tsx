@@ -7,9 +7,13 @@ interface FAQItem {
   category: 'General' | 'Technical' | 'Academic' | 'Community';
 }
 
+interface FAQsProps {
+  onNavigate: (tab: string) => void;
+}
+
 type Language = 'English' | 'Chichewa';
 
-export const FAQs: React.FC = () => {
+export const FAQs: React.FC<FAQsProps> = ({ onNavigate }) => {
   const [lang, setLang] = useState<Language>(() => {
     return (localStorage.getItem('study_hub_chat_lang') as Language) || 'English';
   });
@@ -182,7 +186,7 @@ export const FAQs: React.FC = () => {
           <p className="text-emerald-700 dark:text-emerald-400 font-medium">{t.supportSub}</p>
         </div>
         <button 
-          onClick={() => window.location.hash = '#support'} 
+          onClick={() => onNavigate('support')} 
           className="bg-emerald-600 hover:bg-emerald-700 text-white font-black px-10 py-4 rounded-2xl shadow-xl shadow-emerald-200 dark:shadow-none transition-all uppercase tracking-widest text-xs whitespace-nowrap active:scale-95"
         >
           {t.contactBtn}
