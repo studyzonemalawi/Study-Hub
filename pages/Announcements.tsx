@@ -30,8 +30,13 @@ export const Announcements: React.FC = () => {
     <div className="max-w-4xl mx-auto space-y-8 pb-32 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-black text-gray-800 tracking-tight">Announcements</h2>
-          <p className="text-gray-500">Stay updated with the latest news from Study Hub Malawi.</p>
+          <h2 className="text-3xl font-black text-gray-800 tracking-tight flex items-center gap-3">
+            <span className="text-3xl">📜</span> Announcements
+          </h2>
+          <p className="text-gray-500 flex items-center gap-2 mt-1">
+            <span>Stay updated with the latest news from Study Hub Malawi.</span>
+            <span className="hidden sm:inline">🎓📚</span>
+          </p>
         </div>
         <div className="p-3 bg-emerald-800 text-white rounded-2xl shadow-lg flex items-center gap-3">
           <div className="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center text-lg">📢</div>
@@ -44,7 +49,7 @@ export const Announcements: React.FC = () => {
           <div className="bg-white rounded-[3rem] p-20 text-center border border-dashed border-gray-200 shadow-sm">
             <div className="text-6xl mb-6 grayscale opacity-20">📭</div>
             <h3 className="text-2xl font-black text-gray-700">No Announcements</h3>
-            <p className="text-gray-400 mt-2 font-medium">Check back later for updates and news.</p>
+            <p className="text-gray-400 mt-2 font-medium">Check back later for updates and news. 🦁✨</p>
           </div>
         ) : (
           announcements.map((a) => (
@@ -65,8 +70,8 @@ export const Announcements: React.FC = () => {
                   <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${getPriorityStyles(a.priority)}`}>
                     {getPriorityLabel(a.priority)}
                   </span>
-                  <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
-                    Posted {new Date(a.timestamp).toLocaleDateString()}
+                  <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest flex items-center gap-1">
+                    <span className="opacity-50">🕒</span> Posted {new Date(a.timestamp).toLocaleDateString()}
                   </span>
                 </div>
 
@@ -79,9 +84,9 @@ export const Announcements: React.FC = () => {
                 </p>
 
                 <div className="pt-4 flex items-center gap-2 text-[10px] font-black text-emerald-700 uppercase tracking-widest">
-                  <span>Authorized by System Admin</span>
+                  <span>Authorized by System Admin 🦁</span>
                   <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
-                  <span>Study Hub Malawi</span>
+                  <span>Study Hub Malawi 🎓</span>
                 </div>
               </div>
             </div>
@@ -91,13 +96,14 @@ export const Announcements: React.FC = () => {
 
       <div className="bg-emerald-800 text-white p-10 rounded-[3rem] flex flex-col md:flex-row items-center justify-between gap-8 shadow-2xl relative overflow-hidden">
         <div className="relative z-10 text-center md:text-left">
-           <h3 className="text-2xl font-black mb-2">Want to ask a question?</h3>
-           <p className="text-emerald-100 opacity-70 text-sm">Our support desk is always open for academic inquiries.</p>
+           <h3 className="text-2xl font-black mb-2">Want to ask a question? 🙋‍♂️</h3>
+           <p className="text-emerald-100 opacity-70 text-sm">Our support desk is always open for academic inquiries. 📚🧠</p>
         </div>
-        <button className="relative z-10 bg-white text-emerald-900 px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl transition-all active:scale-95">
-           Chat With Us
+        <button className="relative z-10 bg-white text-emerald-900 px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl transition-all active:scale-95 flex items-center gap-2">
+           <span>Chat With Us</span>
+           <span>💬</span>
         </button>
-        <div className="absolute top-0 right-0 p-8 opacity-5 text-9xl">💬</div>
+        <div className="absolute top-0 left-0 p-8 opacity-5 text-9xl">💬</div>
       </div>
     </div>
   );
