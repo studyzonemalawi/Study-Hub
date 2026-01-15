@@ -25,7 +25,6 @@ const App: React.FC = () => {
     return localStorage.getItem('study_hub_theme') === 'dark';
   });
   
-  // Sync & Network States
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSynced, setLastSynced] = useState<string | null>(null);
@@ -46,6 +45,60 @@ const App: React.FC = () => {
     }
   }, []);
 
+  const handleAuthChange = useCallback(async (session: any) => {
+    if (session?.user) {
+      const sbUser = session.user;
+      const email = sbUser.email || '';
+
+      // Try to get profile from Supabase first
+      const cloudProfile = await storage.getUserFromCloud(sbUser.id);
+      const existingUsers = storage.getUsers();
+      let appUser = existingUsers.find(u => u.id === sbUser.id);
+      
+      if (cloudProfile) {
+        // Hydrate from cloud
+        appUser = {
+          ...appUser,
+          ...cloudProfile,
+          id: sbUser.id,
+          email: email,
+          appRole: (email === ADMIN_EMAIL) ? 'admin' : (appUser?.appRole || 'user'),
+          lastLogin: new Date().toISOString()
+        } as User;
+      } else if (!appUser) {
+        // Create new if nothing exists
+        appUser = {
+          id: sbUser.id,
+          email: email,
+          authProvider: 'email',
+          appRole: (email === ADMIN_EMAIL) ? 'admin' : 'user',
+          name: sbUser.user_metadata?.full_name || '',
+          dateJoined: new Date().toISOString(),
+          lastLogin: new Date().toISOString(),
+          downloadedIds: [],
+          favoriteIds: [],
+          isProfileComplete: false,
+          isPublic: false,
+          termsAccepted: true
+        };
+      } else {
+        appUser = {
+          ...appUser,
+          lastLogin: new Date().toISOString()
+        };
+      }
+      
+      storage.saveUser(appUser);
+      setUser(appUser);
+      localStorage.setItem('study_hub_session', JSON.stringify(appUser));
+      if (navigator.onLine) triggerSync(appUser.id);
+    } else {
+      setUser(null);
+      localStorage.removeItem('study_hub_session');
+    }
+    setIsLoading(false);
+  }, [triggerSync, ADMIN_EMAIL]);
+
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
@@ -57,58 +110,13 @@ const App: React.FC = () => {
   }, [isDarkMode]);
 
   useEffect(() => {
-    // Initial Session Check
     supabase.auth.getSession().then(({ data: { session } }) => {
       handleAuthChange(session);
-      setIsLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       handleAuthChange(session);
     });
-
-    const handleAuthChange = (session: any) => {
-      if (session?.user) {
-        const sbUser = session.user;
-        const email = sbUser.email || '';
-
-        const existingUsers = storage.getUsers();
-        let appUser = existingUsers.find(u => u.id === sbUser.id || (u.email === email));
-        
-        if (!appUser) {
-          appUser = {
-            id: sbUser.id,
-            email: email,
-            authProvider: 'email',
-            appRole: (email === ADMIN_EMAIL) ? 'admin' : 'user',
-            name: sbUser.user_metadata?.full_name || '',
-            dateJoined: new Date().toISOString(),
-            lastLogin: new Date().toISOString(),
-            downloadedIds: [],
-            favoriteIds: [],
-            isProfileComplete: false,
-            isPublic: false,
-            termsAccepted: true
-          };
-          storage.saveUser(appUser);
-        } else {
-          appUser = {
-            ...appUser,
-            appRole: (email === ADMIN_EMAIL) ? 'admin' : appUser.appRole,
-            lastLogin: new Date().toISOString(),
-            email: email || appUser.email
-          };
-          storage.updateUser(appUser);
-        }
-        
-        setUser(appUser);
-        localStorage.setItem('study_hub_session', JSON.stringify(appUser));
-        if (navigator.onLine) triggerSync(appUser.id);
-      } else {
-        setUser(null);
-        localStorage.removeItem('study_hub_session');
-      }
-    };
 
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
@@ -121,13 +129,7 @@ const App: React.FC = () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, [triggerSync]);
-
-  useEffect(() => {
-    if (isOnline && user?.id) {
-      triggerSync(user.id);
-    }
-  }, [isOnline, user?.id, triggerSync]);
+  }, [handleAuthChange]);
 
   const handleLogin = (u: User) => {
     setUser(u);
@@ -147,7 +149,8 @@ const App: React.FC = () => {
 
   const handleUpdateUser = (u: User) => {
     setUser(u);
-    localStorage.setItem('study_hub_session', JSON.stringify(u));
+    storage.updateUser(u);
+    if (navigator.onLine) triggerSync(u.id);
   };
 
   if (isLoading) {
@@ -155,7 +158,7 @@ const App: React.FC = () => {
       <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
         <div className="flex flex-col items-center space-y-4">
           <div className="w-12 h-12 border-4 border-emerald-50/30 border-t-emerald-500 rounded-full animate-spin"></div>
-          <p className="text-slate-600 dark:text-slate-400 font-bold animate-pulse uppercase tracking-widest text-xs">Initializing Hub...</p>
+          <p className="text-slate-600 dark:text-slate-400 font-bold animate-pulse uppercase tracking-widest text-xs">Authenticating...</p>
         </div>
       </div>
     );

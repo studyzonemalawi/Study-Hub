@@ -223,8 +223,8 @@ export const Library: React.FC<LibraryProps> = ({ onNavigate }) => {
                   className="bg-white dark:bg-slate-800 p-8 md:p-10 rounded-[3rem] border border-slate-200/60 dark:border-slate-700 shadow-sm hover:shadow-2xl hover:border-emerald-300 dark:hover:border-emerald-500/30 transition-all text-left group relative overflow-hidden flex flex-col justify-between h-full min-h-[180px]"
                 >
                   <div>
-                    <div className="w-12 h-12 md:w-14 md:h-14 bg-slate-50 dark:bg-slate-700 rounded-2xl flex items-center justify-center p-3 mb-6 group-hover:bg-emerald-50 transition-all duration-300 shadow-inner">
-                      <span className="font-black text-xs md:text-sm text-emerald-600 dark:text-emerald-400">SH</span>
+                    <div className="w-12 h-12 md:w-14 md:h-14 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-2xl flex items-center justify-center p-3 mb-6 group-hover:scale-110 transition-transform duration-300 shadow-lg shadow-emerald-500/20">
+                      <span className="font-black text-xs md:text-sm text-white">SH</span>
                     </div>
                     <h4 className="font-black text-slate-900 dark:text-slate-100 text-xs md:text-sm uppercase tracking-[0.05em] leading-tight pr-4">{sub}</h4>
                   </div>
@@ -327,8 +327,8 @@ export const Library: React.FC<LibraryProps> = ({ onNavigate }) => {
                             )}
 
                             <div className="flex justify-between items-start mb-8">
-                              <div className="w-12 h-12 bg-slate-100 dark:bg-slate-700 rounded-2xl flex items-center justify-center group-hover:bg-white transition-all duration-500 shadow-inner">
-                                <span className="font-black text-xs text-emerald-600 dark:text-emerald-400">SH</span>
+                              <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-2xl flex items-center justify-center group-hover:scale-105 transition-all duration-500 shadow-md">
+                                <span className="font-black text-xs text-white">SH</span>
                               </div>
                               {isDownloaded && !isSelectionMode && (
                                 <span className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border border-emerald-200/50 dark:border-emerald-500/20">

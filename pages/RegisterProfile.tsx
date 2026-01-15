@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from 'react';
 import { User, AccountRole, MALAWI_DISTRICTS, JOIN_REASONS, PRIMARY_GRADES, SECONDARY_GRADES, OTHER_GRADE_OPTIONS, Grade } from '../types';
 import { storage } from '../services/storage';
@@ -25,21 +26,6 @@ export const RegisterProfile: React.FC<RegisterProfileProps> = ({ user, onComple
 
   const getWordCount = (text: string) => text.trim().split(/\s+/).filter(w => w.length > 0).length;
 
-  const finalUpdatedUser: User = {
-    ...user,
-    name,
-    age: parseInt(age),
-    accountRole: accountRole as AccountRole,
-    district,
-    reason,
-    schoolName,
-    currentGrade: currentGrade as Grade,
-    bio,
-    profilePic: 'initials',
-    termsAccepted,
-    isProfileComplete: true
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -61,10 +47,27 @@ export const RegisterProfile: React.FC<RegisterProfileProps> = ({ user, onComple
 
     setIsSubmitting(true);
 
+    const finalUpdatedUser: User = {
+        ...user,
+        name,
+        age: parseInt(age),
+        accountRole: accountRole as AccountRole,
+        district,
+        reason,
+        schoolName,
+        currentGrade: currentGrade as Grade,
+        bio,
+        profilePic: 'initials',
+        termsAccepted,
+        isProfileComplete: true
+      };
+
     setTimeout(() => {
       storage.updateUser(finalUpdatedUser);
       setIsSubmitting(false);
       setIsSaved(true);
+      // Callback after small delay to show success state
+      setTimeout(() => onComplete(finalUpdatedUser), 1000);
     }, 1200);
   };
 
@@ -79,12 +82,6 @@ export const RegisterProfile: React.FC<RegisterProfileProps> = ({ user, onComple
           </div>
           <h2 className="text-3xl font-black text-emerald-800 tracking-tight">Success!</h2>
           <p className="text-gray-500 font-medium">Profile saved successfully. You are now ready to start your learning journey.</p>
-          <button 
-            onClick={() => onComplete(finalUpdatedUser)}
-            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-4 rounded-2xl shadow-xl transition-all uppercase tracking-widest"
-          >
-            Enter Dashboard
-          </button>
         </div>
       </div>
     );
@@ -97,12 +94,12 @@ export const RegisterProfile: React.FC<RegisterProfileProps> = ({ user, onComple
         {/* Sidebar Info */}
         <div className="md:w-1/3 bg-emerald-800 p-10 text-white flex flex-col justify-between">
           <div>
-            <h2 className="text-3xl font-black mb-4">Final Step!</h2>
-            <p className="text-emerald-100 opacity-80 leading-relaxed">Let's personalize your Study Hub experience. Complete your profile to get full access to Malawian resources.</p>
+            <h2 className="text-3xl font-black mb-4 tracking-tighter">FINALIZE HUB ACCESS</h2>
+            <p className="text-emerald-100 opacity-80 leading-relaxed text-sm">Let's personalize your Study Hub experience. Complete your profile to get full access to Malawian academic resources.</p>
           </div>
           <div className="hidden md:block">
             <div className="p-4 bg-white/10 rounded-2xl border border-white/10">
-              <p className="text-xs font-bold uppercase tracking-widest opacity-60 mb-2">Did you know?</p>
+              <p className="text-xs font-bold uppercase tracking-widest opacity-60 mb-2">Academic Promise</p>
               <p className="text-sm italic">"Education is the most powerful weapon which you can use to change the world."</p>
             </div>
           </div>
@@ -114,13 +111,13 @@ export const RegisterProfile: React.FC<RegisterProfileProps> = ({ user, onComple
           
           <div className="flex flex-col items-center">
             <div 
-              className="w-32 h-32 rounded-full border-4 border-emerald-100 bg-emerald-600 flex items-center justify-center overflow-hidden shadow-xl"
+              className="w-32 h-32 rounded-[2.5rem] bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center overflow-hidden shadow-2xl border-4 border-white"
             >
-              <span className="text-white font-black text-3xl">
-                {name ? name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : '?'}
+              <span className="text-white font-black text-4xl tracking-tighter">
+                {name ? name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'SH'}
               </span>
             </div>
-            <p className="text-[10px] font-black uppercase text-emerald-700 tracking-widest mt-4">Personal Identity Circle</p>
+            <p className="text-[10px] font-black uppercase text-emerald-700 tracking-widest mt-4">Profile Badge Preview</p>
           </div>
 
           <div className="grid md:grid-cols-2 gap-6">
@@ -185,7 +182,7 @@ export const RegisterProfile: React.FC<RegisterProfileProps> = ({ user, onComple
           </div>
 
           <button type="submit" disabled={isSubmitting} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-5 rounded-2xl shadow-2xl transition-all disabled:opacity-50 text-lg uppercase tracking-widest">
-            {isSubmitting ? 'Finalizing...' : 'Enter Study Hub'}
+            {isSubmitting ? 'Finalizing Profile...' : 'Complete & Enter Hub'}
           </button>
         </form>
       </div>

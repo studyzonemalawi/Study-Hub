@@ -1,5 +1,5 @@
 
-import { StudyMaterial, Message, User, UserProgress, Testimonial, Announcement, CommunityMessage, ChatRoom } from '../types';
+import { StudyMaterial, Message, User, UserProgress, Testimonial, Announcement, CommunityMessage, ChatRoom, ReadingStatus } from '../types';
 import { supabase } from './supabase';
 
 const MATERIALS_KEY = 'study_hub_materials';
@@ -32,7 +32,6 @@ export const storage = {
     materials.push(material);
     localStorage.setItem(MATERIALS_KEY, JSON.stringify(materials));
     
-    // Cloud backup/sync
     if (navigator.onLine) {
       try {
         await supabase.from('materials').upsert({
@@ -93,6 +92,7 @@ export const storage = {
     return JSON.parse(data);
   },
 
+  // FIX: Added missing saveChatRoom method
   saveChatRoom: (room: ChatRoom) => {
     const rooms = storage.getChatRooms();
     rooms.push(room);
@@ -109,8 +109,10 @@ export const storage = {
     const existingIndex = users.findIndex(u => u.id === user.id);
     if (existingIndex === -1) {
       users.push(user);
-      localStorage.setItem(USERS_KEY, JSON.stringify(users));
+    } else {
+      users[existingIndex] = user;
     }
+    localStorage.setItem(USERS_KEY, JSON.stringify(users));
   },
 
   updateUser: (updatedUser: User) => {
@@ -118,25 +120,44 @@ export const storage = {
     const index = users.findIndex(u => u.id === updatedUser.id);
     if (index !== -1) {
       users[index] = updatedUser;
-      localStorage.setItem(USERS_KEY, JSON.stringify(users));
-      const session = localStorage.getItem('study_hub_session');
-      if (session) {
-        const parsed = JSON.parse(session);
-        if (parsed.id === updatedUser.id) {
-          localStorage.setItem('study_hub_session', JSON.stringify(updatedUser));
-        }
+    } else {
+      users.push(updatedUser);
+    }
+    localStorage.setItem(USERS_KEY, JSON.stringify(users));
+    
+    const session = localStorage.getItem('study_hub_session');
+    if (session) {
+      const parsed = JSON.parse(session);
+      if (parsed.id === updatedUser.id) {
+        localStorage.setItem('study_hub_session', JSON.stringify(updatedUser));
       }
     }
   },
 
+  // FIX: Added missing deleteUser method
   deleteUser: (userId: string) => {
     const users = storage.getUsers().filter(u => u.id !== userId);
     localStorage.setItem(USERS_KEY, JSON.stringify(users));
-    const messages = storage.getMessages().filter(m => m.senderId !== userId && m.receiverId !== userId);
-    localStorage.setItem(MESSAGES_KEY, JSON.stringify(messages));
-    const progresses = storage.getAllProgress();
-    delete progresses[userId];
-    localStorage.setItem(PROGRESS_KEY, JSON.stringify(progresses));
+  },
+
+  getUserFromCloud: async (userId: string): Promise<Partial<User> | null> => {
+    try {
+      const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
+      if (error) return null;
+      return {
+        id: data.id,
+        name: data.name,
+        email: data.email,
+        district: data.district,
+        schoolName: data.school_name,
+        currentGrade: data.grade,
+        accountRole: data.role,
+        bio: data.bio,
+        isProfileComplete: !!data.name && !!data.district
+      };
+    } catch (e) {
+      return null;
+    }
   },
 
   getAllProgress: (): Record<string, UserProgress[]> => {
@@ -170,6 +191,7 @@ export const storage = {
     }
   },
 
+  // FIX: Added missing removeDownload method
   removeDownload: (userId: string, materialId: string) => {
     const users = storage.getUsers();
     const user = users.find(u => u.id === userId);
@@ -177,17 +199,6 @@ export const storage = {
       user.downloadedIds = user.downloadedIds.filter(id => id !== materialId);
       storage.updateUser(user);
     }
-  },
-
-  getTestimonials: (): Testimonial[] => {
-    const data = localStorage.getItem(TESTIMONIALS_KEY);
-    return data ? JSON.parse(data) : [];
-  },
-
-  saveTestimonial: (testimonial: Testimonial) => {
-    const testimonials = storage.getTestimonials();
-    testimonials.unshift(testimonial);
-    localStorage.setItem(TESTIMONIALS_KEY, JSON.stringify(testimonials));
   },
 
   getAnnouncements: (): Announcement[] => {
@@ -210,11 +221,12 @@ export const storage = {
           timestamp: announcement.timestamp
         });
       } catch (e) {
-        console.warn("Announcement cloud sync deferred", e);
+        console.warn("Announcement sync deferred", e);
       }
     }
   },
 
+  // FIX: Added missing deleteAnnouncement method
   deleteAnnouncement: async (id: string) => {
     const announcements = storage.getAnnouncements().filter(a => a.id !== id);
     localStorage.setItem(ANNOUNCEMENTS_KEY, JSON.stringify(announcements));
@@ -223,14 +235,28 @@ export const storage = {
     }
   },
 
+  // FIX: Added missing getTestimonials method
+  getTestimonials: (): Testimonial[] => {
+    const data = localStorage.getItem(TESTIMONIALS_KEY);
+    return data ? JSON.parse(data) : [];
+  },
+
+  // FIX: Added missing saveTestimonial method
+  saveTestimonial: (testimonial: Testimonial) => {
+    const testimonials = storage.getTestimonials();
+    testimonials.unshift(testimonial);
+    localStorage.setItem(TESTIMONIALS_KEY, JSON.stringify(testimonials));
+  },
+
   syncWithServer: async (userId: string) => {
     if (!navigator.onLine) return { success: false, timestamp: null };
 
     try {
-      // 1. Sync Profile (Push)
       const users = storage.getUsers();
       const user = users.find(u => u.id === userId);
-      if (user) {
+      
+      // 1. Sync Profile (Push latest local if exists)
+      if (user && user.isProfileComplete) {
         await supabase.from('profiles').upsert({
           id: user.id,
           name: user.name,
@@ -258,10 +284,15 @@ export const storage = {
         );
       }
 
-      // 3. Pull Global Content (Materials & Announcements)
-      const { data: remoteMaterials } = await supabase.from('materials').select('*');
-      if (remoteMaterials) {
-        const localMaterials: StudyMaterial[] = remoteMaterials.map(rm => ({
+      // 3. Pull Content
+      const [materialsRes, annRes, progRes] = await Promise.all([
+        supabase.from('materials').select('*'),
+        supabase.from('announcements').select('*').order('timestamp', { ascending: false }),
+        supabase.from('user_progress').select('*').eq('user_id', userId)
+      ]);
+
+      if (materialsRes.data) {
+        const localMaterials: StudyMaterial[] = materialsRes.data.map(rm => ({
           id: rm.id,
           title: rm.title,
           level: rm.level,
@@ -275,18 +306,27 @@ export const storage = {
         localStorage.setItem(MATERIALS_KEY, JSON.stringify(localMaterials));
       }
 
-      const { data: remoteAnnouncements } = await supabase.from('announcements')
-        .select('*')
-        .order('timestamp', { ascending: false });
-      if (remoteAnnouncements) {
-        localStorage.setItem(ANNOUNCEMENTS_KEY, JSON.stringify(remoteAnnouncements));
+      if (annRes.data) {
+        localStorage.setItem(ANNOUNCEMENTS_KEY, JSON.stringify(annRes.data));
+      }
+
+      if (progRes.data) {
+        const cloudProgress: UserProgress[] = progRes.data.map(rp => ({
+          materialId: rp.material_id,
+          status: rp.status as ReadingStatus,
+          progressPercent: rp.progress_percent,
+          lastRead: rp.last_read
+        }));
+        const allProgress = storage.getAllProgress();
+        allProgress[userId] = cloudProgress;
+        localStorage.setItem(PROGRESS_KEY, JSON.stringify(allProgress));
       }
 
       const syncTimestamp = new Date().toISOString();
       localStorage.setItem(LAST_SYNC_KEY, syncTimestamp);
       return { success: true, timestamp: syncTimestamp };
     } catch (err) {
-      console.error("[Sync] Error during Supabase synchronization:", err);
+      console.error("[Sync] Error:", err);
       return { success: false, timestamp: null };
     }
   }

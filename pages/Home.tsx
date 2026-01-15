@@ -80,10 +80,9 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, user }) => {
       <section className="relative overflow-hidden bg-slate-900 dark:bg-[#020617] rounded-[3rem] p-10 md:p-16 lg:p-24 text-center border border-white/5 shadow-2xl">
         <div className="relative z-10 max-w-4xl mx-auto space-y-8">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-[10px] font-black text-emerald-400 uppercase tracking-[0.2em]">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-            </span>
+            <div className="w-5 h-5 bg-emerald-600 rounded flex items-center justify-center mr-2 shadow-lg">
+                <span className="text-white text-[8px] font-black">SH</span>
+            </div>
             Official Digital Repository
           </div>
           <h1 className="text-3xl md:text-5xl lg:text-7xl font-black text-white leading-[1.1] tracking-tighter">
@@ -157,8 +156,8 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, user }) => {
             recentMaterials.map((m) => (
               <div key={m.id} className="group bg-slate-50 dark:bg-slate-900/50 p-5 rounded-[2rem] border border-transparent hover:border-emerald-500/20 hover:bg-white dark:hover:bg-slate-900 transition-all flex items-center justify-between shadow-sm">
                 <div className="flex items-center gap-4 min-w-0">
-                  <div className="w-12 h-12 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center border border-slate-100 dark:border-slate-700 flex-none group-hover:bg-emerald-50 transition-all">
-                    <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400">SH</span>
+                  <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-700 dark:bg-slate-800 rounded-2xl flex items-center justify-center border border-emerald-400/20 flex-none shadow-md group-hover:scale-110 transition-transform">
+                    <span className="text-[10px] font-black text-white">SH</span>
                   </div>
                   <div className="min-w-0">
                     <h4 className="font-bold text-slate-800 dark:text-slate-100 group-hover:text-emerald-600 transition-colors truncate">{m.title}</h4>

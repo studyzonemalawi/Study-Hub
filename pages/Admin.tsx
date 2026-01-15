@@ -8,6 +8,7 @@ import {
   User,
   Message,
   Announcement,
+  AccountRole,
   PRIMARY_GRADES, 
   SECONDARY_GRADES, 
   PRIMARY_SUBJECTS, 
@@ -173,6 +174,20 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
       setUsers(users.filter(u => u.id !== userId));
       if (selectedUser?.id === userId) setSelectedUser(null);
     }
+  };
+
+  const handleRoleChange = (newRole: AccountRole) => {
+    if (!selectedUser) return;
+    
+    const updatedUser: User = { ...selectedUser, accountRole: newRole };
+    storage.updateUser(updatedUser);
+    
+    // Update local states
+    setUsers(users.map(u => u.id === selectedUser.id ? updatedUser : u));
+    setSelectedUser(updatedUser);
+    
+    setSuccessMsg(`Role updated to ${newRole} for ${updatedUser.name}`);
+    setTimeout(() => setSuccessMsg(null), 3000);
   };
 
   const viewUserHistory = (user: User) => {
@@ -352,8 +367,15 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
               {users.map(u => (
                 <div key={u.id} className={`p-4 rounded-2xl border transition-all cursor-pointer flex justify-between items-center ${selectedUser?.id === u.id ? 'bg-emerald-50 border-emerald-200 shadow-md' : 'bg-gray-50 border-transparent hover:border-emerald-200'}`} onClick={() => viewUserHistory(u)}>
                   <div className="flex items-center space-x-3 overflow-hidden">
-                    <div className="w-10 h-10 rounded-xl bg-white border border-gray-100 overflow-hidden"><img src={u.profilePic || 'https://via.placeholder.com/150'} className="w-full h-full object-cover" /></div>
-                    <div className="truncate"><p className="font-bold text-gray-800 truncate text-sm">{u.name}</p></div>
+                    <div className="w-10 h-10 rounded-xl bg-white border border-gray-100 overflow-hidden">
+                      <div className="w-full h-full bg-slate-100 flex items-center justify-center font-bold text-slate-400">
+                        {u.name ? u.name[0] : '?'}
+                      </div>
+                    </div>
+                    <div className="truncate">
+                      <p className="font-bold text-gray-800 truncate text-sm">{u.name || u.email}</p>
+                      <p className="text-[8px] font-black uppercase tracking-widest text-emerald-600">{u.accountRole || 'Member'}</p>
+                    </div>
                   </div>
                   <button onClick={(e) => { e.stopPropagation(); deleteUser(u.id); }} className="text-red-200 hover:text-red-500 transition-colors"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
                 </div>
@@ -361,13 +383,55 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
             </div>
           </div>
           <div className="lg:col-span-2 bg-white rounded-[2.5rem] p-10 border border-gray-100 shadow-2xl h-fit">
-            {!selectedUser ? <div className="h-64 flex flex-col items-center justify-center text-gray-300 opacity-40"><p className="font-black uppercase tracking-widest text-xs">Select user to view history</p></div> : (
+            {!selectedUser ? <div className="h-64 flex flex-col items-center justify-center text-gray-300 opacity-40"><p className="font-black uppercase tracking-widest text-xs">Select user to view details</p></div> : (
               <div className="space-y-8 animate-in fade-in duration-300">
-                <div className="flex justify-between items-center border-b pb-8"><h3 className="text-2xl font-black text-gray-800">{selectedUser.name}</h3><button onClick={() => deleteUser(selectedUser.id)} className="px-6 py-3 bg-red-50 text-red-600 font-black rounded-2xl text-[10px] uppercase tracking-widest hover:bg-red-100 transition-colors">Ban User</button></div>
-                <div className="space-y-4 bg-gray-50 p-6 rounded-[2rem] max-h-96 overflow-y-auto custom-scrollbar border border-gray-100">
-                  {userMessages.length === 0 ? <div className="py-20 text-center text-gray-400 italic text-sm">No messages yet.</div> : userMessages.map(m => (
-                    <div key={m.id} className={`flex ${m.senderId === 'admin' ? 'justify-end' : 'justify-start'}`}><div className={`max-w-[80%] p-4 rounded-2xl text-sm ${m.senderId === 'admin' ? 'bg-emerald-600 text-white' : 'bg-white border text-gray-800'}`}>{m.content}</div></div>
-                  ))}
+                <div className="flex justify-between items-start border-b pb-8">
+                  <div>
+                    <h3 className="text-2xl font-black text-gray-800">{selectedUser.name || 'Anonymous User'}</h3>
+                    <p className="text-slate-400 text-xs font-bold">{selectedUser.email}</p>
+                  </div>
+                  <div className="flex gap-3">
+                    <button onClick={() => deleteUser(selectedUser.id)} className="px-6 py-3 bg-red-50 text-red-600 font-black rounded-2xl text-[10px] uppercase tracking-widest hover:bg-red-100 transition-colors">Ban User</button>
+                  </div>
+                </div>
+
+                {/* Account Role Modification Section */}
+                <div className="p-6 bg-emerald-50 border border-emerald-100 rounded-[2rem] space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-emerald-800">Assign User Role</h4>
+                    <span className="text-[9px] font-black uppercase tracking-widest bg-emerald-200 px-2 py-1 rounded-md text-emerald-700">Current: {selectedUser.accountRole || 'Not Set'}</span>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {Object.values(AccountRole).map((role) => (
+                      <button
+                        key={role}
+                        onClick={() => handleRoleChange(role)}
+                        className={`py-3 px-4 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border ${
+                          selectedUser.accountRole === role 
+                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-lg' 
+                            : 'bg-white text-emerald-600 border-emerald-200 hover:bg-emerald-100'
+                        }`}
+                      >
+                        {role}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-2">Message History</h4>
+                  <div className="space-y-4 bg-gray-50 p-6 rounded-[2rem] max-h-96 overflow-y-auto custom-scrollbar border border-gray-100">
+                    {userMessages.length === 0 ? <div className="py-20 text-center text-gray-400 italic text-sm">No messages yet.</div> : userMessages.map(m => (
+                      <div key={m.id} className={`flex ${m.senderId === 'admin' ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`max-w-[80%] p-4 rounded-2xl text-sm ${m.senderId === 'admin' ? 'bg-emerald-600 text-white' : 'bg-white border text-gray-800'}`}>
+                          {m.content}
+                          <div className="mt-2 text-[8px] opacity-60 font-black uppercase tracking-widest">
+                            {new Date(m.timestamp).toLocaleTimeString()}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
