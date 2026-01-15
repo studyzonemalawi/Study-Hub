@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { User } from '../types';
 
@@ -22,8 +23,7 @@ export const Layout: React.FC<LayoutProps> = ({
 }) => {
   if (!user) return <>{children}</>;
 
-  const ADMIN_EMAIL = 'studyhubmalawi@gmail.com';
-  const isAdmin = user.appRole === 'admin' && user.email === ADMIN_EMAIL;
+  const isAdmin = user.appRole === 'admin';
 
   const navItems = [
     { id: 'home', label: 'Home', icon: '🏠' },
@@ -36,7 +36,7 @@ export const Layout: React.FC<LayoutProps> = ({
 
   const getInitials = (name: string, email: string) => {
     if (name) return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-    return email[0].toUpperCase();
+    return email ? email[0].toUpperCase() : '?';
   };
 
   return (
@@ -45,8 +45,8 @@ export const Layout: React.FC<LayoutProps> = ({
       <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 lg:px-10 py-4 flex justify-between items-center">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center text-white shadow-emerald-200 dark:shadow-none">
-                <span className="text-lg font-black tracking-tighter">SH</span>
+            <div className="w-10 h-10 rounded-xl overflow-hidden shadow-emerald-200 dark:shadow-none border border-emerald-500/20">
+                <img src="logo.png" alt="Study Hub Malawi" className="w-full h-full object-cover" />
             </div>
             <div className="flex flex-col">
                 <span className="text-xl font-black tracking-tight text-slate-900 dark:text-white leading-none">STUDY HUB</span>
@@ -72,8 +72,8 @@ export const Layout: React.FC<LayoutProps> = ({
                 <p className="text-xs font-black uppercase tracking-widest text-slate-800 dark:text-slate-100 truncate max-w-[150px]">{user.name || user.email}</p>
                 <p className="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-widest opacity-80">{user.accountRole || 'Member'}</p>
               </div>
-              <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 font-black text-xs border border-slate-200 dark:border-slate-700 shadow-sm">
-                {getInitials(user.name, user.email)}
+              <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 font-black text-xs border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+                {user.profilePic ? <img src={user.profilePic} className="w-full h-full object-cover" /> : getInitials(user.name, user.email)}
               </div>
             </div>
             <button 
@@ -110,8 +110,10 @@ export const Layout: React.FC<LayoutProps> = ({
 
       <footer className="hidden md:block bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 py-12">
         <div className="max-w-7xl mx-auto px-6 flex flex-col items-center space-y-6">
-          <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center text-white font-black text-xs">SH</div>
+          <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 rounded-lg overflow-hidden border border-emerald-500/20">
+                <img src="logo.png" alt="Logo" className="w-full h-full object-cover" />
+              </div>
               <span className="text-slate-900 dark:text-white font-black text-lg tracking-tight">Study Hub Malawi</span>
           </div>
           <p className="text-slate-500 dark:text-slate-400 text-xs text-center max-w-lg leading-relaxed">Empowering every Malawian learner with high-quality academic resources. Bridging the gap in primary and secondary education for a brighter future.</p>

@@ -1,9 +1,9 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-// These environment variables should be set in your execution context
-const supabaseUrl = process.env.SUPABASE_URL || 'https://your-project-id.supabase.co';
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || 'your-anon-key';
+// Live Supabase credentials for "Study Hub Malawi"
+const supabaseUrl = 'https://vkykmbxpdmvvdtmciolo.supabase.co';
+const supabaseAnonKey = 'sb_publishable_mu0YVJi78VLOdUt5zpAirA_VwG55UzO';
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {

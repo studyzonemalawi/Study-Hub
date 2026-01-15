@@ -92,7 +92,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
     setShowConfirmModal(true);
   };
 
-  const startUpload = () => {
+  const startUpload = async () => {
     setShowConfirmModal(false);
     if (!file || !subject || !title || isUploading) return;
     setIsUploading(true);
@@ -101,16 +101,12 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
     
     const interval = setInterval(() => {
       setUploadProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          completeUpload();
-          return 100;
-        }
+        if (prev >= 90) return 90; // Hold at 90 until storage.saveMaterial finishes
         return prev + 10;
       });
     }, 150);
 
-    const completeUpload = () => {
+    try {
       const newMaterial: StudyMaterial = {
         id: Math.random().toString(36).substr(2, 9),
         title, level, grade, category, subject,
@@ -118,19 +114,25 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
         fileUrl: URL.createObjectURL(file),
         uploadedAt: new Date().toISOString()
       };
-      storage.saveMaterial(newMaterial);
+      
+      await storage.saveMaterial(newMaterial);
+      
+      clearInterval(interval);
+      setUploadProgress(100);
       setMaterials((prev) => [...prev, newMaterial]);
-      setIsUploading(false);
-      setUploadProgress(0);
       setTitle('');
       setFile(null);
-      setSuccessMsg('Material saved successfully');
+      setSuccessMsg('Material published successfully to Study Hub cloud');
       const input = document.getElementById('file-upload') as HTMLInputElement;
       if (input) input.value = '';
-    };
+    } catch (err: any) {
+      setError(err.message || "Failed to publish material");
+    } finally {
+      setIsUploading(false);
+    }
   };
 
-  const handlePostAnnouncement = (e: React.FormEvent) => {
+  const handlePostAnnouncement = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!annTitle.trim() || !annContent.trim()) return;
 
@@ -142,25 +144,25 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
       timestamp: new Date().toISOString()
     };
 
-    storage.saveAnnouncement(newAnn);
+    await storage.saveAnnouncement(newAnn);
     setAnnouncements([newAnn, ...announcements]);
     setAnnTitle('');
     setAnnContent('');
     setAnnPriority('normal');
-    setSuccessMsg('Announcement published successfully');
+    setSuccessMsg('Announcement broadcasted to all users');
     setTimeout(() => setSuccessMsg(null), 3000);
   };
 
-  const deleteAnnouncement = (id: string) => {
+  const deleteAnnouncement = async (id: string) => {
     if (window.confirm('Delete this announcement?')) {
-      storage.deleteAnnouncement(id);
+      await storage.deleteAnnouncement(id);
       setAnnouncements(announcements.filter(a => a.id !== id));
     }
   };
 
-  const deleteItem = (id: string) => {
+  const deleteItem = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this resource?')) {
-      storage.deleteMaterial(id);
+      await storage.deleteMaterial(id);
       setMaterials(materials.filter(m => m.id !== id));
     }
   };
@@ -258,7 +260,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">PDF Document</label>
-                <input type="file" required accept=".pdf" onChange={handleFileChange} className="w-full p-4 rounded-2xl border border-gray-100 border-dashed bg-gray-50 text-gray-500 file:hidden cursor-pointer" />
+                <input type="file" required accept=".pdf" id="file-upload" onChange={handleFileChange} className="w-full p-4 rounded-2xl border border-gray-100 border-dashed bg-gray-50 text-gray-500 file:hidden cursor-pointer" />
                 {error && <p className="text-xs text-red-500 font-bold">{error}</p>}
               </div>
               {isUploading && (

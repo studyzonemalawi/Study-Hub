@@ -1,6 +1,15 @@
 
 import React, { useState } from 'react';
-import { User, MALAWI_DISTRICTS, JOIN_REASONS, PRIMARY_GRADES, SECONDARY_GRADES, OTHER_GRADE_OPTIONS, Grade, AccountRole } from '../types';
+import { 
+  User, 
+  MALAWI_DISTRICTS, 
+  JOIN_REASONS, 
+  PRIMARY_GRADES, 
+  SECONDARY_GRADES, 
+  OTHER_GRADE_OPTIONS, 
+  Grade, 
+  AccountRole 
+} from '../types';
 import { storage } from '../services/storage';
 
 interface SettingsProps {
@@ -9,7 +18,10 @@ interface SettingsProps {
   onNavigate: (tab: string) => void;
 }
 
+type SettingsSection = 'profile' | 'academic' | 'security' | 'privacy';
+
 export const Settings: React.FC<SettingsProps> = ({ user, onUpdate, onNavigate }) => {
+  const [activeSection, setActiveSection] = useState<SettingsSection>('profile');
   const [formData, setFormData] = useState<Partial<User>>({
     name: user.name,
     age: user.age,
@@ -19,10 +31,10 @@ export const Settings: React.FC<SettingsProps> = ({ user, onUpdate, onNavigate }
     currentGrade: user.currentGrade,
     reason: user.reason,
     bio: user.bio || '',
-    isPublic: user.isPublic || false
+    isPublic: user.isPublic || false,
+    email: user.email || ''
   });
 
-  const [password, setPassword] = useState(user.password || '');
   const [newPassword, setNewPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -36,16 +48,16 @@ export const Settings: React.FC<SettingsProps> = ({ user, onUpdate, onNavigate }
     const updatedUser: User = {
       ...user,
       ...formData,
-      password: newPassword || password
-    };
+      password: newPassword || user.password
+    } as User;
 
     setTimeout(() => {
       storage.updateUser(updatedUser);
       onUpdate(updatedUser);
       setIsSaving(false);
       setNewPassword('');
-      setMessage({ type: 'success', text: 'Profile saved successfully' });
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      setMessage({ type: 'success', text: 'Changes saved successfully' });
+      setTimeout(() => setMessage(null), 3000);
     }, 600);
   };
 
@@ -56,162 +68,246 @@ export const Settings: React.FC<SettingsProps> = ({ user, onUpdate, onNavigate }
 
   const allGrades = [...PRIMARY_GRADES, ...SECONDARY_GRADES, ...OTHER_GRADE_OPTIONS];
 
+  const sections = [
+    { id: 'profile' as const, label: 'Profile Info', icon: '👤' },
+    { id: 'academic' as const, label: 'Academic Details', icon: '📚' },
+    { id: 'security' as const, label: 'Security', icon: '🔒' },
+    { id: 'privacy' as const, label: 'Privacy', icon: '🛡️' }
+  ];
+
   return (
-    <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex justify-between items-start">
+    <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
         <div>
-          <h2 className="text-3xl font-black text-gray-800">Account Settings</h2>
-          <p className="text-gray-500">Manage your profile, security, and privacy.</p>
+          <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Account Settings</h2>
+          <p className="text-slate-500 dark:text-slate-400 font-medium">Configure your hub identity and security preferences.</p>
         </div>
         <button 
           onClick={() => onNavigate('home')}
-          className="p-3 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-2xl transition-all flex items-center gap-2 group"
-          title="Exit Settings"
+          className="px-6 py-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-2xl transition-all flex items-center gap-2 group border border-slate-200 dark:border-slate-700 shadow-sm"
         >
           <svg className="w-5 h-5 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
-          <span className="text-xs font-bold uppercase tracking-widest hidden sm:inline">Exit</span>
+          <span className="text-[10px] font-black uppercase tracking-[0.2em]">Exit</span>
         </button>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-1 space-y-6">
-          <div className="bg-white p-10 rounded-[2.5rem] border border-gray-100 shadow-xl text-center relative overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-24 bg-emerald-600"></div>
+      <div className="flex flex-col lg:flex-row gap-8 min-h-[600px]">
+        {/* Sidebar Navigation */}
+        <aside className="w-full lg:w-72 flex-none space-y-4">
+          <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] border border-slate-100 dark:border-slate-700 p-4 shadow-xl">
+            <nav className="flex lg:flex-col gap-2 overflow-x-auto no-scrollbar lg:overflow-visible">
+              {sections.map(section => (
+                <button
+                  key={section.id}
+                  onClick={() => { setActiveSection(section.id); setMessage(null); }}
+                  className={`flex items-center gap-4 px-6 py-4 rounded-2xl transition-all whitespace-nowrap lg:whitespace-normal text-left ${
+                    activeSection === section.id 
+                      ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-100 dark:shadow-none' 
+                      : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50'
+                  }`}
+                >
+                  <span className="text-xl">{section.icon}</span>
+                  <span className="text-xs font-black uppercase tracking-widest">{section.label}</span>
+                </button>
+              ))}
+            </nav>
+          </div>
+
+          <div className="hidden lg:block bg-slate-900 dark:bg-slate-950 rounded-[2.5rem] p-8 text-white relative overflow-hidden shadow-2xl">
             <div className="relative z-10">
-              <div className="w-24 h-24 rounded-full border-4 border-white bg-emerald-700 mx-auto mb-4 flex items-center justify-center text-white font-black text-2xl shadow-lg">
+              <div className="w-16 h-16 rounded-full bg-emerald-600 flex items-center justify-center text-xl font-black border-4 border-slate-900 mb-4 mx-auto">
                 {getInitials(user.name)}
               </div>
-              <h3 className="text-xl font-black text-gray-800">{user.name}</h3>
-              {/* Fix: Replaced the non-existent user.phoneNumber with user.email */}
-              <p className="text-sm text-emerald-600 font-bold">{user.email}</p>
-              <div className="mt-4 pt-4 border-t border-gray-100 flex flex-wrap justify-center gap-2">
-                <span className="px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-[10px] font-black uppercase tracking-widest">{user.accountRole}</span>
-                <span className="px-3 py-1 bg-gray-50 text-gray-500 rounded-full text-[10px] font-black uppercase tracking-widest">{user.district}</span>
-              </div>
+              <h4 className="text-center font-black truncate">{user.name}</h4>
+              <p className="text-center text-[10px] font-black uppercase tracking-widest text-emerald-400 mt-1 opacity-80">{user.email}</p>
             </div>
+            <div className="absolute top-0 right-0 p-4 opacity-10 text-6xl">✨</div>
           </div>
+        </aside>
 
-          <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-xl">
-            <h4 className="font-black text-gray-800 mb-6 uppercase tracking-widest text-xs">Privacy Settings</h4>
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
-              <div>
-                <p className="font-bold text-sm text-gray-800">Public Profile</p>
-                <p className="text-[10px] text-gray-500 uppercase font-bold tracking-tighter">Allow others to see your stats</p>
-              </div>
-              <button 
-                onClick={() => setFormData({ ...formData, isPublic: !formData.isPublic })}
-                className={`w-12 h-6 rounded-full transition-colors relative ${formData.isPublic ? 'bg-emerald-600' : 'bg-gray-300'}`}
-              >
-                <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${formData.isPublic ? 'translate-x-6' : 'translate-x-0'}`}></div>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div className="lg:col-span-2">
-          <form onSubmit={handleSubmit} className="bg-white rounded-[2.5rem] border border-gray-100 shadow-2xl overflow-hidden">
-            <div className="p-10 space-y-8">
+        {/* Main Content Area */}
+        <div className="flex-1 bg-white dark:bg-slate-800 rounded-[3rem] border border-slate-100 dark:border-slate-700 shadow-2xl overflow-hidden flex flex-col">
+          <form onSubmit={handleSubmit} className="flex flex-col h-full">
+            <div className="p-8 md:p-12 space-y-10 flex-1">
               {message && (
-                <div className={`p-4 rounded-2xl text-sm font-bold border flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300 ${message.type === 'success' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-red-50 text-red-700 border-red-100'}`}>
-                  <span className="w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-sm">✓</span>
+                <div className={`p-5 rounded-2xl text-xs font-black uppercase tracking-[0.1em] border flex items-center gap-4 animate-in fade-in slide-in-from-top-2 duration-300 ${
+                  message.type === 'success' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-red-50 text-red-700 border-red-100'
+                }`}>
+                  <span className="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-sm text-lg">
+                    {message.type === 'success' ? '✓' : '⚠️'}
+                  </span>
                   {message.text}
                 </div>
               )}
 
-              <div className="space-y-6">
-                <h4 className="text-lg font-black text-gray-800 flex items-center gap-2">
-                  <span className="w-1.5 h-6 bg-emerald-500 rounded-full"></span>
-                  Personal Information
-                </h4>
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Full Name</label>
-                    <input type="text" className="w-full p-4 rounded-2xl border border-gray-100 focus:ring-2 focus:ring-emerald-500 outline-none" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
+              {/* Profile Section */}
+              {activeSection === 'profile' && (
+                <div className="space-y-8 animate-in fade-in duration-500">
+                  <div className="border-b border-slate-50 dark:border-slate-700 pb-4">
+                    <h3 className="text-2xl font-black text-slate-800 dark:text-white">Profile Identity</h3>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Manage how you appear in the Study Hub community.</p>
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Age</label>
-                    <input type="number" className="w-full p-4 rounded-2xl border border-gray-100 focus:ring-2 focus:ring-emerald-500 outline-none" value={formData.age} onChange={(e) => setFormData({ ...formData, age: parseInt(e.target.value) })} />
+                  
+                  <div className="grid md:grid-cols-2 gap-8">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] px-1">Full Display Name</label>
+                      <input 
+                        type="text" 
+                        required
+                        className="w-full p-5 rounded-[1.5rem] border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none font-bold text-slate-900 dark:text-white transition-all" 
+                        value={formData.name} 
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })} 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] px-1">Age</label>
+                      <input 
+                        type="number" 
+                        className="w-full p-5 rounded-[1.5rem] border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none font-bold text-slate-900 dark:text-white transition-all" 
+                        value={formData.age} 
+                        onChange={(e) => setFormData({ ...formData, age: parseInt(e.target.value) })} 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] px-1">Account Role</label>
+                      <select 
+                        className="w-full p-5 rounded-[1.5rem] border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none font-bold text-slate-900 dark:text-white transition-all appearance-none" 
+                        value={formData.accountRole} 
+                        onChange={(e) => setFormData({ ...formData, accountRole: e.target.value as AccountRole })}
+                      >
+                        {Object.values(AccountRole).map(r => <option key={r} value={r}>{r}</option>)}
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] px-1">District</label>
+                      <select 
+                        className="w-full p-5 rounded-[1.5rem] border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none font-bold text-slate-900 dark:text-white transition-all appearance-none" 
+                        value={formData.district} 
+                        onChange={(e) => setFormData({ ...formData, district: e.target.value })}
+                      >
+                        {MALAWI_DISTRICTS.map(d => <option key={d} value={d}>{d}</option>)}
+                      </select>
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Account Role</label>
-                    <select className="w-full p-4 rounded-2xl border border-gray-100 focus:ring-2 focus:ring-emerald-500 outline-none" value={formData.accountRole} onChange={(e) => setFormData({ ...formData, accountRole: e.target.value as AccountRole })}>
-                      {Object.values(AccountRole).map(r => <option key={r} value={r}>{r}</option>)}
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-black text-gray-400 uppercase tracking-widest">District</label>
-                    <select className="w-full p-4 rounded-2xl border border-gray-100 focus:ring-2 focus:ring-emerald-500 outline-none" value={formData.district} onChange={(e) => setFormData({ ...formData, district: e.target.value })}>
-                      {MALAWI_DISTRICTS.map(d => <option key={d} value={d}>{d}</option>)}
-                    </select>
-                  </div>
-                </div>
-              </div>
 
-              <div className="space-y-6 pt-6 border-t border-gray-50">
-                <h4 className="text-lg font-black text-gray-800 flex items-center gap-2">
-                  <span className="w-1.5 h-6 bg-emerald-500 rounded-full"></span>
-                  Current Studies
-                </h4>
-                <div className="grid md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Current Grade/Form</label>
-                    <select 
-                      className="w-full p-4 rounded-2xl border border-gray-100 focus:ring-2 focus:ring-emerald-500 outline-none" 
-                      value={formData.currentGrade} 
-                      onChange={(e) => setFormData({ ...formData, currentGrade: e.target.value as Grade })}
-                    >
-                      {allGrades.map(g => <option key={g} value={g}>{g}</option>)}
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-black text-gray-400 uppercase tracking-widest">School Name</label>
-                    <input type="text" className="w-full p-4 rounded-2xl border border-gray-100 focus:ring-2 focus:ring-emerald-500 outline-none" value={formData.schoolName} onChange={(e) => setFormData({ ...formData, schoolName: e.target.value })} />
+                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] px-1">Bio / Mission Statement</label>
+                    <textarea 
+                      className="w-full p-5 rounded-[1.5rem] border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none font-medium text-slate-900 dark:text-white transition-all h-32 resize-none" 
+                      placeholder="Tell the community about your learning goals..."
+                      value={formData.bio} 
+                      onChange={(e) => setFormData({ ...formData, bio: e.target.value })} 
+                    />
                   </div>
                 </div>
-              </div>
+              )}
 
-              <div className="space-y-6 pt-6 border-t border-gray-50">
-                <h4 className="text-lg font-black text-gray-800 flex items-center gap-2">
-                  <span className="w-1.5 h-6 bg-blue-500 rounded-full"></span>
-                  Security
-                </h4>
-                <div className="relative space-y-2">
-                  <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Change Password</label>
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    className="w-full p-4 rounded-2xl border border-gray-100 focus:ring-2 focus:ring-emerald-500 outline-none pr-20"
-                    placeholder="Enter new password (leave blank to keep current)"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                  />
-                  <button 
-                    type="button" 
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-[38px] text-[10px] font-black uppercase text-emerald-600 hover:text-emerald-800"
-                  >
-                    {showPassword ? 'Hide' : 'Show'}
-                  </button>
+              {/* Academic Section */}
+              {activeSection === 'academic' && (
+                <div className="space-y-8 animate-in fade-in duration-500">
+                  <div className="border-b border-slate-50 dark:border-slate-700 pb-4">
+                    <h3 className="text-2xl font-black text-slate-800 dark:text-white">Academic Status</h3>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Tailor your textbook feed based on your current studies.</p>
+                  </div>
+
+                  <div className="grid md:grid-cols-2 gap-8">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] px-1">Current Grade/Form</label>
+                      <select 
+                        className="w-full p-5 rounded-[1.5rem] border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none font-bold text-slate-900 dark:text-white transition-all appearance-none" 
+                        value={formData.currentGrade} 
+                        onChange={(e) => setFormData({ ...formData, currentGrade: e.target.value as Grade })}
+                      >
+                        {allGrades.map(g => <option key={g} value={g}>{g}</option>)}
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] px-1">School Name</label>
+                      <input 
+                        type="text" 
+                        className="w-full p-5 rounded-[1.5rem] border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none font-bold text-slate-900 dark:text-white transition-all" 
+                        value={formData.schoolName} 
+                        onChange={(e) => setFormData({ ...formData, schoolName: e.target.value })} 
+                      />
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {/* Security Section */}
+              {activeSection === 'security' && (
+                <div className="space-y-8 animate-in fade-in duration-500">
+                  <div className="border-b border-slate-50 dark:border-slate-700 pb-4">
+                    <h3 className="text-2xl font-black text-slate-800 dark:text-white">Security & Login</h3>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Keep your account safe with a strong, unique password.</p>
+                  </div>
+
+                  <div className="space-y-6">
+                    <div className="p-6 bg-slate-50 dark:bg-slate-900 rounded-[2rem] border border-slate-100 dark:border-slate-700">
+                      <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] px-1 mb-2 block">Email Address (Account Identity)</label>
+                      <p className="text-lg font-black text-slate-900 dark:text-white">{user.email}</p>
+                    </div>
+
+                    <div className="relative space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] px-1">New Hub Password</label>
+                      <div className="relative">
+                        <input
+                          type={showPassword ? "text" : "password"}
+                          className="w-full p-5 rounded-[1.5rem] border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none font-bold text-slate-900 dark:text-white transition-all pr-24"
+                          placeholder="••••••••"
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                        />
+                        <button 
+                          type="button" 
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-5 top-1/2 -translate-y-1/2 text-[10px] font-black uppercase text-emerald-600 hover:text-emerald-800 tracking-widest"
+                        >
+                          {showPassword ? 'Hide' : 'Show'}
+                        </button>
+                      </div>
+                      <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold px-2">Leave blank to keep your current password.</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Privacy Section */}
+              {activeSection === 'privacy' && (
+                <div className="space-y-8 animate-in fade-in duration-500">
+                  <div className="border-b border-slate-50 dark:border-slate-700 pb-4">
+                    <h3 className="text-2xl font-black text-slate-800 dark:text-white">Privacy Controls</h3>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Decide how much of your learning data is shared.</p>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="bg-slate-50 dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-700 flex items-center justify-between group transition-all hover:border-emerald-500/30">
+                      <div>
+                        <h4 className="font-black text-slate-900 dark:text-white">Public Profile Participation</h4>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">When enabled, other students can see your reading stats and accomplishments in the community.</p>
+                      </div>
+                      <button 
+                        type="button"
+                        onClick={() => setFormData({ ...formData, isPublic: !formData.isPublic })}
+                        className={`w-14 h-8 rounded-full transition-all relative flex items-center px-1 shadow-inner ${formData.isPublic ? 'bg-emerald-600' : 'bg-slate-300 dark:bg-slate-700'}`}
+                      >
+                        <div className={`w-6 h-6 bg-white rounded-full transition-all shadow-md transform ${formData.isPublic ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
-            <div className="bg-gray-50 p-8 border-t border-gray-100 flex flex-col sm:flex-row justify-between gap-4">
-              <button
-                type="button"
-                onClick={() => onNavigate('home')}
-                className="order-2 sm:order-1 px-8 py-4 text-gray-500 font-black uppercase tracking-widest text-sm hover:text-gray-800 transition-colors"
-              >
-                Discard & Exit
-              </button>
+            <div className="p-8 md:p-12 bg-slate-50/50 dark:bg-slate-900/30 border-t border-slate-100 dark:border-slate-700 flex flex-col sm:flex-row justify-between items-center gap-4 flex-none">
+              <p className="text-[9px] font-black uppercase text-slate-400 tracking-[0.3em] order-2 sm:order-1">Last Updated: {new Date(user.lastLogin).toLocaleDateString()}</p>
               <button
                 type="submit"
                 disabled={isSaving}
-                className="order-1 sm:order-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black px-10 py-4 rounded-2xl shadow-xl transition-all disabled:opacity-50 uppercase tracking-widest text-sm flex items-center justify-center gap-2"
+                className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-black px-12 py-5 rounded-2xl shadow-xl shadow-emerald-100 dark:shadow-none transition-all disabled:opacity-50 uppercase tracking-[0.2em] text-[11px] flex items-center justify-center gap-3 active:scale-[0.98] order-1 sm:order-2"
               >
-                {isSaving ? (
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                ) : null}
-                {isSaving ? 'Processing...' : 'Save All Changes'}
+                {isSaving && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>}
+                {isSaving ? 'Synchronizing...' : 'Save Hub Settings'}
               </button>
             </div>
           </form>

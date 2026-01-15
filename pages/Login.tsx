@@ -35,31 +35,28 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
     if (savedPass) setPassword(savedPass);
   }, []);
 
-  const validateEmail = (email: string) => {
-    return String(email)
-      .toLowerCase()
-      .match(
-        /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
-      );
+  const validateEmail = (e: string) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
   };
 
   const mapSupabaseUserToAppUser = (sbUser: any): User => {
+    const userEmail = sbUser.email || '';
     const existingUsers = storage.getUsers();
-    const existing = existingUsers.find(u => u.email === sbUser.email);
+    const existing = existingUsers.find(u => u.id === sbUser.id || (u.email === userEmail));
     
     if (existing) {
       return {
         ...existing,
         lastLogin: new Date().toISOString(),
-        appRole: sbUser.email === ADMIN_EMAIL ? 'admin' : existing.appRole
+        appRole: userEmail === ADMIN_EMAIL ? 'admin' : existing.appRole
       };
     }
 
     return {
       id: sbUser.id,
-      email: sbUser.email!,
-      authProvider: 'email',
-      appRole: sbUser.email === ADMIN_EMAIL ? 'admin' : 'user',
+      email: userEmail,
+      authProvider: sbUser.app_metadata?.provider === 'facebook' ? 'facebook' : 'email',
+      appRole: userEmail === ADMIN_EMAIL ? 'admin' : 'user',
       name: sbUser.user_metadata?.full_name || '',
       dateJoined: new Date().toISOString(),
       lastLogin: new Date().toISOString(),
@@ -69,6 +66,32 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
       isPublic: false,
       termsAccepted: true
     };
+  };
+
+  const handleFacebookLogin = async () => {
+    setIsLoading(true);
+    setError('');
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'facebook',
+        options: {
+          redirectTo: window.location.origin,
+          scopes: 'email'
+        }
+      });
+      
+      if (error) {
+        // Specifically detect if provider is not enabled in Supabase dashboard
+        if (error.message.includes("provider is not enabled") || (error as any).status === 400) {
+          throw new Error("Facebook Login is not yet enabled in your Supabase Dashboard. Go to Authentication > Providers > Facebook and enter your Meta App ID and Secret.");
+        }
+        throw error;
+      }
+    } catch (err: any) {
+      console.error("Facebook Auth Error:", err);
+      setError(err.message || 'Failed to connect to Facebook. Please check your Supabase configuration.');
+      setIsLoading(false);
+    }
   };
 
   const handleResetPassword = async (e: React.FormEvent) => {
@@ -83,12 +106,14 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
       if (error) throw error;
-      setSuccessMsg('A password reset link has been sent to your email.');
+      setSuccessMsg('Check your email for the password reset link.');
       setIsResettingPassword(false);
     } catch (err: any) {
-      setError(err.message || 'Failed to send reset email.');
+      setError(err.message || 'Failed to initiate reset.');
     } finally {
       setIsLoading(false);
     }
@@ -165,7 +190,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
         }
       }
     } catch (err: any) {
-      setError(err.message || 'Authentication error. Please try again.');
+      setError(err.message || 'Authentication error. Please check your details.');
     } finally {
       setIsLoading(false);
     }
@@ -190,33 +215,35 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
   return (
     <div className="min-h-screen bg-emerald-700 flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-white rounded-[3rem] shadow-2xl p-8 md:p-10 space-y-6 animate-in fade-in zoom-in duration-500 relative overflow-hidden">
+      <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-[3rem] shadow-2xl p-8 md:p-10 space-y-6 animate-in fade-in zoom-in duration-500 relative overflow-hidden">
         {isLoading && (
-          <div className="absolute inset-0 z-50 bg-white/80 backdrop-blur-sm flex items-center justify-center">
+          <div className="absolute inset-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm flex items-center justify-center text-center p-6">
             <div className="flex flex-col items-center gap-4">
               <div className="w-14 h-14 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
-              <p className="font-black text-emerald-800 text-[10px] uppercase tracking-[0.2em] animate-pulse">Accessing Hub...</p>
+              <p className="font-black text-emerald-800 dark:text-emerald-400 text-[10px] uppercase tracking-[0.2em] animate-pulse">Accessing Hub...</p>
             </div>
           </div>
         )}
 
         <div className="text-center space-y-2">
-          <div className="w-16 h-16 bg-emerald-600 rounded-2xl flex items-center justify-center text-white mx-auto shadow-xl shadow-emerald-100 mb-4">
-            <span className="text-2xl font-black">SH</span>
+          <div className="w-20 h-20 rounded-2xl overflow-hidden mx-auto shadow-xl shadow-emerald-100 dark:shadow-none mb-6 border-2 border-emerald-500/20">
+            <div className="w-full h-full bg-emerald-50 dark:bg-slate-800 flex items-center justify-center">
+              <span className="text-3xl font-black text-emerald-600">SH</span>
+            </div>
           </div>
-          <h1 className="text-4xl font-black text-slate-900 tracking-tight leading-none">Welcome Back</h1>
-          <p className="text-slate-500 font-medium">Gateway to Malawian Excellence</p>
+          <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-none">Welcome</h1>
+          <p className="text-slate-500 dark:text-slate-400 font-medium">Gateway to Malawian Excellence</p>
         </div>
 
         {error && (
-          <div className="bg-red-50 text-red-600 p-5 rounded-2xl text-xs font-black uppercase tracking-widest border border-red-100 animate-shake flex items-center gap-3">
-            <span className="text-lg">⚠️</span>
-            {error}
+          <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-5 rounded-2xl text-xs font-bold leading-relaxed border border-red-100 dark:border-red-900/30 animate-shake flex items-start gap-3 shadow-sm">
+            <span className="text-lg flex-none">⚠️</span>
+            <span className="flex-1">{error}</span>
           </div>
         )}
 
         {successMsg && (
-          <div className="bg-emerald-50 text-emerald-700 p-5 rounded-2xl text-xs font-black uppercase tracking-widest border border-emerald-100 animate-in fade-in flex items-center gap-3">
+          <div className="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 p-5 rounded-2xl text-xs font-black uppercase tracking-widest border border-emerald-100 dark:border-emerald-900/30 animate-in fade-in flex items-center gap-3">
             <span className="text-lg">✓</span>
             {successMsg}
           </div>
@@ -224,12 +251,12 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
-            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Email Address</label>
+            <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest px-2">Email Address</label>
             <input
               type="email"
               required
-              className="w-full px-6 py-4 rounded-2xl border border-slate-100 bg-slate-50/50 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all font-bold text-slate-900"
-              placeholder="e.g. kondwani@gmail.com"
+              className="w-full px-6 py-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all font-bold text-slate-900 dark:text-white"
+              placeholder="name@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
@@ -237,12 +264,12 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
           {!isResettingPassword && (
             <div className="space-y-2 relative">
-              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Secure Password</label>
+              <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest px-2">Password</label>
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
                   required
-                  className="w-full px-6 py-4 rounded-2xl border border-slate-100 bg-slate-50/50 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all font-bold pr-16 text-slate-900"
+                  className="w-full px-6 py-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all font-bold pr-16 text-slate-900 dark:text-white"
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -268,11 +295,11 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                     onChange={(e) => setRememberMe(e.target.checked)}
                     className="sr-only"
                   />
-                  <div className={`w-5 h-5 rounded-lg border-2 transition-all flex items-center justify-center ${rememberMe ? 'bg-emerald-600 border-emerald-600' : 'bg-white border-slate-200 group-hover:border-emerald-300'}`}>
+                  <div className={`w-5 h-5 rounded-lg border-2 transition-all flex items-center justify-center ${rememberMe ? 'bg-emerald-600 border-emerald-600' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 group-hover:border-emerald-300'}`}>
                     {rememberMe && <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M5 13l4 4L19 7" /></svg>}
                   </div>
                 </div>
-                <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest group-hover:text-slate-600 transition-colors">Remember Me</span>
+                <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors">Remember Me</span>
               </label>
               {!isRegistering && (
                 <button
@@ -287,34 +314,31 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
           )}
 
           {isRegistering && (
-            <div className="space-y-2 relative animate-in slide-in-from-top-2">
-              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Confirm Password</label>
-              <div className="relative">
-                <input
-                  type={showConfirmPassword ? "text" : "password"}
-                  required
-                  className="w-full px-6 py-4 rounded-2xl border border-slate-100 bg-slate-50/50 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all font-bold pr-16 text-slate-900"
-                  placeholder="••••••••"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-5 top-1/2 -translate-y-1/2 text-[10px] font-black uppercase text-emerald-600 hover:text-emerald-800 transition-colors"
-                >
-                  {showConfirmPassword ? "Hide" : "Show"}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {isRegistering && (
             <div className="space-y-4 pt-2 animate-in slide-in-from-top-2">
-              <p className="text-[10px] text-slate-400 font-bold px-2 leading-relaxed uppercase tracking-widest">
+              <div className="space-y-2 relative">
+                <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest px-2">Confirm Password</label>
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    required
+                    className="w-full px-6 py-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all font-bold pr-16 text-slate-900 dark:text-white"
+                    placeholder="••••••••"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-5 top-1/2 -translate-y-1/2 text-[10px] font-black uppercase text-emerald-600 hover:text-emerald-800 transition-colors"
+                  >
+                    {showConfirmPassword ? "Hide" : "Show"}
+                  </button>
+                </div>
+              </div>
+              <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold px-2 leading-relaxed uppercase tracking-widest">
                 By joining you agree to the <button type="button" onClick={() => setShowTermsModal(true)} className="text-emerald-600 underline hover:text-emerald-800">Terms</button>
               </p>
-              <label className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 cursor-pointer group transition-all hover:bg-emerald-50/50">
+              <label className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 cursor-pointer group transition-all hover:bg-emerald-50/50">
                 <div className="relative">
                   <input 
                     type="checkbox" 
@@ -322,81 +346,88 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                     onChange={(e) => setAcceptedTerms(e.target.checked)}
                     className="sr-only"
                   />
-                  <div className={`w-6 h-6 rounded-xl border-2 transition-all flex items-center justify-center ${acceptedTerms ? 'bg-emerald-600 border-emerald-600 shadow-lg' : 'bg-white border-slate-200 group-hover:border-emerald-300'}`}>
+                  <div className={`w-6 h-6 rounded-xl border-2 transition-all flex items-center justify-center ${acceptedTerms ? 'bg-emerald-600 border-emerald-600 shadow-lg' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 group-hover:border-emerald-300'}`}>
                     {acceptedTerms && <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M5 13l4 4L19 7" /></svg>}
                   </div>
                 </div>
-                <span className="text-xs text-slate-900 font-black uppercase tracking-widest">I Accept Terms</span>
+                <span className="text-xs text-slate-900 dark:text-white font-black uppercase tracking-widest">I Accept Terms</span>
               </label>
             </div>
           )}
 
           <button
             type="submit"
-            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-5 rounded-2xl shadow-xl transition-all active:scale-[0.98] text-[11px] uppercase tracking-[0.2em] mt-6 shadow-emerald-100"
+            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-5 rounded-2xl shadow-xl transition-all active:scale-[0.98] text-[11px] uppercase tracking-[0.2em] mt-6 shadow-emerald-100 dark:shadow-none"
           >
-            {isResettingPassword ? 'Send Link' : (isRegistering ? 'Create Account' : 'Sign In')}
+            {isResettingPassword ? 'Send Reset Link' : (isRegistering ? 'Create Account' : 'Sign In')}
           </button>
-
-          {isResettingPassword && (
-            <div className="text-center pt-2">
-              <button
-                onClick={toggleResetMode}
-                type="button"
-                className="text-slate-400 font-black text-[10px] uppercase tracking-widest hover:text-slate-600 transition-colors"
-              >
-                Back to Login
-              </button>
-            </div>
-          )}
         </form>
 
         {!isResettingPassword && (
-          <div className="text-center pt-4">
+          <div className="space-y-6">
+            <div className="flex items-center gap-4">
+              <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800"></div>
+              <span className="text-[9px] font-black uppercase text-slate-300 dark:text-slate-600 tracking-[0.3em]">OR</span>
+              <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800"></div>
+            </div>
+
             <button
-              onClick={toggleMode}
+              onClick={handleFacebookLogin}
               type="button"
-              className="text-emerald-700 font-black text-[10px] uppercase tracking-[0.15em] hover:underline"
+              className="w-full flex items-center justify-center gap-3 bg-[#1877F2] hover:bg-[#166fe5] text-white font-black py-4 rounded-2xl transition-all shadow-lg group active:scale-[0.98]"
             >
-              {isRegistering ? 'Already a member? Login' : 'New here? Join the hub'}
+              <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+              </svg>
+              <span className="text-[10px] uppercase tracking-widest">Login with Facebook</span>
             </button>
+
+            <div className="text-center">
+              <button
+                onClick={toggleMode}
+                type="button"
+                className="text-emerald-700 dark:text-emerald-400 font-black text-[10px] uppercase tracking-[0.15em] hover:underline"
+              >
+                {isRegistering ? 'Already a member? Login' : 'New here? Join the hub'}
+              </button>
+            </div>
           </div>
         )}
 
-        <div className="pt-6 border-t border-slate-50 text-center">
-          <p className="text-[9px] text-slate-300 font-black uppercase tracking-[0.3em]">United for Malawian Education</p>
+        <div className="pt-6 border-t border-slate-50 dark:border-slate-800 text-center">
+          <p className="text-[9px] text-slate-300 dark:text-slate-600 font-black uppercase tracking-[0.3em]">United for Malawian Education</p>
         </div>
       </div>
 
       {/* Terms Modal */}
       {showTermsModal && (
         <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-[3rem] max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden shadow-2xl animate-in zoom-in duration-300 border border-white/20">
-            <div className="p-8 border-b border-slate-50 flex justify-between items-center bg-slate-50/30">
-              <h3 className="text-2xl font-black text-slate-900 tracking-tight">Terms & Conditions</h3>
+          <div className="bg-white dark:bg-slate-900 rounded-[3rem] max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden shadow-2xl animate-in zoom-in duration-300 border border-white/20">
+            <div className="p-8 border-b border-slate-50 dark:border-slate-800 flex justify-between items-center bg-slate-50/30 dark:bg-slate-800/30">
+              <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Terms & Conditions</h3>
               <button onClick={() => setShowTermsModal(false)} className="text-slate-400 hover:text-red-500 transition-colors p-2">
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
-            <div className="p-10 overflow-y-auto text-slate-600 leading-relaxed text-sm space-y-6 custom-scrollbar">
+            <div className="p-10 overflow-y-auto text-slate-600 dark:text-slate-300 leading-relaxed text-sm space-y-6 custom-scrollbar">
               <div className="space-y-2">
-                <p className="font-black text-slate-900 uppercase text-xs tracking-widest">1. Mission</p>
+                <p className="font-black text-slate-900 dark:text-white uppercase text-xs tracking-widest">1. Mission</p>
                 <p>Study Hub Malawi is an educational platform dedicated to improving academic outcomes through free access to digitized resources.</p>
               </div>
               <div className="space-y-2">
-                <p className="font-black text-slate-900 uppercase text-xs tracking-widest">2. Content Use</p>
+                <p className="font-black text-slate-900 dark:text-white uppercase text-xs tracking-widest">2. Content Use</p>
                 <p>Materials provided are for personal educational use. Commercial redistribution or selling of resources found on Study Hub is strictly prohibited.</p>
               </div>
               <div className="space-y-2">
-                <p className="font-black text-slate-900 uppercase text-xs tracking-widest">3. User Conduct</p>
+                <p className="font-black text-slate-900 dark:text-white uppercase text-xs tracking-widest">3. User Conduct</p>
                 <p>Users must remain respectful in community forums. Bullying, harassment, or sharing of non-educational content will result in immediate banning.</p>
               </div>
               <div className="space-y-2">
-                <p className="font-black text-slate-900 uppercase text-xs tracking-widest">4. Privacy</p>
+                <p className="font-black text-slate-900 dark:text-white uppercase text-xs tracking-widest">4. Privacy</p>
                 <p>We do not sell your data. We use basic analytics to improve library content and curriculum alignment.</p>
               </div>
             </div>
-            <div className="p-8 bg-slate-50 border-t border-slate-100 flex gap-4">
+            <div className="p-8 bg-slate-50 dark:bg-slate-800 border-t border-slate-100 dark:border-slate-700 flex gap-4">
               <button onClick={() => setShowTermsModal(false)} className="flex-1 py-4 text-slate-400 font-black uppercase tracking-widest text-[10px]">Close</button>
               <button onClick={() => { setAcceptedTerms(true); setShowTermsModal(false); }} className="flex-[2] bg-emerald-600 text-white font-black py-4 rounded-2xl shadow-xl hover:bg-emerald-700 uppercase tracking-widest text-[10px]">I Understand & Agree</button>
             </div>

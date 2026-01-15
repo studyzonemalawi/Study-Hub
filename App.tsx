@@ -70,15 +70,18 @@ const App: React.FC = () => {
     const handleAuthChange = (session: any) => {
       if (session?.user) {
         const sbUser = session.user;
+        const email = sbUser.email || '';
+        const provider = sbUser.app_metadata?.provider || 'email';
+
         const existingUsers = storage.getUsers();
-        let appUser = existingUsers.find(u => u.email === sbUser.email);
+        let appUser = existingUsers.find(u => u.id === sbUser.id || (u.email === email));
         
         if (!appUser) {
           appUser = {
             id: sbUser.id,
-            email: sbUser.email!,
-            authProvider: 'email',
-            appRole: sbUser.email === ADMIN_EMAIL ? 'admin' : 'user',
+            email: email,
+            authProvider: (provider === 'facebook' ? 'facebook' : 'email') as 'email' | 'facebook',
+            appRole: (email === ADMIN_EMAIL) ? 'admin' : 'user',
             name: sbUser.user_metadata?.full_name || '',
             dateJoined: new Date().toISOString(),
             lastLogin: new Date().toISOString(),
@@ -92,8 +95,9 @@ const App: React.FC = () => {
         } else {
           appUser = {
             ...appUser,
-            appRole: sbUser.email === ADMIN_EMAIL ? 'admin' : appUser.appRole,
-            lastLogin: new Date().toISOString()
+            appRole: (email === ADMIN_EMAIL) ? 'admin' : appUser.appRole,
+            lastLogin: new Date().toISOString(),
+            email: email || appUser.email
           };
           storage.updateUser(appUser);
         }
@@ -166,7 +170,7 @@ const App: React.FC = () => {
     return <RegisterProfile user={user} onComplete={handleUpdateUser} />;
   }
 
-  const isAdmin = user.appRole === 'admin' && user.email === ADMIN_EMAIL;
+  const isAdmin = user.appRole === 'admin';
 
   const renderContent = () => {
     switch (activeTab) {

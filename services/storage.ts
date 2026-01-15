@@ -27,15 +27,37 @@ export const storage = {
     return data ? JSON.parse(data) : [];
   },
   
-  saveMaterial: (material: StudyMaterial) => {
+  saveMaterial: async (material: StudyMaterial) => {
     const materials = storage.getMaterials();
     materials.push(material);
     localStorage.setItem(MATERIALS_KEY, JSON.stringify(materials));
+    
+    // Cloud backup/sync
+    if (navigator.onLine) {
+      try {
+        await supabase.from('materials').upsert({
+          id: material.id,
+          title: material.title,
+          level: material.level,
+          grade: material.grade,
+          category: material.category,
+          subject: material.subject,
+          file_url: material.fileUrl,
+          file_name: material.fileName,
+          uploaded_at: material.uploadedAt
+        });
+      } catch (e) {
+        console.warn("Cloud sync deferred", e);
+      }
+    }
   },
 
-  deleteMaterial: (id: string) => {
+  deleteMaterial: async (id: string) => {
     const materials = storage.getMaterials().filter(m => m.id !== id);
     localStorage.setItem(MATERIALS_KEY, JSON.stringify(materials));
+    if (navigator.onLine) {
+      await supabase.from('materials').delete().eq('id', id);
+    }
   },
 
   getMessages: (): Message[] => {
@@ -84,7 +106,7 @@ export const storage = {
 
   saveUser: (user: User) => {
     const users = storage.getUsers();
-    const existingIndex = users.findIndex(u => u.email === user.email);
+    const existingIndex = users.findIndex(u => u.id === user.id);
     if (existingIndex === -1) {
       users.push(user);
       localStorage.setItem(USERS_KEY, JSON.stringify(users));
@@ -173,22 +195,39 @@ export const storage = {
     return data ? JSON.parse(data) : [];
   },
 
-  saveAnnouncement: (announcement: Announcement) => {
+  saveAnnouncement: async (announcement: Announcement) => {
     const announcements = storage.getAnnouncements();
     announcements.unshift(announcement);
     localStorage.setItem(ANNOUNCEMENTS_KEY, JSON.stringify(announcements));
+    
+    if (navigator.onLine) {
+      try {
+        await supabase.from('announcements').upsert({
+          id: announcement.id,
+          title: announcement.title,
+          content: announcement.content,
+          priority: announcement.priority,
+          timestamp: announcement.timestamp
+        });
+      } catch (e) {
+        console.warn("Announcement cloud sync deferred", e);
+      }
+    }
   },
 
-  deleteAnnouncement: (id: string) => {
+  deleteAnnouncement: async (id: string) => {
     const announcements = storage.getAnnouncements().filter(a => a.id !== id);
     localStorage.setItem(ANNOUNCEMENTS_KEY, JSON.stringify(announcements));
+    if (navigator.onLine) {
+      await supabase.from('announcements').delete().eq('id', id);
+    }
   },
 
   syncWithServer: async (userId: string) => {
     if (!navigator.onLine) return { success: false, timestamp: null };
 
     try {
-      // 1. Sync Profile
+      // 1. Sync Profile (Push)
       const users = storage.getUsers();
       const user = users.find(u => u.id === userId);
       if (user) {
@@ -205,7 +244,7 @@ export const storage = {
         });
       }
 
-      // 2. Sync Progress
+      // 2. Sync Progress (Push)
       const userProgress = storage.getUserProgress(userId);
       if (userProgress.length > 0) {
         await supabase.from('user_progress').upsert(
@@ -219,24 +258,32 @@ export const storage = {
         );
       }
 
-      // 3. Sync Testimonials
-      const localTestimonials = storage.getTestimonials().filter(t => t.userId === userId);
-      if (localTestimonials.length > 0) {
-        await supabase.from('testimonials').upsert(
-          localTestimonials.map(t => ({
-            id: t.id,
-            user_id: t.userId,
-            user_name: t.userName,
-            content: t.content,
-            rating: t.rating,
-            created_at: t.timestamp
-          }))
-        );
+      // 3. Pull Global Content (Materials & Announcements)
+      const { data: remoteMaterials } = await supabase.from('materials').select('*');
+      if (remoteMaterials) {
+        const localMaterials: StudyMaterial[] = remoteMaterials.map(rm => ({
+          id: rm.id,
+          title: rm.title,
+          level: rm.level,
+          grade: rm.grade,
+          category: rm.category,
+          subject: rm.subject,
+          fileUrl: rm.file_url,
+          fileName: rm.file_name,
+          uploadedAt: rm.uploaded_at
+        }));
+        localStorage.setItem(MATERIALS_KEY, JSON.stringify(localMaterials));
+      }
+
+      const { data: remoteAnnouncements } = await supabase.from('announcements')
+        .select('*')
+        .order('timestamp', { ascending: false });
+      if (remoteAnnouncements) {
+        localStorage.setItem(ANNOUNCEMENTS_KEY, JSON.stringify(remoteAnnouncements));
       }
 
       const syncTimestamp = new Date().toISOString();
       localStorage.setItem(LAST_SYNC_KEY, syncTimestamp);
-      console.log(`[Sync] Successfully reconciled data with Supabase for user ${userId}`);
       return { success: true, timestamp: syncTimestamp };
     } catch (err) {
       console.error("[Sync] Error during Supabase synchronization:", err);

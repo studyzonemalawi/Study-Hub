@@ -157,7 +157,9 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, user }) => {
             recentMaterials.map((m) => (
               <div key={m.id} className="group bg-slate-50 dark:bg-slate-900/50 p-5 rounded-[2rem] border border-transparent hover:border-emerald-500/20 hover:bg-white dark:hover:bg-slate-900 transition-all flex items-center justify-between shadow-sm">
                 <div className="flex items-center gap-4 min-w-0">
-                  <div className="w-12 h-12 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center text-[10px] font-black text-emerald-600 border border-slate-100 dark:border-slate-700 flex-none group-hover:bg-emerald-600 group-hover:text-white transition-all">PDF</div>
+                  <div className="w-12 h-12 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center border border-slate-100 dark:border-slate-700 flex-none group-hover:bg-emerald-50 transition-all">
+                    <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400">SH</span>
+                  </div>
                   <div className="min-w-0">
                     <h4 className="font-bold text-slate-800 dark:text-slate-100 group-hover:text-emerald-600 transition-colors truncate">{m.title}</h4>
                     <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1 truncate">{m.grade} • {m.subject}</p>
