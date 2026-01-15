@@ -1,7 +1,7 @@
-import { GoogleGenAI, Type } from "@google/genai";
 
-// We initialize inside a getter to ensure process.env.API_KEY is available and defined
-// This prevents immediate crashes if the environment variable is not yet injected by Vite
+import { GoogleGenAI, Type } from "@google/genai";
+import { ExamQuestion } from "../types";
+
 const getAI = () => {
   const apiKey = process.env.API_KEY;
   if (!apiKey) {
@@ -10,22 +10,22 @@ const getAI = () => {
   return new GoogleGenAI({ apiKey });
 };
 
-export interface QuizQuestion {
-  id: string;
-  type: 'mcq' | 'comprehension';
-  question: string;
-  options?: string[]; // For MCQ
-  correctAnswer: string;
-  explanation: string;
-}
-
 export interface QuizChapter {
   chapterTitle: string;
   questions: QuizQuestion[];
 }
 
+export interface QuizQuestion {
+  id: string;
+  type: 'mcq' | 'comprehension';
+  question: string;
+  options?: string[];
+  correctAnswer: string;
+  explanation: string;
+}
+
 export interface EvaluationResult {
-  score: number; // 0-100
+  score: number;
   strengths: string[];
   improvements: string[];
   feedbackSummary: string;
@@ -97,6 +97,95 @@ export const aiService = {
     } catch (e) {
       console.error("Failed to parse AI response", e);
       return [];
+    }
+  },
+
+  generateExam: async (level: string, grade: string, subject: string, context: string): Promise<ExamQuestion[]> => {
+    const ai = getAI();
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `You are a curriculum expert for Malawi National Examinations Board. 
+      Formulate an online examination for ${level} students in ${grade} for the subject ${subject}.
+      Base the exam on the following information:
+      """
+      ${context}
+      """
+      Generate between 10 and 15 high-quality Multiple Choice Questions. 
+      Ensure they cover both basic recall and critical thinking application.`,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            questions: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  id: { type: Type.STRING },
+                  question: { type: Type.STRING },
+                  options: { type: Type.ARRAY, items: { type: Type.STRING } },
+                  correctAnswer: { type: Type.STRING },
+                  explanation: { type: Type.STRING, description: "A focused study tip related to this question." }
+                },
+                required: ["id", "question", "options", "correctAnswer", "explanation"]
+              }
+            }
+          },
+          required: ["questions"]
+        }
+      }
+    });
+
+    try {
+      const data = JSON.parse(response.text || '{"questions": []}');
+      return data.questions;
+    } catch (e) {
+      console.error("Exam generation failed", e);
+      return [];
+    }
+  },
+
+  evaluateExam: async (questions: ExamQuestion[], userAnswers: Record<string, string>): Promise<any> => {
+    const ai = getAI();
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `You are an AI examiner. Grade the following exam results.
+      Questions and Correct Answers:
+      ${JSON.stringify(questions)}
+      User Answers:
+      ${JSON.stringify(userAnswers)}
+      
+      For each question, determine if the user was correct. Provide the correct answer and a "Focused Tip" for improvement.`,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            score: { type: Type.NUMBER },
+            feedback: {
+              type: Type.OBJECT,
+              additionalProperties: {
+                type: Type.OBJECT,
+                properties: {
+                  isCorrect: { type: Type.BOOLEAN },
+                  tip: { type: Type.STRING },
+                  correctAnswer: { type: Type.STRING }
+                },
+                required: ["isCorrect", "tip", "correctAnswer"]
+              }
+            }
+          },
+          required: ["score", "feedback"]
+        }
+      }
+    });
+
+    try {
+      return JSON.parse(response.text || '{}');
+    } catch (e) {
+      console.error("Evaluation failed", e);
+      return null;
     }
   },
 

@@ -1,5 +1,5 @@
 
-import { StudyMaterial, Message, User, UserProgress, Testimonial, Announcement, CommunityMessage, ChatRoom, ReadingStatus } from '../types';
+import { StudyMaterial, Message, User, UserProgress, Testimonial, Announcement, CommunityMessage, ChatRoom, ReadingStatus, Exam, ExamResult } from '../types';
 import { supabase } from './supabase';
 
 const MATERIALS_KEY = 'study_hub_materials';
@@ -10,6 +10,8 @@ const PROGRESS_KEY = 'study_hub_progress';
 const TESTIMONIALS_KEY = 'study_hub_testimonials';
 const ANNOUNCEMENTS_KEY = 'study_hub_announcements';
 const CHAT_ROOMS_KEY = 'study_hub_chat_rooms';
+const EXAMS_KEY = 'study_hub_exams';
+const EXAM_RESULTS_KEY = 'study_hub_exam_results';
 const LAST_SYNC_KEY = 'study_hub_last_sync';
 
 const DEFAULT_ROOMS: ChatRoom[] = [
@@ -92,7 +94,6 @@ export const storage = {
     return JSON.parse(data);
   },
 
-  // FIX: Added missing saveChatRoom method
   saveChatRoom: (room: ChatRoom) => {
     const rooms = storage.getChatRooms();
     rooms.push(room);
@@ -134,7 +135,6 @@ export const storage = {
     }
   },
 
-  // FIX: Added missing deleteUser method
   deleteUser: (userId: string) => {
     const users = storage.getUsers().filter(u => u.id !== userId);
     localStorage.setItem(USERS_KEY, JSON.stringify(users));
@@ -191,7 +191,6 @@ export const storage = {
     }
   },
 
-  // FIX: Added missing removeDownload method
   removeDownload: (userId: string, materialId: string) => {
     const users = storage.getUsers();
     const user = users.find(u => u.id === userId);
@@ -226,7 +225,6 @@ export const storage = {
     }
   },
 
-  // FIX: Added missing deleteAnnouncement method
   deleteAnnouncement: async (id: string) => {
     const announcements = storage.getAnnouncements().filter(a => a.id !== id);
     localStorage.setItem(ANNOUNCEMENTS_KEY, JSON.stringify(announcements));
@@ -235,17 +233,45 @@ export const storage = {
     }
   },
 
-  // FIX: Added missing getTestimonials method
   getTestimonials: (): Testimonial[] => {
     const data = localStorage.getItem(TESTIMONIALS_KEY);
     return data ? JSON.parse(data) : [];
   },
 
-  // FIX: Added missing saveTestimonial method
   saveTestimonial: (testimonial: Testimonial) => {
     const testimonials = storage.getTestimonials();
     testimonials.unshift(testimonial);
     localStorage.setItem(TESTIMONIALS_KEY, JSON.stringify(testimonials));
+  },
+
+  // Exam Methods
+  getExams: (): Exam[] => {
+    const data = localStorage.getItem(EXAMS_KEY);
+    return data ? JSON.parse(data) : [];
+  },
+
+  saveExam: (exam: Exam) => {
+    const exams = storage.getExams();
+    exams.unshift(exam);
+    localStorage.setItem(EXAMS_KEY, JSON.stringify(exams));
+  },
+
+  deleteExam: (examId: string) => {
+    const exams = storage.getExams().filter(e => e.id !== examId);
+    localStorage.setItem(EXAMS_KEY, JSON.stringify(exams));
+  },
+
+  getExamResults: (userId: string): ExamResult[] => {
+    const data = localStorage.getItem(EXAM_RESULTS_KEY);
+    const all = data ? JSON.parse(data) : [];
+    return all.filter((r: ExamResult) => r.userId === userId);
+  },
+
+  saveExamResult: (result: ExamResult) => {
+    const data = localStorage.getItem(EXAM_RESULTS_KEY);
+    const all = data ? JSON.parse(data) : [];
+    all.unshift(result);
+    localStorage.setItem(EXAM_RESULTS_KEY, JSON.stringify(all));
   },
 
   syncWithServer: async (userId: string) => {
@@ -255,7 +281,6 @@ export const storage = {
       const users = storage.getUsers();
       const user = users.find(u => u.id === userId);
       
-      // 1. Sync Profile (Push latest local if exists)
       if (user && user.isProfileComplete) {
         await supabase.from('profiles').upsert({
           id: user.id,
@@ -270,7 +295,6 @@ export const storage = {
         });
       }
 
-      // 2. Sync Progress (Push)
       const userProgress = storage.getUserProgress(userId);
       if (userProgress.length > 0) {
         await supabase.from('user_progress').upsert(
@@ -284,7 +308,6 @@ export const storage = {
         );
       }
 
-      // 3. Pull Content
       const [materialsRes, annRes, progRes] = await Promise.all([
         supabase.from('materials').select('*'),
         supabase.from('announcements').select('*').order('timestamp', { ascending: false }),

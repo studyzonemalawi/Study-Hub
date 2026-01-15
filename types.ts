@@ -95,6 +95,35 @@ export interface Announcement {
   priority: 'normal' | 'urgent' | 'important';
 }
 
+export interface ExamQuestion {
+  id: string;
+  question: string;
+  options: string[];
+  correctAnswer: string;
+  explanation: string;
+}
+
+export interface Exam {
+  id: string;
+  title: string;
+  level: EducationLevel;
+  grade: Grade;
+  subject: string;
+  questions: ExamQuestion[];
+  createdAt: string;
+  createdBy: string;
+}
+
+export interface ExamResult {
+  examId: string;
+  userId: string;
+  score: number;
+  totalQuestions: number;
+  answers: Record<string, string>;
+  feedback: Record<string, { isCorrect: boolean; tip: string; correctAnswer: string }>;
+  completedAt: string;
+}
+
 export interface User {
   id: string;
   email: string;

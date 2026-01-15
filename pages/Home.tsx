@@ -60,7 +60,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, user }) => {
 
   const modules = [
     { id: 'library', title: 'Library', desc: 'Revision Notes', icon: '📚', color: 'bg-indigo-600' },
-    { id: 'papers', title: 'Past Papers', desc: 'Official Exams', icon: '📝', color: 'bg-emerald-600' },
+    { id: 'exams', title: 'Online Exams', desc: 'AI Assessment', icon: '📝', color: 'bg-emerald-600' },
     { id: 'announcements', title: 'Updates', desc: 'Stay Informed', icon: '📢', color: 'bg-orange-500' },
     { id: 'testimonials', title: 'Community', desc: 'Connect & Help', icon: '👥', color: 'bg-pink-600' },
     { id: 'activity', title: 'Progress', desc: 'My Statistics', icon: '📈', color: 'bg-blue-600' },
@@ -80,7 +80,6 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, user }) => {
   return (
     <div className="max-w-6xl mx-auto space-y-12 animate-in fade-in slide-in-from-bottom-2 duration-700 pb-16 px-4 md:px-0">
       
-      {/* Redesigned Dashboard Hero Section (Refined without stats boxes) */}
       <section className="relative overflow-hidden bg-white dark:bg-slate-800 rounded-[3rem] p-8 md:p-16 border border-slate-100 dark:border-slate-700 shadow-2xl">
         <div className="relative z-10 flex flex-col items-center text-center space-y-8">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-800 rounded-2xl text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-[0.2em] shadow-sm">
@@ -112,15 +111,14 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, user }) => {
               <svg className="w-5 h-5 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
             </button>
             <button 
-              onClick={() => onNavigate('activity')} 
+              onClick={() => onNavigate('exams')} 
               className="px-10 py-5 bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-200 font-black rounded-3xl border border-slate-200 dark:border-slate-600 hover:bg-slate-50 transition-all active:scale-95 uppercase tracking-widest text-[11px]"
             >
-              My Progress
+              Take Exam
             </button>
           </div>
         </div>
         
-        {/* Background Decor */}
         <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.05),transparent_70%)] pointer-events-none"></div>
         <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none"></div>
         <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none">
@@ -128,7 +126,6 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, user }) => {
         </div>
       </section>
 
-      {/* Responsive Module Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8">
         {activeReading.length > 0 && (
           <button
@@ -161,7 +158,6 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, user }) => {
         ))}
       </div>
 
-      {/* Recent Materials Section */}
       <section className="bg-white dark:bg-slate-800 rounded-[3rem] p-8 md:p-12 border border-slate-100 dark:border-slate-700 shadow-xl overflow-hidden relative">
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-6 relative z-10">
           <div>
