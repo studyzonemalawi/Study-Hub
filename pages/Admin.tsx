@@ -16,8 +16,6 @@ import {
 } from '../types';
 import { storage } from '../services/storage';
 
-const MAX_FILE_SIZE_MB = 25;
-
 interface AdminProps {
   onNavigate: (tab: string) => void;
 }
@@ -30,15 +28,14 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [userMessages, setUserMessages] = useState<Message[]>([]);
   
-  // Content Upload States
+  // Content Upload States (Redesigned for Google Drive)
   const [level, setLevel] = useState<EducationLevel>(EducationLevel.PRIMARY);
   const [grade, setGrade] = useState<Grade>(PRIMARY_GRADES[0]);
   const [category, setCategory] = useState<Category>(Category.NOTES);
   const [subject, setSubject] = useState('');
   const [title, setTitle] = useState('');
-  const [file, setFile] = useState<File | null>(null);
+  const [driveLink, setDriveLink] = useState('');
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -47,6 +44,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
   const [annTitle, setAnnTitle] = useState('');
   const [annContent, setAnnContent] = useState('');
   const [annPriority, setAnnPriority] = useState<'normal' | 'important' | 'urgent'>('normal');
+  const [annToDelete, setAnnToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     setMaterials(storage.getMaterials());
@@ -67,65 +65,61 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
     setCategory(Category.NOTES);
   }, [level]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0] || null;
-    setError(null);
-    setSuccessMsg(null);
-    if (selectedFile) {
-      const fileSizeMB = selectedFile.size / (1024 * 1024);
-      if (fileSizeMB > MAX_FILE_SIZE_MB) {
-        setError(`File is too large (${fileSizeMB.toFixed(2)}MB). Max size is ${MAX_FILE_SIZE_MB}MB.`);
-        setFile(null);
-        return;
+  // Helper to convert Google Drive sharing link to direct download link
+  const convertToDirectLink = (link: string): string | null => {
+    try {
+      const idMatch = link.match(/\/d\/([a-zA-Z0-9_-]+)/) || link.match(/id=([a-zA-Z0-9_-]+)/);
+      if (idMatch && idMatch[1]) {
+        return `https://drive.google.com/uc?export=download&id=${idMatch[1]}`;
       }
-      if (selectedFile.type !== 'application/pdf') {
-        setError('Only PDF files are allowed.');
-        setFile(null);
-        return;
-      }
-      setFile(selectedFile);
+      if (link.startsWith('http')) return link;
+      return null;
+    } catch (e) {
+      return null;
     }
   };
 
   const handleSubmitAttempt = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file || !subject || !title || isUploading) return;
+    setError(null);
+    if (!driveLink || !subject || !title || isUploading) return;
+    
+    const directUrl = convertToDirectLink(driveLink);
+    if (!directUrl) {
+      setError("Please provide a valid Google Drive sharing link.");
+      return;
+    }
+    
     setShowConfirmModal(true);
   };
 
-  const startUpload = async () => {
+  const startPublish = async () => {
     setShowConfirmModal(false);
-    if (!file || !subject || !title || isUploading) return;
     setIsUploading(true);
-    setUploadProgress(0);
     setSuccessMsg(null);
     
-    const interval = setInterval(() => {
-      setUploadProgress((prev) => {
-        if (prev >= 90) return 90; // Hold at 90 until storage.saveMaterial finishes
-        return prev + 10;
-      });
-    }, 150);
+    const directUrl = convertToDirectLink(driveLink);
 
     try {
       const newMaterial: StudyMaterial = {
         id: Math.random().toString(36).substr(2, 9),
-        title, level, grade, category, subject,
-        fileName: file.name,
-        fileUrl: URL.createObjectURL(file),
+        title, 
+        level, 
+        grade, 
+        category, 
+        subject,
+        fileName: `${title.replace(/\s+/g, '_')}.pdf`,
+        fileUrl: directUrl!,
         uploadedAt: new Date().toISOString()
       };
       
       await storage.saveMaterial(newMaterial);
       
-      clearInterval(interval);
-      setUploadProgress(100);
-      setMaterials((prev) => [...prev, newMaterial]);
+      setMaterials((prev) => [newMaterial, ...prev]);
       setTitle('');
-      setFile(null);
-      setSuccessMsg('Material published successfully to Study Hub cloud');
-      const input = document.getElementById('file-upload') as HTMLInputElement;
-      if (input) input.value = '';
+      setDriveLink('');
+      setSuccessMsg('Resource published successfully via Google Drive');
+      setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err: any) {
       setError(err.message || "Failed to publish material");
     } finally {
@@ -154,11 +148,18 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
     setTimeout(() => setSuccessMsg(null), 3000);
   };
 
-  const deleteAnnouncement = async (id: string) => {
-    if (window.confirm('Delete this announcement?')) {
-      await storage.deleteAnnouncement(id);
-      setAnnouncements(announcements.filter(a => a.id !== id));
-    }
+  const handleOpenDeleteAnnModal = (id: string) => {
+    setAnnToDelete(id);
+  };
+
+  const confirmDeleteAnnouncement = async () => {
+    if (!annToDelete) return;
+    
+    await storage.deleteAnnouncement(annToDelete);
+    setAnnouncements(announcements.filter(a => a.id !== annToDelete));
+    setAnnToDelete(null);
+    setSuccessMsg('Announcement removed from the platform');
+    setTimeout(() => setSuccessMsg(null), 3000);
   };
 
   const deleteItem = async (id: string) => {
@@ -182,7 +183,6 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
     const updatedUser: User = { ...selectedUser, accountRole: newRole };
     storage.updateUser(updatedUser);
     
-    // Update local states
     setUsers(users.map(u => u.id === selectedUser.id ? updatedUser : u));
     setSelectedUser(updatedUser);
     
@@ -199,106 +199,139 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
 
   return (
     <div className="space-y-6">
+      {/* Admin Nav */}
       <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
-        <div className="flex bg-white p-1 rounded-2xl shadow-sm border border-gray-100 overflow-x-auto no-scrollbar">
+        <div className="flex bg-white dark:bg-slate-800 p-1.5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-x-auto no-scrollbar">
           <button 
             onClick={() => setActiveAdminTab('content')}
-            className={`px-6 py-2 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeAdminTab === 'content' ? 'bg-emerald-600 text-white shadow-md' : 'text-gray-400 hover:bg-gray-50'}`}
+            className={`px-8 py-2.5 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeAdminTab === 'content' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
           >
-            Content
+            Content Hub
           </button>
           <button 
             onClick={() => setActiveAdminTab('users')}
-            className={`px-6 py-2 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeAdminTab === 'users' ? 'bg-emerald-600 text-white shadow-md' : 'text-gray-400 hover:bg-gray-50'}`}
+            className={`px-8 py-2.5 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeAdminTab === 'users' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
           >
-            Users
+            User Accounts
           </button>
           <button 
             onClick={() => setActiveAdminTab('announcements')}
-            className={`px-6 py-2 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeAdminTab === 'announcements' ? 'bg-emerald-600 text-white shadow-md' : 'text-gray-400 hover:bg-gray-50'}`}
+            className={`px-8 py-2.5 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeAdminTab === 'announcements' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
           >
-            Announcements
+            Broadcasts
           </button>
         </div>
         <button 
           onClick={() => onNavigate('home')}
-          className="p-3 bg-gray-100 hover:bg-gray-200 text-gray-500 rounded-2xl transition-all flex items-center gap-2 group"
+          className="px-6 py-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 rounded-2xl transition-all flex items-center gap-3 group border border-slate-200 dark:border-slate-700 shadow-sm"
         >
           <svg className="w-5 h-5 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
-          <span className="text-[10px] font-black uppercase tracking-widest">Exit Admin</span>
+          <span className="text-[10px] font-black uppercase tracking-widest">Exit Portal</span>
         </button>
       </div>
 
       {successMsg && (
-        <div className="p-4 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-2xl text-sm font-bold flex items-center gap-3 animate-in slide-in-from-top-2 duration-300">
-          <span className="w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-sm">✓</span>
+        <div className="p-5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800 rounded-3xl text-xs font-black uppercase tracking-widest flex items-center gap-4 animate-in slide-in-from-top-2 duration-300">
+          <span className="w-8 h-8 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center shadow-sm">✓</span>
           {successMsg}
         </div>
       )}
 
       {activeAdminTab === 'content' && (
         <div className="grid lg:grid-cols-2 gap-8 pb-20 animate-in fade-in duration-500">
-          <div className="bg-white rounded-[2.5rem] p-10 border border-gray-100 shadow-2xl h-fit">
-            <h2 className="text-2xl font-black mb-6 text-gray-800">Post New Resource</h2>
+          <div className="bg-white dark:bg-slate-800 rounded-[3rem] p-10 border border-slate-100 dark:border-slate-700 shadow-2xl h-fit relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-8 opacity-5 grayscale pointer-events-none">
+                <span className="text-8xl font-black">SH</span>
+            </div>
+
+            <div className="flex items-center gap-4 mb-10">
+               <div className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/20 border border-emerald-400/20">
+                  <span className="text-white font-black text-xl">SH</span>
+               </div>
+               <div>
+                  <h2 className="text-2xl font-black text-slate-900 dark:text-white leading-tight">Post Digital Resource</h2>
+                  <p className="text-[10px] font-black uppercase text-emerald-600 tracking-widest">Google Drive Integration Enabled</p>
+               </div>
+            </div>
+
             <form onSubmit={handleSubmitAttempt} className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-5">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Level</label>
-                  <select value={level} disabled={isUploading} onChange={(e) => setLevel(e.target.value as EducationLevel)} className="w-full p-4 rounded-2xl border border-gray-100 outline-none focus:ring-2 focus:ring-emerald-500 bg-gray-50">
+                  <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest px-1">Level</label>
+                  <select value={level} disabled={isUploading} onChange={(e) => setLevel(e.target.value as EducationLevel)} className="w-full p-4 rounded-2xl border border-slate-100 dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50 dark:bg-slate-900 font-bold text-slate-800 dark:text-white transition-all appearance-none">
                     {Object.values(EducationLevel).map(v => <option key={v} value={v}>{v}</option>)}
                   </select>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Grade / Form</label>
-                  <select value={grade} disabled={isUploading} onChange={(e) => setGrade(e.target.value as Grade)} className="w-full p-4 rounded-2xl border border-gray-100 outline-none focus:ring-2 focus:ring-emerald-500 bg-gray-50">
+                  <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest px-1">Grade / Form</label>
+                  <select value={grade} disabled={isUploading} onChange={(e) => setGrade(e.target.value as Grade)} className="w-full p-4 rounded-2xl border border-slate-100 dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50 dark:bg-slate-900 font-bold text-slate-800 dark:text-white transition-all appearance-none">
                     {availableGrades.map(v => <option key={v} value={v}>{v}</option>)}
                   </select>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+
+              <div className="grid grid-cols-2 gap-5">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Category</label>
-                  <select value={category} disabled={isUploading} onChange={(e) => setCategory(e.target.value as Category)} className="w-full p-4 rounded-2xl border border-gray-100 outline-none focus:ring-2 focus:ring-emerald-500 bg-gray-50">
+                  <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest px-1">Category</label>
+                  <select value={category} disabled={isUploading} onChange={(e) => setCategory(e.target.value as Category)} className="w-full p-4 rounded-2xl border border-slate-100 dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50 dark:bg-slate-900 font-bold text-slate-800 dark:text-white transition-all appearance-none">
                     {availableCategories.map(v => <option key={v} value={v}>{v}</option>)}
                   </select>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Subject</label>
-                  <select value={subject} disabled={isUploading} onChange={(e) => setSubject(e.target.value)} className="w-full p-4 rounded-2xl border border-gray-100 outline-none focus:ring-2 focus:ring-emerald-500 bg-gray-50">
+                  <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest px-1">Subject</label>
+                  <select value={subject} disabled={isUploading} onChange={(e) => setSubject(e.target.value)} className="w-full p-4 rounded-2xl border border-slate-100 dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50 dark:bg-slate-900 font-bold text-slate-800 dark:text-white transition-all appearance-none">
                     {availableSubjects.map(v => <option key={v} value={v}>{v}</option>)}
                   </select>
                 </div>
               </div>
+
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Resource Title</label>
-                <input type="text" required disabled={isUploading} placeholder="e.g. 2023 Mathematics Paper 1" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full p-4 rounded-2xl border border-gray-100 outline-none focus:ring-2 focus:ring-emerald-500 bg-gray-50" />
+                <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest px-1">Resource Title</label>
+                <input type="text" required disabled={isUploading} placeholder="e.g. MSCE Biology Notes Unit 1" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full p-5 rounded-2xl border border-slate-100 dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50 dark:bg-slate-900 font-bold text-slate-800 dark:text-white transition-all" />
               </div>
+
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">PDF Document</label>
-                <input type="file" required accept=".pdf" id="file-upload" onChange={handleFileChange} className="w-full p-4 rounded-2xl border border-gray-100 border-dashed bg-gray-50 text-gray-500 file:hidden cursor-pointer" />
-                {error && <p className="text-xs text-red-500 font-bold">{error}</p>}
-              </div>
-              {isUploading && (
-                <div className="space-y-2">
-                  <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-emerald-700"><span>Processing...</span><span>{uploadProgress}%</span></div>
-                  <div className="w-full bg-emerald-50 rounded-full h-3 overflow-hidden"><div className="bg-emerald-600 h-full transition-all duration-300" style={{ width: `${uploadProgress}%` }}></div></div>
+                <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest px-1">Google Drive Sharing Link</label>
+                <div className="relative">
+                  <input 
+                    type="url" 
+                    required 
+                    disabled={isUploading} 
+                    placeholder="https://drive.google.com/file/d/..." 
+                    value={driveLink} 
+                    onChange={(e) => setDriveLink(e.target.value)} 
+                    className="w-full p-5 pl-14 rounded-2xl border border-slate-100 dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50 dark:bg-slate-900 font-bold text-slate-800 dark:text-white transition-all" 
+                  />
+                  <div className="absolute left-5 top-1/2 -translate-y-1/2 opacity-40">
+                    <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor"><path d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z"/></svg>
+                  </div>
                 </div>
-              )}
-              <button type="submit" disabled={isUploading || !!error || !file} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-5 rounded-2xl shadow-xl transition-all uppercase tracking-widest text-sm disabled:opacity-50">
-                {isUploading ? 'Uploading...' : 'Publish to Library'}
+                {error && <p className="text-[10px] text-red-500 font-black uppercase tracking-widest px-2">{error}</p>}
+                <p className="text-[9px] text-slate-400 dark:text-slate-500 font-bold px-2 uppercase tracking-widest">Ensure "Anyone with the link" can view the file on Google Drive.</p>
+              </div>
+
+              <button type="submit" disabled={isUploading || !driveLink || !title} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-5 rounded-3xl shadow-2xl transition-all uppercase tracking-widest text-xs disabled:opacity-50 active:scale-95 shadow-emerald-500/20">
+                {isUploading ? 'Validating Link...' : 'Publish to Hub'}
               </button>
             </form>
           </div>
-          <div className="bg-white rounded-[2.5rem] p-10 border border-gray-100 shadow-xl overflow-hidden flex flex-col h-fit">
-            <h2 className="text-2xl font-black mb-6 text-gray-800">Library Assets ({materials.length})</h2>
+
+          <div className="bg-white dark:bg-slate-800 rounded-[3rem] p-10 border border-slate-100 dark:border-slate-700 shadow-xl overflow-hidden flex flex-col h-fit">
+            <h2 className="text-2xl font-black mb-8 text-slate-900 dark:text-white flex items-center gap-3">
+               <span className="w-2 h-8 bg-emerald-500 rounded-full"></span>
+               Library Assets ({materials.length})
+            </h2>
             <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
               {materials.map(m => (
-                <div key={m.id} className="p-5 bg-gray-50 rounded-[1.5rem] flex items-center justify-between border border-transparent hover:border-emerald-100 transition-all">
-                  <div className="truncate pr-4">
-                    <h4 className="font-bold text-gray-800 truncate text-sm">{m.title}</h4>
-                    <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mt-1">{m.subject} • {m.grade}</p>
+                <div key={m.id} className="p-6 bg-slate-50 dark:bg-slate-900/50 rounded-[2rem] flex items-center justify-between border border-transparent hover:border-emerald-500/20 transition-all group">
+                  <div className="truncate pr-4 flex items-center gap-4 min-w-0">
+                    <div className="w-10 h-10 bg-white dark:bg-slate-800 rounded-xl flex items-center justify-center text-[10px] font-black text-emerald-600 border border-slate-100 dark:border-slate-700 shadow-sm flex-none">SH</div>
+                    <div className="min-w-0">
+                      <h4 className="font-bold text-slate-800 dark:text-slate-100 truncate text-sm">{m.title}</h4>
+                      <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest mt-1">{m.subject} • {m.grade}</p>
+                    </div>
                   </div>
-                  <button onClick={() => deleteItem(m.id)} className="p-3 bg-white text-red-300 hover:text-red-500 rounded-xl transition-all shadow-sm">
+                  <button onClick={() => deleteItem(m.id)} className="p-3 bg-white dark:bg-slate-800 text-red-300 hover:text-red-500 rounded-xl transition-all shadow-sm flex-none">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                   </button>
                 </div>
@@ -310,48 +343,48 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
 
       {activeAdminTab === 'announcements' && (
         <div className="grid lg:grid-cols-2 gap-8 pb-20 animate-in fade-in duration-500">
-           <div className="bg-white rounded-[2.5rem] p-10 border border-gray-100 shadow-2xl h-fit">
-            <h2 className="text-2xl font-black mb-6 text-gray-800">Broadcast Announcement</h2>
+           <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] p-10 border border-slate-100 dark:border-slate-700 shadow-2xl h-fit">
+            <h2 className="text-2xl font-black mb-6 text-slate-900 dark:text-white">Broadcast Announcement</h2>
             <form onSubmit={handlePostAnnouncement} className="space-y-6">
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Announcement Title</label>
-                <input type="text" required placeholder="e.g. MSCE 2024 Past Papers Uploaded!" value={annTitle} onChange={(e) => setAnnTitle(e.target.value)} className="w-full p-4 rounded-2xl border border-gray-100 focus:ring-2 focus:ring-emerald-500 outline-none bg-gray-50 font-bold" />
+                <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest px-1">Announcement Title</label>
+                <input type="text" required placeholder="e.g. MSCE 2024 Past Papers Uploaded!" value={annTitle} onChange={(e) => setAnnTitle(e.target.value)} className="w-full p-4 rounded-2xl border border-slate-100 dark:border-slate-700 focus:ring-2 focus:ring-emerald-500 outline-none bg-slate-50 dark:bg-slate-900 font-bold text-slate-800 dark:text-white transition-all" />
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Message Priority</label>
+                <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest px-1">Message Priority</label>
                 <div className="flex gap-2">
                   {['normal', 'important', 'urgent'].map(p => (
-                    <button key={p} type="button" onClick={() => setAnnPriority(p as any)} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${annPriority === p ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-gray-400 border-gray-100'}`}>
+                    <button key={p} type="button" onClick={() => setAnnPriority(p as any)} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${annPriority === p ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white dark:bg-slate-900 text-slate-400 border-slate-100 dark:border-slate-700'}`}>
                       {p}
                     </button>
                   ))}
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Message Content</label>
-                <textarea required placeholder="Write the full update for all members..." value={annContent} onChange={(e) => setAnnContent(e.target.value)} className="w-full p-4 rounded-2xl border border-gray-100 focus:ring-2 focus:ring-emerald-500 outline-none bg-gray-50 h-40 font-medium resize-none" />
+                <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest px-1">Message Content</label>
+                <textarea required placeholder="Write the full update for all members..." value={annContent} onChange={(e) => setAnnContent(e.target.value)} className="w-full p-4 rounded-2xl border border-slate-100 dark:border-slate-700 focus:ring-2 focus:ring-emerald-500 outline-none bg-slate-50 dark:bg-slate-900 font-medium text-slate-800 dark:text-white transition-all h-40 resize-none" />
               </div>
-              <button type="submit" className="w-full bg-emerald-800 text-white font-black py-5 rounded-2xl shadow-xl hover:bg-emerald-900 transition-all uppercase tracking-widest text-sm">
+              <button type="submit" className="w-full bg-emerald-800 text-white font-black py-5 rounded-3xl shadow-xl hover:bg-emerald-900 transition-all uppercase tracking-widest text-xs">
                 Publish Broadcast
               </button>
             </form>
           </div>
-          <div className="bg-white rounded-[2.5rem] p-10 border border-gray-100 shadow-xl overflow-hidden flex flex-col h-fit">
-            <h2 className="text-2xl font-black mb-6 text-gray-800">Sent Broadcasts ({announcements.length})</h2>
+          <div className="bg-white dark:bg-slate-800 rounded-[3rem] p-10 border border-slate-100 dark:border-slate-700 shadow-xl overflow-hidden flex flex-col h-fit">
+            <h2 className="text-2xl font-black mb-6 text-slate-900 dark:text-white">Sent Broadcasts ({announcements.length})</h2>
             <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
                {announcements.map(a => (
-                 <div key={a.id} className="p-6 bg-gray-50 rounded-[2rem] border border-gray-100 space-y-3 relative group">
-                    <button onClick={() => deleteAnnouncement(a.id)} className="absolute top-4 right-4 text-red-200 hover:text-red-500 transition-colors">
+                 <div key={a.id} className="p-8 bg-slate-50 dark:bg-slate-900/50 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 space-y-4 relative group">
+                    <button onClick={() => handleOpenDeleteAnnModal(a.id)} className="absolute top-6 right-6 p-2.5 bg-red-50 dark:bg-red-900/20 text-red-300 hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-xl transition-all shadow-sm">
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                     </button>
-                    <div className="flex items-center gap-2">
-                      <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${a.priority === 'urgent' ? 'bg-red-500 text-white' : a.priority === 'important' ? 'bg-orange-500 text-white' : 'bg-emerald-600 text-white'}`}>
+                    <div className="flex items-center gap-3">
+                      <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${a.priority === 'urgent' ? 'bg-red-500 text-white' : a.priority === 'important' ? 'bg-orange-500 text-white' : 'bg-emerald-600 text-white'}`}>
                         {a.priority}
                       </span>
-                      <span className="text-[10px] text-gray-400 font-bold">{new Date(a.timestamp).toLocaleDateString()}</span>
+                      <span className="text-[10px] text-slate-400 font-bold">{new Date(a.timestamp).toLocaleDateString()}</span>
                     </div>
-                    <h4 className="font-black text-gray-800">{a.title}</h4>
-                    <p className="text-xs text-gray-500 line-clamp-2">{a.content}</p>
+                    <h4 className="font-black text-slate-800 dark:text-slate-100 text-lg">{a.title}</h4>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">{a.content}</p>
                  </div>
                ))}
             </div>
@@ -361,55 +394,57 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
 
       {activeAdminTab === 'users' && (
         <div className="grid lg:grid-cols-3 gap-8 animate-in fade-in duration-500 pb-20">
-          <div className="lg:col-span-1 bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-2xl">
-            <h2 className="text-xl font-black mb-6 text-gray-800 uppercase tracking-widest text-xs">Platform Users ({users.length})</h2>
-            <div className="space-y-3 overflow-y-auto max-h-[70vh] custom-scrollbar pr-2">
+          <div className="lg:col-span-1 bg-white dark:bg-slate-800 rounded-[3rem] p-10 border border-slate-100 dark:border-slate-700 shadow-2xl">
+            <h2 className="text-xl font-black mb-8 text-slate-900 dark:text-white uppercase tracking-widest text-[10px]">Platform Users ({users.length})</h2>
+            <div className="space-y-4 overflow-y-auto max-h-[70vh] custom-scrollbar pr-2">
               {users.map(u => (
-                <div key={u.id} className={`p-4 rounded-2xl border transition-all cursor-pointer flex justify-between items-center ${selectedUser?.id === u.id ? 'bg-emerald-50 border-emerald-200 shadow-md' : 'bg-gray-50 border-transparent hover:border-emerald-200'}`} onClick={() => viewUserHistory(u)}>
-                  <div className="flex items-center space-x-3 overflow-hidden">
-                    <div className="w-10 h-10 rounded-xl bg-white border border-gray-100 overflow-hidden">
-                      <div className="w-full h-full bg-slate-100 flex items-center justify-center font-bold text-slate-400">
-                        {u.name ? u.name[0] : '?'}
+                <div key={u.id} className={`p-5 rounded-[2rem] border transition-all cursor-pointer flex justify-between items-center ${selectedUser?.id === u.id ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-700 shadow-md' : 'bg-slate-50 dark:bg-slate-900/50 border-transparent hover:border-emerald-200'}`} onClick={() => viewUserHistory(u)}>
+                  <div className="flex items-center space-x-4 overflow-hidden">
+                    <div className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 overflow-hidden flex-none">
+                      <div className="w-full h-full bg-emerald-50 dark:bg-slate-950 flex items-center justify-center font-black text-emerald-600 text-sm">
+                        {u.name ? u.name[0].toUpperCase() : '?'}
                       </div>
                     </div>
                     <div className="truncate">
-                      <p className="font-bold text-gray-800 truncate text-sm">{u.name || u.email}</p>
-                      <p className="text-[8px] font-black uppercase tracking-widest text-emerald-600">{u.accountRole || 'Member'}</p>
+                      <p className="font-bold text-slate-800 dark:text-slate-100 truncate text-sm">{u.name || u.email}</p>
+                      <p className="text-[8px] font-black uppercase tracking-widest text-emerald-600 mt-0.5">{u.accountRole || 'Member'}</p>
                     </div>
                   </div>
-                  <button onClick={(e) => { e.stopPropagation(); deleteUser(u.id); }} className="text-red-200 hover:text-red-500 transition-colors"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
+                  <button onClick={(e) => { e.stopPropagation(); deleteUser(u.id); }} className="text-red-200 hover:text-red-500 transition-colors flex-none ml-2"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
                 </div>
               ))}
             </div>
           </div>
-          <div className="lg:col-span-2 bg-white rounded-[2.5rem] p-10 border border-gray-100 shadow-2xl h-fit">
-            {!selectedUser ? <div className="h-64 flex flex-col items-center justify-center text-gray-300 opacity-40"><p className="font-black uppercase tracking-widest text-xs">Select user to view details</p></div> : (
-              <div className="space-y-8 animate-in fade-in duration-300">
-                <div className="flex justify-between items-start border-b pb-8">
-                  <div>
-                    <h3 className="text-2xl font-black text-gray-800">{selectedUser.name || 'Anonymous User'}</h3>
-                    <p className="text-slate-400 text-xs font-bold">{selectedUser.email}</p>
+          <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-[3rem] p-12 border border-slate-100 dark:border-slate-700 shadow-2xl h-fit">
+            {!selectedUser ? <div className="h-96 flex flex-col items-center justify-center text-slate-300 opacity-40"><p className="font-black uppercase tracking-widest text-[10px]">Select user to view details</p></div> : (
+              <div className="space-y-10 animate-in fade-in duration-300">
+                <div className="flex justify-between items-start border-b border-slate-50 dark:border-slate-700 pb-10">
+                  <div className="flex items-center gap-6">
+                    <div className="w-20 h-20 rounded-[2rem] bg-emerald-600 flex items-center justify-center text-3xl text-white font-black shadow-xl shadow-emerald-500/20">{selectedUser.name ? selectedUser.name[0].toUpperCase() : '?'}</div>
+                    <div>
+                      <h3 className="text-3xl font-black text-slate-900 dark:text-white">{selectedUser.name || 'Anonymous User'}</h3>
+                      <p className="text-slate-400 dark:text-slate-500 text-xs font-bold mt-1">{selectedUser.email}</p>
+                    </div>
                   </div>
-                  <div className="flex gap-3">
-                    <button onClick={() => deleteUser(selectedUser.id)} className="px-6 py-3 bg-red-50 text-red-600 font-black rounded-2xl text-[10px] uppercase tracking-widest hover:bg-red-100 transition-colors">Ban User</button>
+                  <div className="flex gap-4">
+                    <button onClick={() => deleteUser(selectedUser.id)} className="px-8 py-4 bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 font-black rounded-2xl text-[10px] uppercase tracking-widest hover:bg-red-100 transition-colors">Ban Account</button>
                   </div>
                 </div>
 
-                {/* Account Role Modification Section */}
-                <div className="p-6 bg-emerald-50 border border-emerald-100 rounded-[2rem] space-y-4">
+                <div className="p-8 bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-800 rounded-[2.5rem] space-y-6">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-emerald-800">Assign User Role</h4>
-                    <span className="text-[9px] font-black uppercase tracking-widest bg-emerald-200 px-2 py-1 rounded-md text-emerald-700">Current: {selectedUser.accountRole || 'Not Set'}</span>
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-emerald-800 dark:text-emerald-400">Modify User Permissions</h4>
+                    <span className="text-[9px] font-black uppercase tracking-widest bg-emerald-600 px-3 py-1 rounded-lg text-white">Current: {selectedUser.accountRole || 'Member'}</span>
                   </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {Object.values(AccountRole).map((role) => (
                       <button
                         key={role}
                         onClick={() => handleRoleChange(role)}
-                        className={`py-3 px-4 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border ${
+                        className={`py-4 px-4 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all border-2 ${
                           selectedUser.accountRole === role 
-                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-lg' 
-                            : 'bg-white text-emerald-600 border-emerald-200 hover:bg-emerald-100'
+                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-xl' 
+                            : 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-500 border-emerald-100 dark:border-emerald-900 hover:border-emerald-500'
                         }`}
                       >
                         {role}
@@ -418,14 +453,14 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                   </div>
                 </div>
 
-                <div className="space-y-4">
-                  <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-2">Message History</h4>
-                  <div className="space-y-4 bg-gray-50 p-6 rounded-[2rem] max-h-96 overflow-y-auto custom-scrollbar border border-gray-100">
-                    {userMessages.length === 0 ? <div className="py-20 text-center text-gray-400 italic text-sm">No messages yet.</div> : userMessages.map(m => (
+                <div className="space-y-6">
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-2">Recent Interactions</h4>
+                  <div className="space-y-4 bg-slate-50 dark:bg-slate-900/50 p-8 rounded-[2.5rem] max-h-96 overflow-y-auto custom-scrollbar border border-slate-100 dark:border-slate-800">
+                    {userMessages.length === 0 ? <div className="py-20 text-center text-slate-400 font-black uppercase tracking-widest text-[10px] opacity-40">No message history available.</div> : userMessages.map(m => (
                       <div key={m.id} className={`flex ${m.senderId === 'admin' ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-[80%] p-4 rounded-2xl text-sm ${m.senderId === 'admin' ? 'bg-emerald-600 text-white' : 'bg-white border text-gray-800'}`}>
+                        <div className={`max-w-[80%] p-5 rounded-[1.8rem] text-sm font-medium ${m.senderId === 'admin' ? 'bg-emerald-600 text-white shadow-lg' : 'bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-slate-800 dark:text-slate-100'}`}>
                           {m.content}
-                          <div className="mt-2 text-[8px] opacity-60 font-black uppercase tracking-widest">
+                          <div className="mt-3 text-[8px] opacity-60 font-black uppercase tracking-widest border-t border-white/10 pt-2">
                             {new Date(m.timestamp).toLocaleTimeString()}
                           </div>
                         </div>
@@ -440,13 +475,28 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
       )}
 
       {showConfirmModal && (
-        <div className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-white rounded-[2.5rem] w-full max-w-md p-10 shadow-2xl animate-in zoom-in duration-200 border border-white/20">
-            <h3 className="text-2xl font-black text-gray-800 mb-2">Publish Resource?</h3>
-            <p className="text-gray-500 font-medium mb-8 leading-relaxed">This will make "{title}" visible to all students in {level} {grade}.</p>
+        <div className="fixed inset-0 z-[200] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-6">
+          <div className="bg-white dark:bg-slate-900 rounded-[3rem] w-full max-w-md p-10 shadow-2xl animate-in zoom-in duration-200 border border-white/10">
+            <div className="w-20 h-20 bg-emerald-50 dark:bg-emerald-900/30 rounded-3xl flex items-center justify-center text-4xl mb-8 mx-auto shadow-inner">📤</div>
+            <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2 text-center">Confirm Publication</h3>
+            <p className="text-slate-500 dark:text-slate-400 font-medium mb-10 text-center leading-relaxed px-4">This will create a direct link to the Google Drive file for all students in {level} {grade}.</p>
             <div className="grid grid-cols-2 gap-4">
-              <button onClick={() => setShowConfirmModal(false)} className="w-full py-4 rounded-2xl bg-gray-100 text-gray-600 font-black uppercase tracking-widest text-xs">Cancel</button>
-              <button onClick={startUpload} className="w-full py-4 rounded-2xl bg-emerald-600 text-white font-black uppercase tracking-widest text-xs shadow-xl shadow-emerald-100">Publish Now</button>
+              <button onClick={() => setShowConfirmModal(false)} className="w-full py-5 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-500 font-black uppercase tracking-widest text-[10px]">Cancel</button>
+              <button onClick={startPublish} className="w-full py-5 rounded-2xl bg-emerald-600 text-white font-black uppercase tracking-widest text-[10px] shadow-xl shadow-emerald-500/20 active:scale-95 transition-all">Publish</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {annToDelete && (
+        <div className="fixed inset-0 z-[200] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-6">
+          <div className="bg-white dark:bg-slate-900 rounded-[3rem] w-full max-w-md p-10 shadow-2xl animate-in zoom-in duration-200 border border-white/10">
+            <div className="w-20 h-20 bg-red-50 dark:bg-red-900/30 rounded-3xl flex items-center justify-center text-4xl mb-8 mx-auto shadow-inner">🗑️</div>
+            <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2 text-center">Delete Broadcast?</h3>
+            <p className="text-slate-500 dark:text-slate-400 font-medium mb-10 text-center leading-relaxed px-4">This announcement will be permanently removed for all members. This action cannot be undone.</p>
+            <div className="grid grid-cols-2 gap-4">
+              <button onClick={() => setAnnToDelete(null)} className="w-full py-5 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-500 font-black uppercase tracking-widest text-[10px]">Keep It</button>
+              <button onClick={confirmDeleteAnnouncement} className="w-full py-5 rounded-2xl bg-red-600 text-white font-black uppercase tracking-widest text-[10px] shadow-xl shadow-red-500/20 active:scale-95 transition-all">Delete Permanently</button>
             </div>
           </div>
         </div>
