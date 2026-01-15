@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { User } from '../types';
 
 interface LayoutProps {
@@ -21,6 +21,8 @@ export const Layout: React.FC<LayoutProps> = ({
   isDarkMode,
   toggleDarkMode
 }) => {
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
   if (!user) return <>{children}</>;
 
   const isAdmin = user.appRole === 'admin';
@@ -37,6 +39,19 @@ export const Layout: React.FC<LayoutProps> = ({
   const getInitials = (name: string, email: string) => {
     if (name) return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
     return email ? email[0].toUpperCase() : '?';
+  };
+
+  const handleLogoutClick = () => {
+    setShowLogoutConfirm(true);
+  };
+
+  const confirmLogout = () => {
+    setShowLogoutConfirm(false);
+    onLogout();
+  };
+
+  const cancelLogout = () => {
+    setShowLogoutConfirm(false);
   };
 
   return (
@@ -76,7 +91,7 @@ export const Layout: React.FC<LayoutProps> = ({
               </div>
             </div>
             <button 
-              onClick={onLogout}
+              onClick={handleLogoutClick}
               className="bg-emerald-600 hover:bg-emerald-700 px-5 py-2.5 rounded-xl text-[10px] text-white font-black uppercase tracking-widest transition-all shadow-lg shadow-emerald-500/10 dark:shadow-none"
             >
               Logout
@@ -89,6 +104,35 @@ export const Layout: React.FC<LayoutProps> = ({
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-10 py-8">
         {children}
       </main>
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 z-[200] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-300">
+          <div className="bg-white dark:bg-slate-900 rounded-[3rem] max-w-md w-full p-10 shadow-2xl animate-in zoom-in duration-300 border border-slate-100 dark:border-slate-800 text-center space-y-8">
+            <div className="w-20 h-20 bg-emerald-50 dark:bg-emerald-950/30 rounded-3xl flex items-center justify-center text-4xl mx-auto shadow-inner">
+              🚪
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Are you sure you want to logout?</h3>
+              <p className="text-slate-500 dark:text-slate-400 font-medium">You will need to sign back in to access your library and progress.</p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <button 
+                onClick={cancelLogout}
+                className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-black rounded-2xl text-[11px] uppercase tracking-[0.2em] transition-all"
+              >
+                No, Stay
+              </button>
+              <button 
+                onClick={confirmLogout}
+                className="flex-1 py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-2xl text-[11px] uppercase tracking-[0.2em] shadow-xl shadow-emerald-500/20 transition-all active:scale-95"
+              >
+                Yes, Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Bottom Navigation for Mobile */}
       <nav className="md:hidden bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg border-t border-slate-200 dark:border-slate-800 fixed bottom-0 left-0 right-0 h-20 flex items-center justify-around z-50 pb-safe shadow-[0_-10px_30px_rgba(0,0,0,0.05)] dark:shadow-none">
