@@ -80,73 +80,52 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, user }) => {
   return (
     <div className="max-w-6xl mx-auto space-y-12 animate-in fade-in slide-in-from-bottom-2 duration-700 pb-16 px-4 md:px-0">
       
-      {/* Redesigned Dashboard Hero Section */}
-      <section className="relative overflow-hidden bg-white dark:bg-slate-800 rounded-[3rem] p-8 md:p-12 border border-slate-100 dark:border-slate-700 shadow-2xl">
-        <div className="relative z-10 flex flex-col md:flex-row items-center gap-10 md:gap-16">
-          {/* Left Side: Personalized Greeting */}
-          <div className="flex-1 text-center md:text-left space-y-6">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-800 rounded-2xl text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-[0.2em] shadow-sm">
-              <span className="animate-pulse">🇲🇼</span>
-              Malawi Academic Hub
-            </div>
-            
-            <div className="space-y-2">
-              <h1 className="text-4xl md:text-6xl font-black text-slate-900 dark:text-white leading-[1.1] tracking-tighter">
-                Takulandirani,<br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-blue-600 dark:from-emerald-400 dark:to-blue-400">
-                  {getFirstName(user.name)}!
-                </span>
-              </h1>
+      {/* Redesigned Dashboard Hero Section (Refined without stats boxes) */}
+      <section className="relative overflow-hidden bg-white dark:bg-slate-800 rounded-[3rem] p-8 md:p-16 border border-slate-100 dark:border-slate-700 shadow-2xl">
+        <div className="relative z-10 flex flex-col items-center text-center space-y-8">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-800 rounded-2xl text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-[0.2em] shadow-sm">
+            <span className="animate-pulse">🇲🇼</span>
+            Malawi Academic Hub
+          </div>
+          
+          <div className="space-y-4 max-w-2xl">
+            <h1 className="text-4xl md:text-7xl font-black text-slate-900 dark:text-white leading-[1.1] tracking-tighter">
+              Takulandirani,<br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-blue-600 dark:from-emerald-400 dark:to-blue-400">
+                {getFirstName(user.name)}!
+              </span>
+            </h1>
+            <div className="flex flex-col items-center gap-2">
               <p className="text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest text-[10px] md:text-xs">
                 {user.currentGrade} • {user.district} District
               </p>
-            </div>
-
-            <div className="flex flex-wrap justify-center md:justify-start gap-4 pt-4">
-              <button 
-                onClick={() => onNavigate('library')} 
-                className="group px-8 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black rounded-2xl shadow-xl hover:shadow-emerald-500/10 transition-all active:scale-95 uppercase tracking-widest text-xs flex items-center gap-3"
-              >
-                <span>Browse Materials</span>
-                <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
-              </button>
-              <button 
-                onClick={() => onNavigate('activity')} 
-                className="px-8 py-4 bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-200 font-black rounded-2xl border border-slate-200 dark:border-slate-600 hover:bg-slate-50 transition-all active:scale-95 uppercase tracking-widest text-xs"
-              >
-                My Progress
-              </button>
+              <div className="h-1 w-20 bg-emerald-500/20 rounded-full mt-2"></div>
             </div>
           </div>
 
-          {/* Right Side: Visual Quick Stats Box */}
-          <div className="w-full md:w-80 flex-none grid grid-cols-2 gap-4">
-            <div className="p-6 bg-emerald-50 dark:bg-emerald-950/20 rounded-[2rem] border border-emerald-100 dark:border-emerald-900/30 flex flex-col items-center justify-center text-center shadow-sm">
-                <span className="text-2xl mb-2">📚</span>
-                <span className="text-xl font-black text-emerald-900 dark:text-emerald-100">{recentMaterials.length}</span>
-                <span className="text-[8px] font-black uppercase tracking-widest text-emerald-600/60">New Adds</span>
-            </div>
-            <div className="p-6 bg-blue-50 dark:bg-blue-950/20 rounded-[2rem] border border-blue-100 dark:border-blue-900/30 flex flex-col items-center justify-center text-center shadow-sm">
-                <span className="text-2xl mb-2">📥</span>
-                <span className="text-xl font-black text-blue-900 dark:text-blue-100">{user.downloadedIds.length}</span>
-                <span className="text-[8px] font-black uppercase tracking-widest text-blue-600/60">Offline</span>
-            </div>
-            <div className="p-6 bg-orange-50 dark:bg-orange-950/20 rounded-[2rem] border border-orange-100 dark:border-orange-900/30 flex flex-col items-center justify-center text-center shadow-sm">
-                <span className="text-2xl mb-2">🔥</span>
-                <span className="text-xl font-black text-orange-900 dark:text-orange-100">Distinction</span>
-                <span className="text-[8px] font-black uppercase tracking-widest text-orange-600/60">Goal</span>
-            </div>
-            <div className="p-6 bg-pink-50 dark:bg-pink-950/20 rounded-[2rem] border border-pink-100 dark:border-pink-900/30 flex flex-col items-center justify-center text-center shadow-sm">
-                <span className="text-2xl mb-2">🦁</span>
-                <span className="text-xl font-black text-pink-900 dark:text-pink-100">Hub</span>
-                <span className="text-[8px] font-black uppercase tracking-widest text-pink-600/60">Member</span>
-            </div>
+          <div className="flex flex-wrap justify-center gap-4 pt-4">
+            <button 
+              onClick={() => onNavigate('library')} 
+              className="group px-10 py-5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black rounded-3xl shadow-2xl hover:shadow-emerald-500/10 transition-all active:scale-95 uppercase tracking-widest text-[11px] flex items-center gap-3"
+            >
+              <span>Browse Materials</span>
+              <svg className="w-5 h-5 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+            </button>
+            <button 
+              onClick={() => onNavigate('activity')} 
+              className="px-10 py-5 bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-200 font-black rounded-3xl border border-slate-200 dark:border-slate-600 hover:bg-slate-50 transition-all active:scale-95 uppercase tracking-widest text-[11px]"
+            >
+              My Progress
+            </button>
           </div>
         </div>
         
         {/* Background Decor */}
-        <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-emerald-50/30 dark:from-emerald-900/10 to-transparent pointer-events-none"></div>
-        <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none"></div>
+        <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.05),transparent_70%)] pointer-events-none"></div>
+        <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none"></div>
+        <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none">
+            <span className="text-[12rem] font-black leading-none select-none">SH</span>
+        </div>
       </section>
 
       {/* Responsive Module Grid */}
