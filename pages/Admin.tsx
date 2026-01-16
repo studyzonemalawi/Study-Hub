@@ -27,7 +27,6 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [exams, setExams] = useState<any[]>([]);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [userMessages, setUserMessages] = useState<Message[]>([]);
   
   // Content Upload States
   const [level, setLevel] = useState<EducationLevel>(EducationLevel.PRIMARY);
@@ -45,14 +44,17 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
   const [annTitle, setAnnTitle] = useState('');
   const [annContent, setAnnContent] = useState('');
   const [annPriority, setAnnPriority] = useState<'normal' | 'important' | 'urgent'>('normal');
-  const [annToDelete, setAnnToDelete] = useState<string | null>(null);
 
   useEffect(() => {
+    refreshData();
+  }, []);
+
+  const refreshData = () => {
     setMaterials(storage.getMaterials());
     setUsers(storage.getUsers());
     setAnnouncements(storage.getAnnouncements());
     setExams(storage.getExams());
-  }, []);
+  };
 
   const availableGrades = level === EducationLevel.PRIMARY 
     ? PRIMARY_GRADES 
@@ -119,7 +121,7 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
       setMaterials((prev) => [newMaterial, ...prev]);
       setTitle('');
       setDriveLink('');
-      setSuccessMsg('Resource published successfully via Google Drive');
+      setSuccessMsg('Resource published successfully');
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err: any) {
       setError(err.message || "Failed to publish material");
@@ -149,6 +151,13 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
     setTimeout(() => setSuccessMsg(null), 3000);
   };
 
+  const deleteAnnouncement = async (id: string) => {
+    if (window.confirm("Remove this broadcast?")) {
+      await storage.deleteAnnouncement(id);
+      setAnnouncements(announcements.filter(a => a.id !== id));
+    }
+  };
+
   const deleteExam = (id: string) => {
     if (window.confirm("Are you sure you want to delete this AI Exam?")) {
       storage.deleteExam(id);
@@ -171,54 +180,31 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
     }
   };
 
-  const handleRoleChange = (newRole: AccountRole) => {
-    if (!selectedUser) return;
+  const handleRoleChange = (userId: string, newRole: AccountRole) => {
+    const userToUpdate = users.find(u => u.id === userId);
+    if (!userToUpdate) return;
     
-    const updatedUser: User = { ...selectedUser, accountRole: newRole };
+    const updatedUser: User = { ...userToUpdate, accountRole: newRole };
     storage.updateUser(updatedUser);
+    setUsers(users.map(u => u.id === userId ? updatedUser : u));
     
-    setUsers(users.map(u => u.id === selectedUser.id ? updatedUser : u));
-    setSelectedUser(updatedUser);
-    
-    setSuccessMsg(`Role updated to ${newRole} for ${updatedUser.name}`);
+    setSuccessMsg(`Role updated to ${newRole}`);
     setTimeout(() => setSuccessMsg(null), 3000);
-  };
-
-  const viewUserHistory = (user: User) => {
-    const allMessages = storage.getMessages();
-    const filtered = allMessages.filter(m => m.senderId === user.id || m.receiverId === user.id);
-    setUserMessages(filtered);
-    setSelectedUser(user);
   };
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
         <div className="flex bg-white dark:bg-slate-800 p-1.5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-x-auto no-scrollbar">
-          <button 
-            onClick={() => setActiveAdminTab('content')}
-            className={`px-8 py-2.5 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeAdminTab === 'content' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
-          >
-            Content Hub
-          </button>
-          <button 
-            onClick={() => setActiveAdminTab('exams')}
-            className={`px-8 py-2.5 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeAdminTab === 'exams' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
-          >
-            Exam Portal
-          </button>
-          <button 
-            onClick={() => setActiveAdminTab('users')}
-            className={`px-8 py-2.5 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeAdminTab === 'users' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
-          >
-            Users
-          </button>
-          <button 
-            onClick={() => setActiveAdminTab('announcements')}
-            className={`px-8 py-2.5 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeAdminTab === 'announcements' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
-          >
-            Broadcasts
-          </button>
+          {(['content', 'exams', 'users', 'announcements'] as const).map((tab) => (
+            <button 
+              key={tab}
+              onClick={() => setActiveAdminTab(tab)}
+              className={`px-8 py-2.5 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeAdminTab === tab ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+            >
+              {tab === 'announcements' ? 'Broadcasts' : tab === 'content' ? 'Content Hub' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -229,6 +215,91 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
         </div>
       )}
 
+      {/* Content Hub Tab */}
+      {activeAdminTab === 'content' && (
+        <div className="grid lg:grid-cols-2 gap-8 pb-20 animate-in fade-in duration-500">
+          <div className="bg-white dark:bg-slate-800 rounded-[3rem] p-10 border border-slate-100 dark:border-slate-700 shadow-2xl h-fit relative overflow-hidden">
+            <div className="flex items-center gap-4 mb-10">
+               <div className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-2xl flex items-center justify-center shadow-lg border border-emerald-400/20">
+                  <span className="text-white font-black text-xl">SH</span>
+               </div>
+               <div>
+                  <h2 className="text-2xl font-black text-slate-900 dark:text-white leading-tight">Post Digital Resource</h2>
+                  <p className="text-[10px] font-black uppercase text-emerald-600 tracking-widest">Google Drive Integration Enabled</p>
+               </div>
+            </div>
+
+            <form onSubmit={handleSubmitAttempt} className="space-y-6">
+              <div className="grid grid-cols-2 gap-5">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Level</label>
+                  <select value={level} disabled={isUploading} onChange={(e) => setLevel(e.target.value as EducationLevel)} className="w-full p-4 rounded-2xl border border-slate-100 dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50 dark:bg-slate-900 font-bold text-slate-800 dark:text-white appearance-none">
+                    {Object.values(EducationLevel).map(v => <option key={v} value={v}>{v}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Grade</label>
+                  <select value={grade} disabled={isUploading} onChange={(e) => setGrade(e.target.value as Grade)} className="w-full p-4 rounded-2xl border border-slate-100 dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50 dark:bg-slate-900 font-bold text-slate-800 dark:text-white appearance-none">
+                    {availableGrades.map(v => <option key={v} value={v}>{v}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-5">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Category</label>
+                  <select value={category} disabled={isUploading} onChange={(e) => setCategory(e.target.value as Category)} className="w-full p-4 rounded-2xl border border-slate-100 dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50 dark:bg-slate-900 font-bold text-slate-800 dark:text-white appearance-none">
+                    {availableCategories.map(v => <option key={v} value={v}>{v}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Subject</label>
+                  <select value={subject} disabled={isUploading} onChange={(e) => setSubject(e.target.value)} className="w-full p-4 rounded-2xl border border-slate-100 dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50 dark:bg-slate-900 font-bold text-slate-800 dark:text-white appearance-none">
+                    {availableSubjects.map(v => <option key={v} value={v}>{v}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Resource Title</label>
+                <input type="text" required disabled={isUploading} placeholder="e.g. MSCE Biology Notes Unit 1" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full p-5 rounded-2xl border border-slate-100 dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50 dark:bg-slate-900 font-bold text-slate-800 dark:text-white" />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Google Drive Sharing Link</label>
+                <input type="url" required disabled={isUploading} placeholder="https://drive.google.com/file/d/..." value={driveLink} onChange={(e) => setDriveLink(e.target.value)} className="w-full p-5 rounded-2xl border border-slate-100 dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50 dark:bg-slate-900 font-bold text-slate-800 dark:text-white" />
+                {error && <p className="text-[10px] text-red-500 font-black uppercase tracking-widest px-2">{error}</p>}
+              </div>
+
+              <button type="submit" disabled={isUploading || !driveLink || !title} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-5 rounded-3xl shadow-2xl transition-all uppercase tracking-widest text-xs disabled:opacity-50 active:scale-95">
+                {isUploading ? 'Validating Link...' : 'Publish to Hub'}
+              </button>
+            </form>
+          </div>
+
+          <div className="bg-white dark:bg-slate-800 rounded-[3rem] p-10 border border-slate-100 dark:border-slate-700 shadow-xl overflow-hidden flex flex-col h-fit">
+            <h2 className="text-2xl font-black mb-8 text-slate-900 dark:text-white flex items-center gap-3">
+               <span className="w-2 h-8 bg-emerald-500 rounded-full"></span>
+               Library Assets ({materials.length})
+            </h2>
+            <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+              {materials.map(m => (
+                <div key={m.id} className="p-6 bg-slate-50 dark:bg-slate-900/50 rounded-[2rem] flex items-center justify-between border border-transparent hover:border-emerald-500/20 transition-all group">
+                  <div className="truncate pr-4 min-w-0">
+                      <h4 className="font-bold text-slate-800 dark:text-slate-100 truncate text-sm">{m.title}</h4>
+                      <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest mt-1">{m.subject} • {m.grade}</p>
+                  </div>
+                  <button onClick={() => deleteItem(m.id)} className="p-3 bg-white dark:bg-slate-800 text-red-300 hover:text-red-500 rounded-xl shadow-sm flex-none">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Exam Tab */}
       {activeAdminTab === 'exams' && (
         <div className="space-y-8 animate-in fade-in duration-500 pb-20">
           <div className="bg-emerald-800 p-10 md:p-16 rounded-[3rem] text-white flex flex-col md:flex-row items-center justify-between gap-10 shadow-2xl relative overflow-hidden">
@@ -243,7 +314,6 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                 </button>
              </div>
              <div className="relative z-10 w-24 h-24 bg-white/10 rounded-[2.5rem] flex items-center justify-center text-5xl shadow-inner">🤖</div>
-             <div className="absolute -right-20 -bottom-20 w-80 h-80 bg-white/5 rounded-full blur-3xl"></div>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -265,110 +335,151 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
         </div>
       )}
 
-      {activeAdminTab === 'content' && (
+      {/* Broadcasts Tab */}
+      {activeAdminTab === 'announcements' && (
         <div className="grid lg:grid-cols-2 gap-8 pb-20 animate-in fade-in duration-500">
-          <div className="bg-white dark:bg-slate-800 rounded-[3rem] p-10 border border-slate-100 dark:border-slate-700 shadow-2xl h-fit relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-8 opacity-5 grayscale pointer-events-none">
-                <span className="text-8xl font-black">SH</span>
-            </div>
-
-            <div className="flex items-center gap-4 mb-10">
-               <div className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/20 border border-emerald-400/20">
-                  <span className="text-white font-black text-xl">SH</span>
-               </div>
-               <div>
-                  <h2 className="text-2xl font-black text-slate-900 dark:text-white leading-tight">Post Digital Resource</h2>
-                  <p className="text-[10px] font-black uppercase text-emerald-600 tracking-widest">Google Drive Integration Enabled</p>
-               </div>
-            </div>
-
-            <form onSubmit={handleSubmitAttempt} className="space-y-6">
-              <div className="grid grid-cols-2 gap-5">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest px-1">Level</label>
-                  <select value={level} disabled={isUploading} onChange={(e) => setLevel(e.target.value as EducationLevel)} className="w-full p-4 rounded-2xl border border-slate-100 dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50 dark:bg-slate-900 font-bold text-slate-800 dark:text-white transition-all appearance-none">
-                    {Object.values(EducationLevel).map(v => <option key={v} value={v}>{v}</option>)}
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest px-1">Grade / Form</label>
-                  <select value={grade} disabled={isUploading} onChange={(e) => setGrade(e.target.value as Grade)} className="w-full p-4 rounded-2xl border border-slate-100 dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50 dark:bg-slate-900 font-bold text-slate-800 dark:text-white transition-all appearance-none">
-                    {availableGrades.map(v => <option key={v} value={v}>{v}</option>)}
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-5">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest px-1">Category</label>
-                  <select value={category} disabled={isUploading} onChange={(e) => setCategory(e.target.value as Category)} className="w-full p-4 rounded-2xl border border-slate-100 dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50 dark:bg-slate-900 font-bold text-slate-800 dark:text-white transition-all appearance-none">
-                    {availableCategories.map(v => <option key={v} value={v}>{v}</option>)}
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest px-1">Subject</label>
-                  <select value={subject} disabled={isUploading} onChange={(e) => setSubject(e.target.value)} className="w-full p-4 rounded-2xl border border-slate-100 dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50 dark:bg-slate-900 font-bold text-slate-800 dark:text-white transition-all appearance-none">
-                    {availableSubjects.map(v => <option key={v} value={v}>{v}</option>)}
-                  </select>
-                </div>
-              </div>
-
+          <div className="bg-white dark:bg-slate-800 rounded-[3rem] p-10 border border-slate-100 dark:border-slate-700 shadow-2xl h-fit">
+            <h2 className="text-2xl font-black mb-8 text-slate-900 dark:text-white flex items-center gap-3">
+              <span className="w-2 h-8 bg-orange-500 rounded-full"></span>
+              Create Broadcast
+            </h2>
+            <form onSubmit={handlePostAnnouncement} className="space-y-6">
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest px-1">Resource Title</label>
-                <input type="text" required disabled={isUploading} placeholder="e.g. MSCE Biology Notes Unit 1" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full p-5 rounded-2xl border border-slate-100 dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50 dark:bg-slate-900 font-bold text-slate-800 dark:text-white transition-all" />
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Broadcast Title</label>
+                <input 
+                  type="text" 
+                  required 
+                  value={annTitle} 
+                  onChange={(e) => setAnnTitle(e.target.value)} 
+                  placeholder="e.g. MSCE Results Update" 
+                  className="w-full p-4 rounded-2xl border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 font-bold outline-none focus:ring-2 focus:ring-orange-500 transition-all"
+                />
               </div>
-
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest px-1">Google Drive Sharing Link</label>
-                <div className="relative">
-                  <input 
-                    type="url" 
-                    required 
-                    disabled={isUploading} 
-                    placeholder="https://drive.google.com/file/d/..." 
-                    value={driveLink} 
-                    onChange={(e) => setDriveLink(e.target.value)} 
-                    className="w-full p-5 pl-14 rounded-2xl border border-slate-100 dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50 dark:bg-slate-900 font-bold text-slate-800 dark:text-white transition-all" 
-                  />
-                  <div className="absolute left-5 top-1/2 -translate-y-1/2 opacity-40">
-                    <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor"><path d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z"/></svg>
-                  </div>
-                </div>
-                {error && <p className="text-[10px] text-red-500 font-black uppercase tracking-widest px-2">{error}</p>}
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Message Content</label>
+                <textarea 
+                  required 
+                  value={annContent} 
+                  onChange={(e) => setAnnContent(e.target.value)} 
+                  placeholder="Tell students what's new..." 
+                  className="w-full p-4 rounded-2xl border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 font-medium outline-none focus:ring-2 focus:ring-orange-500 h-40 resize-none transition-all"
+                />
               </div>
-
-              <button type="submit" disabled={isUploading || !driveLink || !title} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-5 rounded-3xl shadow-2xl transition-all uppercase tracking-widest text-xs disabled:opacity-50 active:scale-95 shadow-emerald-500/20">
-                {isUploading ? 'Validating Link...' : 'Publish to Hub'}
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Priority Level</label>
+                <div className="grid grid-cols-3 gap-3">
+                  {(['normal', 'important', 'urgent'] as const).map(p => (
+                    <button 
+                      key={p} 
+                      type="button" 
+                      onClick={() => setAnnPriority(p)}
+                      className={`py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border-2 ${annPriority === p ? 'bg-orange-500 text-white border-orange-500 shadow-lg' : 'bg-slate-50 dark:bg-slate-900 text-slate-400 border-transparent hover:border-orange-200'}`}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <button 
+                type="submit" 
+                className="w-full bg-orange-600 hover:bg-orange-700 text-white font-black py-5 rounded-3xl shadow-2xl transition-all uppercase tracking-widest text-xs active:scale-95"
+              >
+                Send Broadcast 📢
               </button>
             </form>
           </div>
 
-          <div className="bg-white dark:bg-slate-800 rounded-[3rem] p-10 border border-slate-100 dark:border-slate-700 shadow-xl overflow-hidden flex flex-col h-fit">
+          <div className="bg-white dark:bg-slate-800 rounded-[3rem] p-10 border border-slate-100 dark:border-slate-700 shadow-xl flex flex-col h-fit">
             <h2 className="text-2xl font-black mb-8 text-slate-900 dark:text-white flex items-center gap-3">
-               <span className="w-2 h-8 bg-emerald-500 rounded-full"></span>
-               Library Assets ({materials.length})
+              <span className="w-2 h-8 bg-orange-500 rounded-full"></span>
+              Sent Broadcasts ({announcements.length})
             </h2>
             <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
-              {materials.map(m => (
-                <div key={m.id} className="p-6 bg-slate-50 dark:bg-slate-900/50 rounded-[2rem] flex items-center justify-between border border-transparent hover:border-emerald-500/20 transition-all group">
-                  <div className="truncate pr-4 flex items-center gap-4 min-w-0">
-                    <div className="w-10 h-10 bg-white dark:bg-slate-800 rounded-xl flex items-center justify-center text-[10px] font-black text-emerald-600 border border-slate-100 dark:border-slate-700 shadow-sm flex-none">SH</div>
-                    <div className="min-w-0">
-                      <h4 className="font-bold text-slate-800 dark:text-slate-100 truncate text-sm">{m.title}</h4>
-                      <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest mt-1">{m.subject} • {m.grade}</p>
+              {announcements.length === 0 ? (
+                <div className="text-center py-20 text-slate-400 font-bold italic">No broadcasts sent yet.</div>
+              ) : (
+                announcements.map(a => (
+                  <div key={a.id} className="p-6 bg-slate-50 dark:bg-slate-900/50 rounded-[2rem] border border-transparent hover:border-orange-200/30 transition-all group">
+                    <div className="flex justify-between items-start mb-4">
+                       <span className={`px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest ${a.priority === 'urgent' ? 'bg-red-500 text-white' : a.priority === 'important' ? 'bg-orange-500 text-white' : 'bg-emerald-500 text-white'}`}>
+                        {a.priority}
+                       </span>
+                       <button onClick={() => deleteAnnouncement(a.id)} className="text-slate-300 hover:text-red-500 transition-colors">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                       </button>
                     </div>
+                    <h4 className="font-black text-slate-800 dark:text-white mb-1">{a.title}</h4>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">{a.content}</p>
+                    <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest mt-4">Posted: {new Date(a.timestamp).toLocaleDateString()}</p>
                   </div>
-                  <button onClick={() => deleteItem(m.id)} className="p-3 bg-white dark:bg-slate-800 text-red-300 hover:text-red-500 rounded-xl transition-all shadow-sm flex-none">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                  </button>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
         </div>
       )}
 
-      {/* Announcements and Users omitted for brevity, same as previous file */}
+      {/* Users Tab */}
+      {activeAdminTab === 'users' && (
+        <div className="bg-white dark:bg-slate-800 rounded-[3rem] p-10 border border-slate-100 dark:border-slate-700 shadow-2xl animate-in fade-in duration-500 pb-20">
+          <div className="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-6">
+             <div>
+                <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Hub Members</h2>
+                <p className="text-slate-500 dark:text-slate-400 font-medium">Manage student and teacher identities across Malawi.</p>
+             </div>
+             <div className="bg-emerald-50 dark:bg-emerald-950/30 px-6 py-3 rounded-2xl border border-emerald-100 dark:border-emerald-800">
+                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400">{users.length} Registered Users</span>
+             </div>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {users.map(u => (
+              <div key={u.id} className="bg-slate-50 dark:bg-slate-900/50 p-6 rounded-[2.5rem] border border-transparent hover:border-emerald-500/20 transition-all flex flex-col justify-between">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-600 flex items-center justify-center text-white font-black text-xs shadow-md">
+                      {(u.name || u.email || '?')[0].toUpperCase()}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h4 className="font-black text-slate-900 dark:text-white truncate">{u.name || 'Unknown User'}</h4>
+                      <p className="text-[10px] text-slate-400 truncate">{u.email}</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                     <div className="bg-white dark:bg-slate-800 p-2 rounded-xl border border-slate-100 dark:border-slate-700">
+                        <p className="text-[8px] font-black uppercase text-slate-400">Grade</p>
+                        <p className="text-[10px] font-bold text-slate-700 dark:text-white">{u.currentGrade || 'N/A'}</p>
+                     </div>
+                     <div className="bg-white dark:bg-slate-800 p-2 rounded-xl border border-slate-100 dark:border-slate-700">
+                        <p className="text-[8px] font-black uppercase text-slate-400">District</p>
+                        <p className="text-[10px] font-bold text-slate-700 dark:text-white">{u.district || 'N/A'}</p>
+                     </div>
+                  </div>
+                </div>
+
+                <div className="mt-6 pt-6 border-t border-slate-200/50 dark:border-slate-700/50 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[8px] font-black uppercase text-slate-400">Account Role</label>
+                    <select 
+                      value={u.accountRole} 
+                      onChange={(e) => handleRoleChange(u.id, e.target.value as AccountRole)}
+                      className="text-[10px] font-black uppercase text-emerald-600 bg-transparent outline-none cursor-pointer"
+                    >
+                      {Object.values(AccountRole).map(r => <option key={r} value={r}>{r}</option>)}
+                    </select>
+                  </div>
+                  <button 
+                    onClick={() => deleteUser(u.id)}
+                    className="w-full py-2.5 rounded-xl border border-red-100 dark:border-red-900/30 text-[9px] font-black uppercase tracking-widest text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
+                  >
+                    Remove Access
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
