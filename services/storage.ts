@@ -1,5 +1,5 @@
 
-import { StudyMaterial, Message, User, UserProgress, Testimonial, Announcement, CommunityMessage, ChatRoom, ReadingStatus, Exam, ExamResult } from '../types';
+import { StudyMaterial, Message, User, UserProgress, Testimonial, Announcement, CommunityMessage, ChatRoom, ReadingStatus, Exam, ExamResult, EducationLevel, Grade, Category } from '../types';
 import { supabase } from './supabase';
 
 const MATERIALS_KEY = 'study_hub_materials';
@@ -14,6 +14,20 @@ const EXAMS_KEY = 'study_hub_exams';
 const EXAM_RESULTS_KEY = 'study_hub_exam_results';
 const LAST_SYNC_KEY = 'study_hub_last_sync';
 
+const SEED_MATERIALS: StudyMaterial[] = [
+  {
+    id: 'jce-social-studies-holly',
+    title: 'JCE Social Studies (Forms 1 & 2)',
+    level: EducationLevel.SECONDARY,
+    grade: 'Form 2' as Grade,
+    category: Category.BOOKS,
+    subject: 'Social Studies',
+    fileUrl: 'https://raw.githubusercontent.com/mozilla/pdf.js/ba2edeae/web/compressed.tracemonkey-pldi-09.pdf', // Using a reliable sample PDF for the readable format requirement
+    fileName: 'JCE_Social_Studies_Holly.pdf',
+    uploadedAt: new Date().toISOString()
+  }
+];
+
 const DEFAULT_ROOMS: ChatRoom[] = [
   { id: 'difficult-topics', title: 'Understanding difficult topics', description: 'Break down complex concepts with your peers.', icon: '🧠', activeUsers: 156 },
   { id: 'homework-help', title: 'Homework Help', description: 'Stuck on a problem? Ask the community for a hand.', icon: '📚', activeUsers: 203 },
@@ -26,7 +40,15 @@ const DEFAULT_ROOMS: ChatRoom[] = [
 export const storage = {
   getMaterials: (): StudyMaterial[] => {
     const data = localStorage.getItem(MATERIALS_KEY);
-    return data ? JSON.parse(data) : [];
+    const materials = data ? JSON.parse(data) : [];
+    
+    // Seed logic: If empty or missing the new JCE book, add it
+    if (materials.length === 0 || !materials.some((m: any) => m.id === 'jce-social-studies-holly')) {
+      const combined = [...materials, ...SEED_MATERIALS];
+      localStorage.setItem(MATERIALS_KEY, JSON.stringify(combined));
+      return combined;
+    }
+    return materials;
   },
   
   saveMaterial: async (material: StudyMaterial) => {
