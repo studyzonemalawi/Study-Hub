@@ -22,9 +22,102 @@ const SEED_MATERIALS: StudyMaterial[] = [
     grade: 'Form 2' as Grade,
     category: Category.BOOKS,
     subject: 'Social Studies',
-    fileUrl: 'https://raw.githubusercontent.com/mozilla/pdf.js/ba2edeae/web/compressed.tracemonkey-pldi-09.pdf', // Using a reliable sample PDF for the readable format requirement
+    fileUrl: 'https://raw.githubusercontent.com/mozilla/pdf.js/ba2edeae/web/compressed.tracemonkey-pldi-09.pdf',
     fileName: 'JCE_Social_Studies_Holly.pdf',
     uploadedAt: new Date().toISOString()
+  },
+  {
+    id: 'msce-chemistry-chuzu',
+    title: 'Basic Principles Chemistry (Form 4)',
+    level: EducationLevel.SECONDARY,
+    grade: 'Form 4' as Grade,
+    category: Category.BOOKS,
+    subject: 'Chemistry',
+    fileUrl: '#digital',
+    fileName: 'MSCE_Chemistry_Chuzu.digital',
+    isDigital: true,
+    uploadedAt: new Date().toISOString(),
+    content: `
+# Basic Principles Chemistry
+## Senior Secondary Students (Form 3 & 4)
+### Author: Chuzu Elisha C.
+
+**Foreword**
+This book is a continuation of Basic Principle Chemistry for junior students. It contains special basics that will help students to understand Chemistry easily as they are studying to prepare for the Malawi School Certificate of Examination (MSCE).
+
+---
+
+## UNIT 1: Nitrogen, Sulphur and Phosphorus
+
+### 1.11 Nitrogen
+Nitrogen is an essential element, which makes up 78% of air. In the periodic table, nitrogen is in Group V and Period 2. It is a non-metallic substance with a valance of three.
+
+#### Sources of Nitrogen
+- **The Air:** Nitrogen makes up 78% of the atmosphere.
+- **The Soil:** Found in nitrogen-containing compounds called nitrates, produced by lighting effects and decaying organic matter.
+
+#### Physical Properties of Nitrogen
+- It has no smell.
+- It is a colourless gas.
+- Almost insoluble in water.
+- Less dense than air.
+
+#### Chemical Properties
+- **Diatomic Molecule:** Exists as N2 with a triple covalent bond (N≡N).
+- **Reaction with Alkali Metals:** Forms nitrogen alkalides (e.g., Magnesium nitride).
+- **Haber Process:** Reacts with Hydrogen to form Ammonia (NH3) under 300 atm and 450°C.
+
+### 1.19 Sulphur
+Sulphur is a non-metallic element found in Group VI and Period 2. It is extracted by the Frasch process.
+
+#### Sources of Sulphur
+- Crude oil and natural gases.
+- Metal ores like Copper pyrites (CuFeS2).
+- Volcanic regions.
+
+#### Properties of Sulphur
+- Does not conduct electricity.
+- Yellow brittle solid at room temperature.
+- Insoluble in water.
+
+---
+
+## UNIT 2: Chemical Bonding II
+
+### 2.10 Introduction
+Chemical bond is defined as a force of attraction between two particles.
+
+#### Types of Bonds
+1. **Ionic Bond:** Involves transfer of electrons from metal to non-metal.
+2. **Covalent Bond:** Involves sharing of electrons between non-metals.
+3. **Metallic Bond:** Occurs among metals, involving a sea of delocalized electrons.
+
+---
+
+## UNIT 3: Stoichiometry
+
+### 3.10 Introduction
+Stoichiometry is the branch of chemistry based on the law of conservation of mass: "the total mass of the reactants equals the total mass of the products."
+
+#### The Mole
+One mole is the amount of substance which contains 6.023 x 10^23 elementary particles (Avogadro's constant).
+
+---
+
+## UNIT 13: Oxidation and Reduction Reactions
+
+### 13.11 Oxidation Number
+Oxidation refers to the loss of electrons or addition of oxygen. Reduction refers to the gain of electrons or loss of oxygen.
+
+---
+
+## UNIT 14: Electrolysis
+
+### 14.11 Process
+Electrolysis is the process of splitting up substances by passing an electric current through them.
+- **Anode:** Positive electrode (attracts anions).
+- **Cathode:** Negative electrode (attracts cations).
+    `
   }
 ];
 
@@ -42,9 +135,8 @@ export const storage = {
     const data = localStorage.getItem(MATERIALS_KEY);
     const materials = data ? JSON.parse(data) : [];
     
-    // Seed logic: If empty or missing the new JCE book, add it
-    if (materials.length === 0 || !materials.some((m: any) => m.id === 'jce-social-studies-holly')) {
-      const combined = [...materials, ...SEED_MATERIALS];
+    if (materials.length === 0 || !materials.some((m: any) => m.id === 'msce-chemistry-chuzu')) {
+      const combined = [...materials, ...SEED_MATERIALS.filter(sm => !materials.some((m: any) => m.id === sm.id))];
       localStorage.setItem(MATERIALS_KEY, JSON.stringify(combined));
       return combined;
     }
