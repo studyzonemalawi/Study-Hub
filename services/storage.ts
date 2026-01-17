@@ -1,4 +1,3 @@
-
 import { StudyMaterial, Message, User, UserProgress, Testimonial, Announcement, CommunityMessage, ChatRoom, ReadingStatus, Exam, ExamResult, EducationLevel, Grade, Category } from '../types';
 import { supabase } from './supabase';
 
@@ -25,6 +24,153 @@ const SEED_MATERIALS: StudyMaterial[] = [
     fileUrl: 'https://raw.githubusercontent.com/mozilla/pdf.js/ba2edeae/web/compressed.tracemonkey-pldi-09.pdf',
     fileName: 'JCE_Social_Studies_Holly.pdf',
     uploadedAt: new Date().toISOString()
+  },
+  {
+    id: 'msce-chemistry-form3-chirindanji',
+    title: 'Complete Chemistry Notes (Form 3)',
+    level: EducationLevel.SECONDARY,
+    grade: 'Form 3' as Grade,
+    category: Category.NOTES,
+    subject: 'Chemistry',
+    fileUrl: '#digital',
+    fileName: 'Complete_Chemistry_Form3.digital',
+    isDigital: true,
+    uploadedAt: new Date().toISOString(),
+    content: `
+# Complete Chemistry Notes
+## Senior Secondary (Form 3) - Syllabus Based
+### Compiled by: Ganizani Chirindanji
+
+---
+
+## TOPIC 1: EXPERIMENTAL TECHNIQUES
+
+### 1.1 Chemical Waste Management
+Chemical waste is a product or unwanted material from a chemical reaction or an expired product no longer needed.
+**Examples of Waste Products:**
+- Unused chemicals (acids, alkalis).
+- Broken laboratory glassware and sharp objects.
+- Plastics, waste papers, and rubbers.
+- Poisonous gases from reactions.
+
+**Safe Disposal Methods:**
+- **Normal Waste Bins:** For non-recyclable plastics, wood, and paper.
+- **Controlled Containers:** For sharp objects (scalpels) and hazardous items.
+- **Water Draining:** For harmless soluble inorganic salts and diluted detergents.
+- **Incineration:** High-temperature burning for syringes, needles, and organic solvents.
+
+### 1.2 Scientific Investigation
+A systematic process to find an answer to a problem.
+**Key Components:**
+1. **Problem Identification:** Asking questions (e.g., What causes rusting?).
+2. **Hypothesis:** A guessed answer based on experience.
+3. **Variables:**
+   - **Independent (IV):** The quantity you decide to change (x-axis).
+   - **Dependent (DV):** The quantity you observe/measure (y-axis).
+   - **Control (CV):** Factors kept constant.
+
+### 1.3 Purity of a Substance
+A pure substance has constant composition and consistent properties.
+**Criteria for Purity:**
+- **Melting Point:** Pure substances have a specific MP. Impurities lower the MP.
+- **Boiling Point:** Pure substances have a fixed BP. Impurities raise the BP.
+- **Chromatography:** Used to separate mixtures of soluble substances (dyes, inks).
+
+**Relative Flow Values (Rf):**
+Rf = (Distance travelled by substance) / (Distance travelled by solvent).
+*Rf values are always less than 1.*
+
+---
+
+## TOPIC 2: NITROGEN, SULPHUR AND PHOSPHORUS
+
+### 2.1 Nitrogen (Group V)
+- Makes up 78% of the air.
+- Atomic Number: 7, Configuration: 2.5, Valency: 3.
+- **Properties:** Colorless, odorless, inert (triple covalent bond N≡N).
+- **Industrial Preparation:** The Haber Process.
+  - Nitrogen + Hydrogen ⇌ Ammonia (NH3).
+  - Conditions: Iron catalyst, 450°C, 300 atmospheres.
+
+### 2.2 Sulphur (Group VI)
+- Found in volcanic regions and metal ores.
+- **Extraction:** The Frasch Process.
+  - Super-heated water melts sulphur; compressed air forces it to the surface.
+- **Allotropes:** Rhombic (stable below 96°C) and Monoclinic (stable above 96°C).
+- **Industrial Use:** Manufacture of Sulphuric Acid via the Contact Process.
+  - Catalyst: Vanadium (V) Oxide.
+
+### 2.3 Phosphorus (Group V)
+- Atomic Number: 15, Configuration: 2.8.5.
+- **Allotropes:** White and Red phosphorus.
+- **Uses:** Fertilizers (NPK), matches, and detergents.
+
+---
+
+## TOPIC 3: CHEMICAL BONDING AND PROPERTIES OF MATTER
+
+### 3.1 Ionic (Electrovalent) Bonding
+- Formed by transferring electrons from a metal (cation) to a non-metal (anion).
+- **Properties:** High MP/BP, conduct electricity in molten/aqueous state, soluble in water.
+
+### 3.2 Covalent Bonding
+- Formed by sharing electrons between non-metals.
+- **Properties:** Low MP/BP, insulators (non-electrolytes), volatile.
+- **Types:** Pure covalent (equal sharing) and Dative (one atom provides both electrons).
+
+### 3.3 Allotropy (Carbon)
+- **Graphite:** Hexagonal rings in layers. Conducts electricity due to delocalized electrons. Used as a lubricant.
+- **Diamond:** Tetrahedral structure. Hardest known substance. Non-conductor.
+
+---
+
+## TOPIC 4: STOICHIOMETRY
+
+### 4.1 The Mole Concept
+- **The Mole:** Amount containing 6.023 x 10^23 particles (Avogadro's Constant).
+- **Molar Mass:** Mass of 1 mole (g/mol).
+- **Formulas:**
+  - Moles = Mass / Molar Mass.
+  - Molarity = Moles / Volume (dm³).
+
+### 4.2 Standard Solutions
+- A solution of known concentration.
+- **Dilution Law:** C1V1 = C2V2.
+
+### 4.3 Titration
+- Gradual addition of a titrant to an analyte to find unknown concentration.
+- **Indicators:** Phenolphthalein (pink in base) and Methyl Orange.
+
+---
+
+## TOPIC 5: HEATS OF REACTION
+
+### 5.1 Enthalpy Change (ΔH)
+- **Exothermic:** Heat released to surroundings. ΔH is negative. Temperature rises. (e.g., Combustion, Neutralization).
+- **Endothermic:** Heat absorbed from surroundings. ΔH is positive. Temperature falls. (e.g., Photosynthesis).
+
+---
+
+## TOPIC 6: ORGANIC CHEMISTRY (ALKANOLS)
+
+- **Functional Group:** Hydroxyl group (-OH).
+- **General Formula:** CnH2n+1OH.
+- **Primary Alkanol:** -OH bonded to a carbon with only one other carbon bond.
+- **Secondary Alkanol:** -OH bonded to a carbon with two other carbon bonds.
+- **Tertiary Alkanol:** -OH bonded to a carbon with three other carbon bonds.
+
+---
+
+## TOPIC 10: IDENTIFICATION OF UNKNOWN COMPOUNDS
+
+**Test Results for Families:**
+- **Alkanes:** Insoluble in water, no reaction with Bromine.
+- **Alkenes:** Decolorize orange/brown Bromine solution.
+- **Alkanols:** Soluble in water, react with Sodium to produce Hydrogen gas.
+- **Alkanoic Acids:** Turn blue litmus red, pH < 7.
+- **Alkanals (Aldehydes):** Form orange precipitate with 2,4-DNPH; Silver mirror with Tollen's reagent.
+- **Alkanones (Ketones):** Form orange precipitate with 2,4-DNPH; No reaction with Tollen's.
+    `
   },
   {
     id: 'msce-chemistry-chuzu',
@@ -135,8 +281,13 @@ export const storage = {
     const data = localStorage.getItem(MATERIALS_KEY);
     const materials = data ? JSON.parse(data) : [];
     
-    if (materials.length === 0 || !materials.some((m: any) => m.id === 'msce-chemistry-chuzu')) {
-      const combined = [...materials, ...SEED_MATERIALS.filter(sm => !materials.some((m: any) => m.id === sm.id))];
+    const seedIds = SEED_MATERIALS.map(sm => sm.id);
+    const existingIds = materials.map((m: any) => m.id);
+    const needsSeeding = seedIds.some(id => !existingIds.includes(id));
+
+    if (materials.length === 0 || needsSeeding) {
+      const missingSeeds = SEED_MATERIALS.filter(sm => !existingIds.includes(sm.id));
+      const combined = [...materials, ...missingSeeds];
       localStorage.setItem(MATERIALS_KEY, JSON.stringify(combined));
       return combined;
     }
@@ -358,7 +509,6 @@ export const storage = {
     localStorage.setItem(TESTIMONIALS_KEY, JSON.stringify(testimonials));
   },
 
-  // Exam Methods
   getExams: (): Exam[] => {
     const data = localStorage.getItem(EXAMS_KEY);
     return data ? JSON.parse(data) : [];
