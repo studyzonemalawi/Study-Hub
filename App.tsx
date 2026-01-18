@@ -39,6 +39,10 @@ const App: React.FC = () => {
       const result = await storage.syncWithServer(userId);
       if (result.success) {
         setLastSynced(result.timestamp);
+        // Refresh local state with synced data
+        const updatedUsers = storage.getUsers();
+        const found = updatedUsers.find(u => u.id === userId);
+        if (found) setUser(found);
       }
     } catch (err) {
       console.error("Sync failed", err);
@@ -53,10 +57,9 @@ const App: React.FC = () => {
       const email = sbUser.email || '';
       const isAdmin = email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
 
-      // Priority 1: Check Cloud
+      // Attempt to pull cloud profile first
       const cloudProfile = await storage.getUserFromCloud(sbUser.id);
       
-      // Priority 2: Check Local Storage
       const existingUsers = storage.getUsers();
       let appUser = existingUsers.find(u => u.id === sbUser.id);
       
@@ -66,11 +69,10 @@ const App: React.FC = () => {
           ...cloudProfile,
           id: sbUser.id,
           email: email,
-          appRole: isAdmin ? 'admin' : (cloudProfile.accountRole === 'Admin' ? 'admin' : 'user'),
+          appRole: isAdmin ? 'admin' : (cloudProfile.appRole || 'user'),
           lastLogin: new Date().toISOString()
         } as User;
       } else if (!appUser) {
-        // First time user or cleared cache
         appUser = {
           id: sbUser.id,
           email: email,
@@ -81,12 +83,11 @@ const App: React.FC = () => {
           lastLogin: new Date().toISOString(),
           downloadedIds: [],
           favoriteIds: [],
-          isProfileComplete: isAdmin, // Admins skip profile completion
+          isProfileComplete: isAdmin,
           isPublic: isAdmin,
           termsAccepted: true
         };
       } else {
-        // Existing local user
         appUser = {
           ...appUser,
           appRole: isAdmin ? 'admin' : appUser.appRole,
@@ -97,6 +98,8 @@ const App: React.FC = () => {
       storage.saveUser(appUser);
       setUser(appUser);
       localStorage.setItem('study_hub_session', JSON.stringify(appUser));
+      
+      // Perform initial robust sync
       if (navigator.onLine) triggerSync(appUser.id);
     } else {
       setUser(null);
@@ -116,17 +119,18 @@ const App: React.FC = () => {
   }, [isDarkMode]);
 
   useEffect(() => {
-    // Initial check
     supabase.auth.getSession().then(({ data: { session } }) => {
       handleAuthChange(session);
     });
 
-    // Listen for changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       handleAuthChange(session);
     });
 
-    const handleOnline = () => setIsOnline(true);
+    const handleOnline = () => {
+      setIsOnline(true);
+      if (user) triggerSync(user.id);
+    };
     const handleOffline = () => setIsOnline(false);
 
     window.addEventListener('online', handleOnline);
@@ -137,11 +141,12 @@ const App: React.FC = () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, [handleAuthChange]);
+  }, [handleAuthChange, user, triggerSync]);
 
   const handleLogin = (u: User) => {
     setUser(u);
     localStorage.setItem('study_hub_session', JSON.stringify(u));
+    if (navigator.onLine) triggerSync(u.id);
   };
 
   const handleLogout = async () => {
@@ -158,7 +163,6 @@ const App: React.FC = () => {
   const handleUpdateUser = (u: User) => {
     setUser(u);
     storage.updateUser(u);
-    if (navigator.onLine) triggerSync(u.id);
   };
 
   const isAdmin = user?.appRole === 'admin';
