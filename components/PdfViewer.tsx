@@ -21,6 +21,9 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
 }) => {
   const [showConfirmClose, setShowConfirmClose] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  
+  const containerRef = useRef<HTMLDivElement>(null);
   
   const lang = localStorage.getItem('study_hub_chat_lang') || 'English';
   const t = {
@@ -31,16 +34,39 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
     page: lang === 'English' ? 'Page' : 'Tsamba',
     prev: lang === 'English' ? 'Previous' : 'Zakale',
     next: lang === 'English' ? 'Next' : 'Zotsatira',
+    fullscreen: lang === 'English' ? 'Full Screen' : 'Zosefukira',
+    exitFullscreen: lang === 'English' ? 'Exit Full Screen' : 'Tulukani Zosefukira',
   };
 
   const [numPages, setNumPages] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [isRenderLoading, setIsRenderLoading] = useState(true);
   const [pdfDoc, setPdfDoc] = useState<any>(null);
-  const [scale, setScale] = useState(1.2); // Balanced default scale
+  const [scale, setScale] = useState(1.2); 
   
   const flipPageRef = useRef<HTMLCanvasElement | null>(null);
   const currentRenderTask = useRef<any>(null);
+
+  // Sync fullscreen state with browser events (e.g., if user presses Esc)
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  const toggleFullscreen = () => {
+    if (!containerRef.current) return;
+
+    if (!document.fullscreenElement) {
+      containerRef.current.requestFullscreen().catch(err => {
+        console.error(`Error attempting to enable full-screen mode: ${err.message}`);
+      });
+    } else {
+      document.exitFullscreen();
+    }
+  };
 
   // Digital Note Pagination logic
   const digitalPages = useMemo(() => {
@@ -119,7 +145,7 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[100] bg-slate-100 dark:bg-slate-950 flex flex-col h-screen w-screen overflow-hidden animate-in fade-in duration-300">
+    <div ref={containerRef} className="fixed inset-0 z-[100] bg-slate-100 dark:bg-slate-950 flex flex-col h-screen w-screen overflow-hidden animate-in fade-in duration-300">
       {/* Header Bar */}
       <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex-none flex items-center justify-between px-4 py-3 md:px-8 z-[110] shadow-sm">
         <div className="flex items-center min-w-0 flex-1">
@@ -141,7 +167,7 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
 
         <div className="flex items-center gap-2 md:gap-4">
            {/* Zoom settings */}
-           <div className="flex items-center bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-1 shadow-sm">
+           <div className="hidden sm:flex items-center bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-1 shadow-sm">
               <button onClick={() => setScale(s => Math.max(0.5, s - 0.2))} className="p-2 text-slate-400 hover:text-emerald-500 transition-colors">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M20 12H4" /></svg>
               </button>
@@ -151,6 +177,19 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
               </button>
            </div>
            
+           {/* Fullscreen Toggle Button */}
+           <button 
+             onClick={toggleFullscreen} 
+             title={isFullscreen ? t.exitFullscreen : t.fullscreen}
+             className="p-3 bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-xl hover:bg-slate-100 transition-all border border-slate-100 dark:border-slate-700 shadow-sm"
+           >
+             {isFullscreen ? (
+               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
+             ) : (
+               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
+             )}
+           </button>
+
            <button 
              onClick={() => setShowConfirmClose(true)} 
              className="p-3 bg-red-50 dark:bg-red-900/20 text-red-600 rounded-xl hover:bg-red-100 transition-all border border-red-100 dark:border-red-900/30 shadow-sm"
@@ -182,7 +221,7 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
           </div>
         </aside>
 
-        {/* Reading Stage (Fix: Correct Centering and Scrollability) */}
+        {/* Reading Stage */}
         <main className="flex-1 overflow-auto custom-scrollbar bg-slate-200 dark:bg-slate-950 p-4 md:p-12 relative flex flex-col">
           {isRenderLoading ? (
             <div className="flex-1 flex flex-col items-center justify-center gap-4 animate-pulse">
