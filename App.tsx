@@ -167,7 +167,7 @@ const App: React.FC = () => {
       case 'settings': return <Settings user={user} onUpdate={handleUpdateUser} onNavigate={setActiveTab} />;
       case 'exams': return <ExamCenter user={user} onNavigate={setActiveTab} />;
       case 'admin-exam-form': return isAdmin ? <AdminExamForm onNavigate={setActiveTab} /> : <Home user={user} onNavigate={setActiveTab} />;
-      case 'admin': return isAdmin ? <Admin onNavigate={setActiveTab} /> : <Home user={user} onNavigate={setActiveTab} />;
+      case 'admin': return isAdmin ? <Admin user={user} onNavigate={setActiveTab} /> : <Home user={user} onNavigate={setActiveTab} />;
       default: return <Home user={user} onNavigate={setActiveTab} />;
     }
   };

@@ -15,12 +15,14 @@ import {
   SECONDARY_SUBJECTS
 } from '../types';
 import { storage } from '../services/storage';
+import { PdfViewer } from '../components/PdfViewer';
 
 interface AdminProps {
+  user: User;
   onNavigate: (tab: string) => void;
 }
 
-export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
+export const Admin: React.FC<AdminProps> = ({ user, onNavigate }) => {
   const [activeAdminTab, setActiveAdminTab] = useState<'content' | 'users' | 'announcements' | 'exams'>('content');
   const [materials, setMaterials] = useState<StudyMaterial[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -39,6 +41,9 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+
+  // Preview State
+  const [viewingMaterial, setViewingMaterial] = useState<StudyMaterial | null>(null);
 
   // Announcement States
   const [annTitle, setAnnTitle] = useState('');
@@ -80,6 +85,32 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
     } catch (e) {
       return null;
     }
+  };
+
+  const handlePreviewDraft = () => {
+    setError(null);
+    if (!driveLink || !title) {
+      setError("Please provide a title and a link to preview.");
+      return;
+    }
+    const directUrl = convertToDirectLink(driveLink);
+    if (!directUrl) {
+      setError("Please provide a valid Google Drive sharing link.");
+      return;
+    }
+
+    const draftMaterial: StudyMaterial = {
+      id: 'draft',
+      title: title || 'Previewing Draft',
+      level,
+      grade,
+      category,
+      subject,
+      fileName: 'draft.pdf',
+      fileUrl: directUrl,
+      uploadedAt: new Date().toISOString()
+    };
+    setViewingMaterial(draftMaterial);
   };
 
   const handleSubmitAttempt = (e: React.FormEvent) => {
@@ -266,14 +297,29 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Google Drive Sharing Link</label>
+                <div className="flex justify-between items-center">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Google Drive Sharing Link</label>
+                  <button 
+                    type="button" 
+                    onClick={handlePreviewDraft}
+                    className="text-[9px] font-black text-emerald-600 uppercase tracking-widest hover:underline"
+                  >
+                    Preview Link
+                  </button>
+                </div>
                 <input type="url" required disabled={isUploading} placeholder="https://drive.google.com/file/d/..." value={driveLink} onChange={(e) => setDriveLink(e.target.value)} className="w-full p-5 rounded-2xl border border-slate-100 dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50 dark:bg-slate-900 font-bold text-slate-800 dark:text-white" />
                 {error && <p className="text-[10px] text-red-500 font-black uppercase tracking-widest px-2">{error}</p>}
               </div>
 
-              <button type="submit" disabled={isUploading || !driveLink || !title} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-5 rounded-3xl shadow-2xl transition-all uppercase tracking-widest text-xs disabled:opacity-50 active:scale-95">
-                {isUploading ? 'Validating Link...' : 'Publish to Hub'}
-              </button>
+              <div className="flex gap-4 pt-2">
+                 <button 
+                   type="submit" 
+                   disabled={isUploading || !driveLink || !title} 
+                   className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black py-5 rounded-3xl shadow-2xl transition-all uppercase tracking-widest text-xs disabled:opacity-50 active:scale-95 shadow-emerald-100 dark:shadow-none"
+                 >
+                   {isUploading ? 'Validating...' : 'Publish to Hub'}
+                 </button>
+              </div>
             </form>
           </div>
 
@@ -289,9 +335,14 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                       <h4 className="font-bold text-slate-800 dark:text-slate-100 truncate text-sm">{m.title}</h4>
                       <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest mt-1">{m.subject} • {m.grade}</p>
                   </div>
-                  <button onClick={() => deleteItem(m.id)} className="p-3 bg-white dark:bg-slate-800 text-red-300 hover:text-red-500 rounded-xl shadow-sm flex-none">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                  </button>
+                  <div className="flex items-center gap-2 flex-none">
+                    <button onClick={() => setViewingMaterial(m)} className="p-3 bg-white dark:bg-slate-800 text-emerald-500 hover:text-emerald-600 rounded-xl shadow-sm transition-all hover:scale-105" title="Preview Asset">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                    </button>
+                    <button onClick={() => deleteItem(m.id)} className="p-3 bg-white dark:bg-slate-800 text-red-300 hover:text-red-500 rounded-xl shadow-sm transition-all hover:scale-105" title="Delete Asset">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -479,6 +530,35 @@ export const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
             ))}
           </div>
         </div>
+      )}
+
+      {/* Confirmation Modal for Publishing */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 rounded-[3rem] p-10 max-w-md w-full text-center space-y-8 animate-in zoom-in duration-200 shadow-2xl">
+            <div className="w-20 h-20 bg-emerald-50 dark:bg-emerald-900/30 rounded-full flex items-center justify-center text-4xl mx-auto shadow-inner border-2 border-emerald-100">
+               🚀
+            </div>
+            <div className="space-y-3">
+              <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Confirm Upload?</h3>
+              <p className="text-slate-500 dark:text-slate-400 font-medium leading-relaxed">This resource will be immediately available to all registered students in the {grade} library.</p>
+            </div>
+            <div className="space-y-4">
+              <button onClick={startPublish} className="w-full py-5 bg-emerald-600 text-white font-black rounded-2xl shadow-xl uppercase tracking-widest text-[10px] active:scale-95 transition-all">Publish Resource</button>
+              <button onClick={() => setShowConfirmModal(false)} className="w-full py-5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-300 font-black rounded-2xl uppercase tracking-widest text-[10px] transition-all">Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PdfViewer for Previews */}
+      {viewingMaterial && (
+        <PdfViewer 
+          material={viewingMaterial} 
+          userId={user.id}
+          onClose={() => setViewingMaterial(null)}
+          onUpdateStatus={() => {}}
+        />
       )}
     </div>
   );

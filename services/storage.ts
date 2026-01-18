@@ -1,3 +1,4 @@
+
 import { StudyMaterial, Message, User, UserProgress, Testimonial, Announcement, CommunityMessage, ChatRoom, ReadingStatus, Exam, ExamResult, EducationLevel, Grade, Category } from '../types';
 import { supabase } from './supabase';
 
@@ -24,6 +25,56 @@ const SEED_MATERIALS: StudyMaterial[] = [
     fileUrl: 'https://raw.githubusercontent.com/mozilla/pdf.js/ba2edeae/web/compressed.tracemonkey-pldi-09.pdf',
     fileName: 'JCE_Social_Studies_Holly.pdf',
     uploadedAt: new Date().toISOString()
+  },
+  {
+    id: 'std8-maths-intro',
+    title: 'Instant Math: Arithmetic Mastery',
+    level: EducationLevel.PRIMARY,
+    grade: 'Standard 8' as Grade,
+    category: Category.NOTES,
+    subject: 'Mathematics',
+    fileUrl: '#digital',
+    fileName: 'Std8_Math_Mastery.digital',
+    isDigital: true,
+    uploadedAt: new Date().toISOString(),
+    content: `
+# Mathematics: Arithmetic Mastery
+## Standard 8 - Malawi National Curriculum
+
+---
+
+## 1. NUMBER SYSTEMS
+### 1.1 Understanding Large Numbers
+In Standard 8, we work with numbers up to **millions**.
+**Example:** 5,230,450 (Five million, two hundred and thirty thousand, four hundred and fifty).
+
+### 1.2 Factors and Multiples
+- **Highest Common Factor (HCF):** The largest number that divides two or more numbers.
+- **Lowest Common Multiple (LCM):** The smallest number that is a multiple of two or more numbers.
+
+---
+
+## 2. FRACTIONS AND PERCENTAGES
+### 2.1 Converting Fractions to Percentages
+To convert a fraction to a percentage, multiply by 100.
+**Example:** 1/4 = (1/4) x 100 = 25%.
+
+### 2.2 Ratio and Proportion
+Ratios compare two quantities. 
+**Scenario:** If a recipe uses 2 cups of sugar for 5 cups of flour, the ratio is **2:5**.
+
+---
+
+## 3. GEOMETRY
+### 3.1 Properties of Triangles
+- **Equilateral:** All sides and angles are equal.
+- **Isosceles:** Two sides and two angles are equal.
+- **Scalene:** No sides or angles are equal.
+
+### 3.2 Area and Perimeter
+- **Area of Rectangle:** Length x Width.
+- **Perimeter of Circle (Circumference):** 2 x π x Radius.
+    `
   },
   {
     id: 'msce-chemistry-form3-chirindanji',
@@ -74,7 +125,7 @@ A pure substance has constant composition and consistent properties.
 **Criteria for Purity:**
 - **Melting Point:** Pure substances have a specific MP. Impurities lower the MP.
 - **Boiling Point:** Pure substances have a fixed BP. Impurities raise the BP.
-- **Chromatography:** Used to separate mixtures of soluble substances (dyes, inks).
+- **Chromatography:** Used to separate mixtures of soluble substances (dyes, hits).
 
 **Relative Flow Values (Rf):**
 Rf = (Distance travelled by substance) / (Distance travelled by solvent).
@@ -170,99 +221,6 @@ Rf = (Distance travelled by substance) / (Distance travelled by solvent).
 - **Alkanoic Acids:** Turn blue litmus red, pH < 7.
 - **Alkanals (Aldehydes):** Form orange precipitate with 2,4-DNPH; Silver mirror with Tollen's reagent.
 - **Alkanones (Ketones):** Form orange precipitate with 2,4-DNPH; No reaction with Tollen's.
-    `
-  },
-  {
-    id: 'msce-chemistry-chuzu',
-    title: 'Basic Principles Chemistry (Form 4)',
-    level: EducationLevel.SECONDARY,
-    grade: 'Form 4' as Grade,
-    category: Category.BOOKS,
-    subject: 'Chemistry',
-    fileUrl: '#digital',
-    fileName: 'MSCE_Chemistry_Chuzu.digital',
-    isDigital: true,
-    uploadedAt: new Date().toISOString(),
-    content: `
-# Basic Principles Chemistry
-## Senior Secondary Students (Form 3 & 4)
-### Author: Chuzu Elisha C.
-
-**Foreword**
-This book is a continuation of Basic Principle Chemistry for junior students. It contains special basics that will help students to understand Chemistry easily as they are studying to prepare for the Malawi School Certificate of Examination (MSCE).
-
----
-
-## UNIT 1: Nitrogen, Sulphur and Phosphorus
-
-### 1.11 Nitrogen
-Nitrogen is an essential element, which makes up 78% of air. In the periodic table, nitrogen is in Group V and Period 2. It is a non-metallic substance with a valance of three.
-
-#### Sources of Nitrogen
-- **The Air:** Nitrogen makes up 78% of the atmosphere.
-- **The Soil:** Found in nitrogen-containing compounds called nitrates, produced by lighting effects and decaying organic matter.
-
-#### Physical Properties of Nitrogen
-- It has no smell.
-- It is a colourless gas.
-- Almost insoluble in water.
-- Less dense than air.
-
-#### Chemical Properties
-- **Diatomic Molecule:** Exists as N2 with a triple covalent bond (N≡N).
-- **Reaction with Alkali Metals:** Forms nitrogen alkalides (e.g., Magnesium nitride).
-- **Haber Process:** Reacts with Hydrogen to form Ammonia (NH3) under 300 atm and 450°C.
-
-### 1.19 Sulphur
-Sulphur is a non-metallic element found in Group VI and Period 2. It is extracted by the Frasch process.
-
-#### Sources of Sulphur
-- Crude oil and natural gases.
-- Metal ores like Copper pyrites (CuFeS2).
-- Volcanic regions.
-
-#### Properties of Sulphur
-- Does not conduct electricity.
-- Yellow brittle solid at room temperature.
-- Insoluble in water.
-
----
-
-## UNIT 2: Chemical Bonding II
-
-### 2.10 Introduction
-Chemical bond is defined as a force of attraction between two particles.
-
-#### Types of Bonds
-1. **Ionic Bond:** Involves transfer of electrons from metal to non-metal.
-2. **Covalent Bond:** Involves sharing of electrons between non-metals.
-3. **Metallic Bond:** Occurs among metals, involving a sea of delocalized electrons.
-
----
-
-## UNIT 3: Stoichiometry
-
-### 3.10 Introduction
-Stoichiometry is the branch of chemistry based on the law of conservation of mass: "the total mass of the reactants equals the total mass of the products."
-
-#### The Mole
-One mole is the amount of substance which contains 6.023 x 10^23 elementary particles (Avogadro's constant).
-
----
-
-## UNIT 13: Oxidation and Reduction Reactions
-
-### 13.11 Oxidation Number
-Oxidation refers to the loss of electrons or addition of oxygen. Reduction refers to the gain of electrons or loss of oxygen.
-
----
-
-## UNIT 14: Electrolysis
-
-### 14.11 Process
-Electrolysis is the process of splitting up substances by passing an electric current through them.
-- **Anode:** Positive electrode (attracts anions).
-- **Cathode:** Negative electrode (attracts cations).
     `
   }
 ];
@@ -551,6 +509,7 @@ export const storage = {
           name: user.name,
           email: user.email,
           district: user.district,
+          // Fixed: school_name mapping from local schoolName
           school_name: user.schoolName,
           grade: user.currentGrade,
           role: user.accountRole,
@@ -567,6 +526,7 @@ export const storage = {
             material_id: p.materialId,
             status: p.status,
             progress_percent: p.progressPercent,
+            // Fixed: last_read mapping from local lastRead
             last_read: p.lastRead
           }))
         );
