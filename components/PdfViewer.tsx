@@ -222,30 +222,51 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
         </aside>
 
         {/* Reading Stage */}
-        <main className="flex-1 overflow-auto custom-scrollbar bg-slate-200 dark:bg-slate-950 p-4 md:p-12 relative flex flex-col">
+        <main className="flex-1 overflow-auto custom-scrollbar bg-slate-200 dark:bg-slate-950 p-4 md:p-12 relative flex flex-col group/reader">
           {isRenderLoading ? (
             <div className="flex-1 flex flex-col items-center justify-center gap-4 animate-pulse">
               <div className="w-14 h-14 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
               <p className="text-emerald-600 dark:text-emerald-400 font-black text-[10px] uppercase tracking-[0.2em]">{t.loading}</p>
             </div>
           ) : (
-            <div className="flex-1 flex items-start justify-center min-w-max min-h-max">
-               <div className="relative shadow-[0_40px_80px_-20px_rgba(0,0,0,0.4)] bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-sm">
-                  {material.isDigital ? (
-                    <div className="p-12 md:p-24 min-h-[1000px] w-[800px] max-w-full font-serif leading-relaxed text-slate-800 dark:text-slate-200 animate-in fade-in duration-500 select-none">
-                       <div className="whitespace-pre-wrap text-xl md:text-2xl" dangerouslySetInnerHTML={{ __html: digitalPages[currentPage-1]?.replace(/# (.*)/g, '<h2 class="text-4xl font-black text-emerald-800 dark:text-emerald-400 mb-10">$1</h2>').replace(/## (.*)/g, '<h3 class="text-2xl font-black text-slate-900 dark:text-white mt-10 mb-6">$1</h3>') }} />
-                    </div>
-                  ) : (
-                    <div className="rounded-sm overflow-hidden flex items-center justify-center">
-                       <canvas ref={flipPageRef} className="max-w-none block shadow-2xl" />
-                    </div>
-                  )}
-                  
-                  {/* Decorative Spine Shadow */}
-                  <div className="absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-black/10 to-transparent pointer-events-none"></div>
-                  <div className="absolute inset-y-0 left-0 w-1 bg-white/20 pointer-events-none"></div>
-               </div>
-            </div>
+            <>
+              {/* Floating Back Arrow */}
+              <button 
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className={`fixed left-[calc(var(--sidebar-width,0px)+2rem)] top-1/2 -translate-y-1/2 z-[90] p-4 rounded-full bg-white/20 hover:bg-white/40 dark:bg-slate-800/20 dark:hover:bg-slate-800/40 backdrop-blur-md text-slate-600 dark:text-slate-300 transition-all duration-300 border border-white/30 dark:border-slate-700/30 shadow-2xl ${currentPage === 1 ? 'opacity-0 pointer-events-none' : 'opacity-0 group-hover/reader:opacity-100 hover:scale-110 active:scale-90'}`}
+                style={{ '--sidebar-width': isSidebarOpen ? '16rem' : '0rem' } as React.CSSProperties}
+              >
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M15 19l-7-7 7-7" /></svg>
+              </button>
+
+              {/* Floating Forward Arrow */}
+              <button 
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === numPages}
+                className={`fixed right-8 top-1/2 -translate-y-1/2 z-[90] p-4 rounded-full bg-white/20 hover:bg-white/40 dark:bg-slate-800/20 dark:hover:bg-slate-800/40 backdrop-blur-md text-slate-600 dark:text-slate-300 transition-all duration-300 border border-white/30 dark:border-slate-700/30 shadow-2xl ${currentPage === numPages ? 'opacity-0 pointer-events-none' : 'opacity-0 group-hover/reader:opacity-100 hover:scale-110 active:scale-90'}`}
+              >
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M9 5l7 7-7 7" /></svg>
+              </button>
+
+              <div className="flex-1 flex items-start justify-center min-w-max min-h-max relative">
+                <div className="relative shadow-[0_40px_80px_-20px_rgba(0,0,0,0.4)] bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-sm">
+                    {material.isDigital ? (
+                      <div className="p-12 md:p-24 min-h-[1000px] w-[800px] max-w-full font-serif leading-relaxed text-slate-800 dark:text-slate-200 animate-in fade-in duration-500 select-none">
+                        <div className="whitespace-pre-wrap text-xl md:text-2xl" dangerouslySetInnerHTML={{ __html: digitalPages[currentPage-1]?.replace(/# (.*)/g, '<h2 class="text-4xl font-black text-emerald-800 dark:text-emerald-400 mb-10">$1</h2>').replace(/## (.*)/g, '<h3 class="text-2xl font-black text-slate-900 dark:text-white mt-10 mb-6">$1</h3>') }} />
+                      </div>
+                    ) : (
+                      <div className="rounded-sm overflow-hidden flex items-center justify-center">
+                        <canvas ref={flipPageRef} className="max-w-none block shadow-2xl" />
+                      </div>
+                    )}
+                    
+                    {/* Decorative Spine Shadow */}
+                    <div className="absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-black/10 to-transparent pointer-events-none"></div>
+                    <div className="absolute inset-y-0 left-0 w-1 bg-white/20 pointer-events-none"></div>
+                </div>
+              </div>
+            </>
           )}
         </main>
       </div>

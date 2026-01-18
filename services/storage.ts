@@ -184,7 +184,8 @@ export const storage = {
           material_id: p.materialId,
           status: p.status,
           progress_percent: p.progressPercent,
-          last_read: p.last_read
+          // Fixed property access: changed p.last_read to p.lastRead
+          last_read: p.lastRead
         });
       } catch (e) { console.warn("Cloud progress update failed", e); }
     }
@@ -273,7 +274,7 @@ export const storage = {
     if (navigator.onLine) await supabase.from('announcements').delete().eq('id', id);
   },
 
-  fetchGlobalAnnouncements: async () => {
+  fetchGlobalAnnouncements: async ( ) => {
     if (!navigator.onLine) return;
     try {
       const { data, error } = await supabase.from('announcements').select('*').order('timestamp', { ascending: false });
@@ -305,7 +306,7 @@ export const storage = {
           exam_id: result.examId,
           user_id: result.userId,
           score: result.score,
-          total_questions: result.totalQuestions,
+          total_questions: result.total_questions,
           answers: result.answers,
           feedback: result.feedback,
           completed_at: result.completedAt
