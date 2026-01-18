@@ -1,4 +1,3 @@
-
 import { StudyMaterial, Message, User, UserProgress, Testimonial, Announcement, CommunityMessage, ChatRoom, ReadingStatus, Exam, ExamResult, EducationLevel, Grade, Category } from '../types';
 import { supabase } from './supabase';
 
@@ -16,180 +15,6 @@ const LAST_SYNC_KEY = 'study_hub_last_sync';
 
 const SEED_MATERIALS: StudyMaterial[] = [
   {
-    id: 'msce-chemistry-form1-chirindanji',
-    title: 'Complete Form One Chemistry Notes',
-    level: EducationLevel.SECONDARY,
-    grade: 'Form 1' as Grade,
-    category: Category.NOTES,
-    subject: 'Chemistry',
-    fileUrl: '#digital',
-    fileName: 'Form1_Chemistry_Chirindanji.digital',
-    isDigital: true,
-    uploadedAt: new Date().toISOString(),
-    content: `
-# COMPLETE FORM ONE CHEMISTRY NOTES
-## SYLLABUS-BASED
-### Compiled by: Ganizani Chirindanji
-
----
-
-## TABLE OF CONTENT
-1. **TOPIC 1 : INTRODUCTION TO CHEMISTRY** ... 1
-2. **TOPIC 2 : ESSENTIAL MATHEMATICAL SKILLS IN CHEMISTRY** ... 11
-3. **TOPIC 3: COMPOSITION AND CLASSIFICATION OF MATTER** ... 16
-4. **TOPIC 4 : ATOMIC STRUCTURE** ... 34
-5. **TOPIC 5 : THE PERIODIC TABLE** ... 42
-6. **TOPIC 6 : PHYSICAL AND CHEMICAL CHANGES** ... 47
-7. **TOPIC 7 : ORGANIC COMPOUNDS** ... 58
-
----
-
-# TOPIC 1: INTRODUCTION TO CHEMISTRY
-
-## MEANING OF CHEMISTRY
-Chemistry is the branch of science dealing with elements and the compounds they form and the reactions they undergo.
-
-## BRANCHES OF CHEMISTRY
-The branches of chemistry include physical, environmental, analytical, industrial, organic and inorganic chemistry.
-
-### a. PHYSICAL CHEMISTRY
-It is the study of how chemical compounds and their constituents react with each other.
-
-### b. ENVIRONMENTAL CHEMISTRY
-It is the study of how chemicals react naturally in the environment and human impact on natural systems.
-
-### c. ANALYTICAL CHEMISTRY
-It is the study of separation, identification, and quantification of the chemical components of natural and artificial materials.
-
-### d. INDUSTRIAL CHEMISTRY
-It is the study of the application of physical and chemical processes towards the change of raw materials into beneficial products.
-
-### e. ORGANIC CHEMISTRY
-It is the study of compounds that contain carbon except oxides of carbon and carbonates.
-
-### f. INORGANIC CHEMISTRY
-It is the study of compounds that do not contain carbon and non-living things.
-
----
-
-## IMPORTANCE OF CHEMISTRY IN EVERYDAY LIFE
-Chemistry is important in everyday life and it is applied in different ways. Some of the applications of chemistry are:
-- **Water treatment.** Different chemical processes are used to purify water so that it is safe for drinking.
-- **Cooking nsima.** Mixing of the ingredients applies concepts in chemistry.
-- **Making a cup of tea.**
-- **Pharmaceuticals.**
-- **Food industries.** Chemistry is involved in the processing of the food. For example, lime is added to brown sugar so that it becomes white.
-- **Manufacture of soap and detergents** also applies knowledge of chemistry.
-- **Manufacture of pesticides.**
-
-## AREAS WHERE CHEMISTRY IS APPLIED
-- Pharmaceutical companies that manufacture medical drugs.
-- Companies that make food and drinks (soft and alcoholic).
-- Companies that manufacture oil products.
-- Companies that manufacture fertilizers and pesticides.
-- Water purification and supply companies.
-- The mining industries.
-
----
-
-## CAREERS IN CHEMISTRY AND THEIR IMPORTANCE
-Most careers in modern society require the application of the knowledge in chemistry.
-
-### a. Medicine and nursing
-Doctors and nurses need chemistry as part of their training.
-
-### b. Pharmacist
-Pharmacists require chemistry as part of their training in order to understand the chemicals they are providing.
-
-### c. Food chemist
-Food chemists help test manufactured food to ensure that it is safe to eat.
-
-### d. Teacher chemist
-Chemistry teachers prepare students for different careers by teaching them chemistry in schools.
-
----
-
-## THE LABORATORY
-A laboratory is a special room equipped for conducting scientific research and experimentation.
-
-### SAFETY RULES IN THE LABORATORY
-- Do not drink, taste nor eat anything in the laboratory. Any chemical is never tasted in the laboratory but can be tested.
-- Handle all materials in the laboratory carefully. Glassware must be held with both hands.
-- Never run or play in the laboratory.
-- Wear protective materials such as lab coat, an apron, and safety goggles.
-- Never work in the laboratory barefooted.
-- Avoid disturbing or pushing a colleague who is busy working in the laboratory.
-- Clean all equipment and workplaces after each laboratory period.
-- Follow experimental procedures and do not take short cuts.
-- Turn off water, gas and electricity outlets when not in use.
-- Keep flame and flammable solutions apart.
-- Always work in a well ventilated area.
-
----
-
-## HAZARD SYMBOLS
-- **X (Cross):** Harmful or irritant substance.
-- **Skull and Crossbones:** Toxic substance.
-- **Flame:** Highly flammable.
-- **Corrosive (Dripping liquid):** Corrosive.
-- **Dead tree/fish:** Dangerous to the environment.
-
----
-
-## THE SI UNIT SYSTEM OF MEASUREMENT
-The system of measurement used nowadays is known as the SI system of units. SI stands for International System.
-
-### BASIC UNITS
-- **Length:** Metre (M)
-- **Mass:** Kilogram (Kg)
-- **Time:** Second (S)
-- **Temperature:** Kelvin (K)
-
----
-
-# TOPIC 3: COMPOSITION AND CLASSIFICATION OF MATTER
-
-## MATTER
-Matter is defined as anything that has mass and occupies space.
-
-## STATES OF MATTER
-There are three states of matter: **Solids**, **Liquids**, and **Gases**.
-
-### 1. SOLIDS
-- Particles are tightly packed, usually in a regular pattern.
-- They do not flow.
-- They have a definite shape and volume.
-- They are difficult to compress.
-
-### 2. LIQUIDS
-- Particles are close together, but with no regular arrangement.
-- Liquids flow.
-- They have indefinite shape (take the shape of the container) but definite volume.
-
-### 3. GASES
-- Particles are very far apart with no regular arrangement.
-- Particles move randomly at very high speeds.
-- They have indefinite shape and volume.
-- They can be easily compressed.
-
----
-
-# TOPIC 4: ATOMIC STRUCTURE
-An atom is defined as the smallest particle of matter.
-
-## COMPOSITION OF AN ATOM
-An atom consists of three sub-atomic particles: **Protons**, **Neutrons** and **Electrons**.
-- **Nucleus:** Central part containing protons and neutrons.
-- **Energy Levels (Shells):** Imaginary paths where electrons move.
-
-| Particle | Charge | Mass | Location |
-| :--- | :--- | :--- | :--- |
-| Proton | +1 | 1 amu | Nucleus |
-| Electron | -1 | ~0 | Shells |
-| Neutron | 0 | 1 amu | Nucleus |
-    `
-  },
-  {
     id: 'jce-social-studies-holly',
     title: 'JCE Social Studies (Forms 1 & 2)',
     level: EducationLevel.SECONDARY,
@@ -199,33 +24,6 @@ An atom consists of three sub-atomic particles: **Protons**, **Neutrons** and **
     fileUrl: 'https://raw.githubusercontent.com/mozilla/pdf.js/ba2edeae/web/compressed.tracemonkey-pldi-09.pdf',
     fileName: 'JCE_Social_Studies_Holly.pdf',
     uploadedAt: new Date().toISOString()
-  },
-  {
-    id: 'std8-maths-intro',
-    title: 'Instant Math: Arithmetic Mastery',
-    level: EducationLevel.PRIMARY,
-    grade: 'Standard 8' as Grade,
-    category: Category.NOTES,
-    subject: 'Mathematics',
-    fileUrl: '#digital',
-    fileName: 'Std8_Math_Mastery.digital',
-    isDigital: true,
-    uploadedAt: new Date().toISOString(),
-    content: `
-# Mathematics: Arithmetic Mastery
-## Standard 8 - Malawi National Curriculum
-
----
-
-## 1. NUMBER SYSTEMS
-### 1.1 Understanding Large Numbers
-In Standard 8, we work with numbers up to **millions**.
-**Example:** 5,230,450 (Five million, two hundred and thirty thousand, four hundred and fifty).
-
-### 1.2 Factors and Multiples
-- **Highest Common Factor (HCF):** The largest number that divides two or more numbers.
-- **Lowest Common Multiple (LCM):** The smallest number that is a multiple of two or more numbers.
-    `
   },
   {
     id: 'msce-chemistry-form3-chirindanji',
@@ -249,6 +47,222 @@ In Standard 8, we work with numbers up to **millions**.
 
 ### 1.1 Chemical Waste Management
 Chemical waste is a product or unwanted material from a chemical reaction or an expired product no longer needed.
+**Examples of Waste Products:**
+- Unused chemicals (acids, alkalis).
+- Broken laboratory glassware and sharp objects.
+- Plastics, waste papers, and rubbers.
+- Poisonous gases from reactions.
+
+**Safe Disposal Methods:**
+- **Normal Waste Bins:** For non-recyclable plastics, wood, and paper.
+- **Controlled Containers:** For sharp objects (scalpels) and hazardous items.
+- **Water Draining:** For harmless soluble inorganic salts and diluted detergents.
+- **Incineration:** High-temperature burning for syringes, needles, and organic solvents.
+
+### 1.2 Scientific Investigation
+A systematic process to find an answer to a problem.
+**Key Components:**
+1. **Problem Identification:** Asking questions (e.g., What causes rusting?).
+2. **Hypothesis:** A guessed answer based on experience.
+3. **Variables:**
+   - **Independent (IV):** The quantity you decide to change (x-axis).
+   - **Dependent (DV):** The quantity you observe/measure (y-axis).
+   - **Control (CV):** Factors kept constant.
+
+### 1.3 Purity of a Substance
+A pure substance has constant composition and consistent properties.
+**Criteria for Purity:**
+- **Melting Point:** Pure substances have a specific MP. Impurities lower the MP.
+- **Boiling Point:** Pure substances have a fixed BP. Impurities raise the BP.
+- **Chromatography:** Used to separate mixtures of soluble substances (dyes, inks).
+
+**Relative Flow Values (Rf):**
+Rf = (Distance travelled by substance) / (Distance travelled by solvent).
+*Rf values are always less than 1.*
+
+---
+
+## TOPIC 2: NITROGEN, SULPHUR AND PHOSPHORUS
+
+### 2.1 Nitrogen (Group V)
+- Makes up 78% of the air.
+- Atomic Number: 7, Configuration: 2.5, Valency: 3.
+- **Properties:** Colorless, odorless, inert (triple covalent bond N≡N).
+- **Industrial Preparation:** The Haber Process.
+  - Nitrogen + Hydrogen ⇌ Ammonia (NH3).
+  - Conditions: Iron catalyst, 450°C, 300 atmospheres.
+
+### 2.2 Sulphur (Group VI)
+- Found in volcanic regions and metal ores.
+- **Extraction:** The Frasch Process.
+  - Super-heated water melts sulphur; compressed air forces it to the surface.
+- **Allotropes:** Rhombic (stable below 96°C) and Monoclinic (stable above 96°C).
+- **Industrial Use:** Manufacture of Sulphuric Acid via the Contact Process.
+  - Catalyst: Vanadium (V) Oxide.
+
+### 2.3 Phosphorus (Group V)
+- Atomic Number: 15, Configuration: 2.8.5.
+- **Allotropes:** White and Red phosphorus.
+- **Uses:** Fertilizers (NPK), matches, and detergents.
+
+---
+
+## TOPIC 3: CHEMICAL BONDING AND PROPERTIES OF MATTER
+
+### 3.1 Ionic (Electrovalent) Bonding
+- Formed by transferring electrons from a metal (cation) to a non-metal (anion).
+- **Properties:** High MP/BP, conduct electricity in molten/aqueous state, soluble in water.
+
+### 3.2 Covalent Bonding
+- Formed by sharing electrons between non-metals.
+- **Properties:** Low MP/BP, insulators (non-electrolytes), volatile.
+- **Types:** Pure covalent (equal sharing) and Dative (one atom provides both electrons).
+
+### 3.3 Allotropy (Carbon)
+- **Graphite:** Hexagonal rings in layers. Conducts electricity due to delocalized electrons. Used as a lubricant.
+- **Diamond:** Tetrahedral structure. Hardest known substance. Non-conductor.
+
+---
+
+## TOPIC 4: STOICHIOMETRY
+
+### 4.1 The Mole Concept
+- **The Mole:** Amount containing 6.023 x 10^23 particles (Avogadro's Constant).
+- **Molar Mass:** Mass of 1 mole (g/mol).
+- **Formulas:**
+  - Moles = Mass / Molar Mass.
+  - Molarity = Moles / Volume (dm³).
+
+### 4.2 Standard Solutions
+- A solution of known concentration.
+- **Dilution Law:** C1V1 = C2V2.
+
+### 4.3 Titration
+- Gradual addition of a titrant to an analyte to find unknown concentration.
+- **Indicators:** Phenolphthalein (pink in base) and Methyl Orange.
+
+---
+
+## TOPIC 5: HEATS OF REACTION
+
+### 5.1 Enthalpy Change (ΔH)
+- **Exothermic:** Heat released to surroundings. ΔH is negative. Temperature rises. (e.g., Combustion, Neutralization).
+- **Endothermic:** Heat absorbed from surroundings. ΔH is positive. Temperature falls. (e.g., Photosynthesis).
+
+---
+
+## TOPIC 6: ORGANIC CHEMISTRY (ALKANOLS)
+
+- **Functional Group:** Hydroxyl group (-OH).
+- **General Formula:** CnH2n+1OH.
+- **Primary Alkanol:** -OH bonded to a carbon with only one other carbon bond.
+- **Secondary Alkanol:** -OH bonded to a carbon with two other carbon bonds.
+- **Tertiary Alkanol:** -OH bonded to a carbon with three other carbon bonds.
+
+---
+
+## TOPIC 10: IDENTIFICATION OF UNKNOWN COMPOUNDS
+
+**Test Results for Families:**
+- **Alkanes:** Insoluble in water, no reaction with Bromine.
+- **Alkenes:** Decolorize orange/brown Bromine solution.
+- **Alkanols:** Soluble in water, react with Sodium to produce Hydrogen gas.
+- **Alkanoic Acids:** Turn blue litmus red, pH < 7.
+- **Alkanals (Aldehydes):** Form orange precipitate with 2,4-DNPH; Silver mirror with Tollen's reagent.
+- **Alkanones (Ketones):** Form orange precipitate with 2,4-DNPH; No reaction with Tollen's.
+    `
+  },
+  {
+    id: 'msce-chemistry-chuzu',
+    title: 'Basic Principles Chemistry (Form 4)',
+    level: EducationLevel.SECONDARY,
+    grade: 'Form 4' as Grade,
+    category: Category.BOOKS,
+    subject: 'Chemistry',
+    fileUrl: '#digital',
+    fileName: 'MSCE_Chemistry_Chuzu.digital',
+    isDigital: true,
+    uploadedAt: new Date().toISOString(),
+    content: `
+# Basic Principles Chemistry
+## Senior Secondary Students (Form 3 & 4)
+### Author: Chuzu Elisha C.
+
+**Foreword**
+This book is a continuation of Basic Principle Chemistry for junior students. It contains special basics that will help students to understand Chemistry easily as they are studying to prepare for the Malawi School Certificate of Examination (MSCE).
+
+---
+
+## UNIT 1: Nitrogen, Sulphur and Phosphorus
+
+### 1.11 Nitrogen
+Nitrogen is an essential element, which makes up 78% of air. In the periodic table, nitrogen is in Group V and Period 2. It is a non-metallic substance with a valance of three.
+
+#### Sources of Nitrogen
+- **The Air:** Nitrogen makes up 78% of the atmosphere.
+- **The Soil:** Found in nitrogen-containing compounds called nitrates, produced by lighting effects and decaying organic matter.
+
+#### Physical Properties of Nitrogen
+- It has no smell.
+- It is a colourless gas.
+- Almost insoluble in water.
+- Less dense than air.
+
+#### Chemical Properties
+- **Diatomic Molecule:** Exists as N2 with a triple covalent bond (N≡N).
+- **Reaction with Alkali Metals:** Forms nitrogen alkalides (e.g., Magnesium nitride).
+- **Haber Process:** Reacts with Hydrogen to form Ammonia (NH3) under 300 atm and 450°C.
+
+### 1.19 Sulphur
+Sulphur is a non-metallic element found in Group VI and Period 2. It is extracted by the Frasch process.
+
+#### Sources of Sulphur
+- Crude oil and natural gases.
+- Metal ores like Copper pyrites (CuFeS2).
+- Volcanic regions.
+
+#### Properties of Sulphur
+- Does not conduct electricity.
+- Yellow brittle solid at room temperature.
+- Insoluble in water.
+
+---
+
+## UNIT 2: Chemical Bonding II
+
+### 2.10 Introduction
+Chemical bond is defined as a force of attraction between two particles.
+
+#### Types of Bonds
+1. **Ionic Bond:** Involves transfer of electrons from metal to non-metal.
+2. **Covalent Bond:** Involves sharing of electrons between non-metals.
+3. **Metallic Bond:** Occurs among metals, involving a sea of delocalized electrons.
+
+---
+
+## UNIT 3: Stoichiometry
+
+### 3.10 Introduction
+Stoichiometry is the branch of chemistry based on the law of conservation of mass: "the total mass of the reactants equals the total mass of the products."
+
+#### The Mole
+One mole is the amount of substance which contains 6.023 x 10^23 elementary particles (Avogadro's constant).
+
+---
+
+## UNIT 13: Oxidation and Reduction Reactions
+
+### 13.11 Oxidation Number
+Oxidation refers to the loss of electrons or addition of oxygen. Reduction refers to the gain of electrons or loss of oxygen.
+
+---
+
+## UNIT 14: Electrolysis
+
+### 14.11 Process
+Electrolysis is the process of splitting up substances by passing an electric current through them.
+- **Anode:** Positive electrode (attracts anions).
+- **Cathode:** Negative electrode (attracts cations).
     `
   }
 ];
