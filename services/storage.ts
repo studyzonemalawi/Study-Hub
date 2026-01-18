@@ -26,91 +26,9 @@ const SEED_MATERIAL: StudyMaterial = {
   grade: "Form 1" as Grade,
   category: Category.NOTES,
   subject: "Chemistry",
-  fileUrl: "#",
-  fileName: "chemistry_f1_notes.digital",
-  uploadedAt: "2024-01-01T00:00:00.000Z",
-  isDigital: true,
-  content: `# COMPLETE FORM ONE CHEMISTRY NOTES
-SYLLABUS-BASED
-COMPILED BY: GANIZANI CHIRINDANJI
-CONTACT: 0999326377
-
-## TOPIC 1 : INTRODUCTION TO CHEMISTRY
-### MEANING OF CHEMISTRY
-Chemistry is the branch of science dealing with elements and the compounds they form and the reactions they undergo.
-
-### BRANCHES OF CHEMISTRY
-The branches of chemistry include physical, environmental, analytical, industrial, organic and inorganic chemistry.
-
-- **PHYSICAL CHEMISTRY**: Study of how chemical compounds and their constituents react with each other.
-- **ENVIRONMENTAL CHEMISTRY**: Study of how chemicals react naturally in the environment and human impact.
-- **ANALYTICAL CHEMISTRY**: Study of separation, identification, and quantification of materials.
-- **INDUSTRIAL CHEMISTRY**: Application of physical and chemical processes towards raw materials.
-- **ORGANIC CHEMISTRY**: Study of compounds that contain carbon (except oxides/carbonates).
-- **INORGANIC CHEMISTRY**: Study of compounds that do not contain carbon.
-
-### IMPORTANCE OF CHEMISTRY
-- **Water treatment**: Processes to purify water for safe drinking.
-- **Cooking nsima**: Mixing ingredients applies concepts in chemistry.
-- **Pharmaceuticals**: Creation of medical drugs.
-- **Food industries**: Processing food (e.g., adding lime to sugar).
-
----
-
-## TOPIC 2 : ESSENTIAL MATHEMATICAL SKILLS
-### STANDARD FORM
-The scientific notation for writing very large or small numbers.
-Example: 4 500 = 4.5 × 10³
-
-### SIGNIFICANT FIGURES
-1. All non-zero digits are significant.
-2. Zeroes between non-zero digits are significant.
-3. Zeroes to the left of non-zero digits are **not** significant.
-
----
-
-## TOPIC 3: COMPOSITION AND CLASSIFICATION OF MATTER
-### MATTER
-Anything that has mass and occupies space.
-
-### STATES OF MATTER
-- **SOLIDS**: Tightly packed, regular pattern, do not flow, difficult to compress.
-- **LIQUIDS**: Close together, no regular arrangement, they flow.
-- **GASES**: Very far apart, move randomly at high speeds, can be compressed.
-
-### DIFFUSION
-The movement of particles from a region of higher concentration to a region of lower concentration.
-
----
-
-## TOPIC 4 : ATOMIC STRUCTURE
-An atom consists of three sub-atomic particles:
-- **Protons**: Positive charge (+1), Mass 1 amu, inside nucleus.
-- **Electrons**: Negative charge (-1), Negligible mass, move in shells.
-- **Neutrons**: Neutral charge (0), Mass 1 amu, inside nucleus.
-
----
-
-## TOPIC 5 : THE PERIODIC TABLE
-A table arranging elements by atomic number, configurations, and properties.
-- **Group I**: Alkali metals (e.g., Lithium, Sodium, Potassium).
-- **Group II**: Alkaline earth metals.
-- **Group VII**: Halogens.
-- **Group VIII**: Noble gases (Inert).
-
----
-
-## TOPIC 6 : PHYSICAL AND CHEMICAL CHANGES
-- **PHYSICAL CHANGE**: No new substance is formed (e.g., Melting wax).
-- **CHEMICAL CHANGE**: New substance is formed (e.g., Burning wood).
-
----
-
-## TOPIC 7 : ORGANIC COMPOUNDS
-Compounds containing the element carbon.
-- **Sources**: Plants, animals, fossil fuels, natural gas, coal.
-- **Petroleum**: A mixture of hydrocarbons separated by fractional distillation.
-- **Fractions**: Petrol, Diesel, Paraffin, Bitumen, Lubricants.`
+  fileUrl: "https://vkykmbxpdmvvdtmciolo.supabase.co/storage/v1/object/public/materials/chemistry_f1_notes.pdf",
+  fileName: "chemistry_f1_notes.pdf",
+  uploadedAt: "2024-01-01T00:00:00.000Z"
 };
 
 export const storage = {
@@ -146,9 +64,7 @@ export const storage = {
           subject: material.subject,
           file_url: material.fileUrl,
           file_name: material.fileName,
-          uploaded_at: material.uploadedAt,
-          is_digital: material.isDigital,
-          content: material.content
+          uploaded_at: material.uploadedAt
         });
       } catch (e) { console.warn("Cloud material save failed", e); }
     }
@@ -169,9 +85,7 @@ export const storage = {
           subject: m.subject,
           fileUrl: m.file_url,
           fileName: m.file_name,
-          uploadedAt: m.uploaded_at,
-          isDigital: m.is_digital,
-          content: m.content
+          uploadedAt: m.uploaded_at
         }));
         
         // Ensure seed material is still there even after fetch

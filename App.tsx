@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { User } from './types';
 import { Layout } from './components/Layout';
 import { Login } from './pages/Login';
@@ -30,10 +30,14 @@ const App: React.FC = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSynced, setLastSynced] = useState<string | null>(null);
+  const isCurrentlySyncingRef = useRef(false);
 
   const ADMIN_EMAIL = 'studyhubmalawi@gmail.com';
 
   const triggerSync = useCallback(async (userId: string) => {
+    if (isCurrentlySyncingRef.current) return;
+    
+    isCurrentlySyncingRef.current = true;
     setIsSyncing(true);
     try {
       const result = await storage.syncWithServer(userId);
@@ -48,6 +52,7 @@ const App: React.FC = () => {
       console.error("Sync failed", err);
     } finally {
       setIsSyncing(false);
+      isCurrentlySyncingRef.current = false;
     }
   }, []);
 
@@ -129,7 +134,7 @@ const App: React.FC = () => {
 
     const handleOnline = () => {
       setIsOnline(true);
-      if (user) triggerSync(user.id);
+      if (user?.id) triggerSync(user.id);
     };
     const handleOffline = () => setIsOnline(false);
 
@@ -141,7 +146,7 @@ const App: React.FC = () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, [handleAuthChange, user, triggerSync]);
+  }, [handleAuthChange, user?.id, triggerSync]);
 
   const handleLogin = (u: User) => {
     setUser(u);

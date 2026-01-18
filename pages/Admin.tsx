@@ -6,15 +6,14 @@ import {
   Category, 
   StudyMaterial, 
   User,
-  Message,
   Announcement,
-  AccountRole,
   PRIMARY_GRADES, 
   SECONDARY_GRADES, 
   PRIMARY_SUBJECTS, 
   SECONDARY_SUBJECTS
 } from '../types';
 import { storage } from '../services/storage';
+import { supabase } from '../services/supabase';
 import { PdfViewer } from '../components/PdfViewer';
 
 interface AdminProps {
@@ -108,17 +107,39 @@ export const Admin: React.FC<AdminProps> = ({ user, onNavigate }) => {
     setShowConfirmModal(false);
     setIsUploading(true);
     setSuccessMsg(null);
+    setError(null);
     
     try {
       let finalUrl = "";
       let finalFileName = "";
 
       if (activeAdminTab === 'local-upload' && localFile) {
-        finalUrl = URL.createObjectURL(localFile);
+        // Upload binary to Supabase Storage
+        const timestamp = Date.now();
+        const sanitizedName = localFile.name.replace(/[^a-zA-Z0-9.]/g, '_');
+        const filePath = `${level}/${grade}/${subject}/${timestamp}_${sanitizedName}`;
+
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('materials')
+          .upload(filePath, localFile, {
+            cacheControl: '3600',
+            upsert: false
+          });
+
+        if (uploadError) {
+          throw new Error(`Upload failed: ${uploadError.message}`);
+        }
+
+        // Get Public URL
+        const { data: { publicUrl } } = supabase.storage
+          .from('materials')
+          .getPublicUrl(filePath);
+
+        finalUrl = publicUrl;
         finalFileName = localFile.name;
       } else {
         const directUrl = convertToDirectLink(driveLink);
-        if (!directUrl) throw new Error("Invalid Drive Link");
+        if (!directUrl) throw new Error("Invalid Drive Link provided.");
         finalUrl = directUrl;
         finalFileName = `${title.replace(/\s+/g, '_')}.pdf`;
       }
@@ -139,10 +160,11 @@ export const Admin: React.FC<AdminProps> = ({ user, onNavigate }) => {
       
       setMaterials((prev) => [newMaterial, ...prev]);
       resetForm();
-      setSuccessMsg('Resource published successfully to the Hub');
+      setSuccessMsg('Resource published successfully to the cloud hub.');
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err: any) {
-      setError(err.message || "Failed to publish material");
+      console.error(err);
+      setError(err.message || "Failed to publish material. Check connection.");
     } finally {
       setIsUploading(false);
     }
@@ -153,6 +175,7 @@ export const Admin: React.FC<AdminProps> = ({ user, onNavigate }) => {
     setDriveLink('');
     setLocalFile(null);
     setError(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handlePostAnnouncement = async (e: React.FormEvent) => {
@@ -200,7 +223,7 @@ export const Admin: React.FC<AdminProps> = ({ user, onNavigate }) => {
               onClick={() => { setActiveAdminTab(tab); resetForm(); }}
               className={`px-8 py-2.5 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeAdminTab === tab ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
             >
-              {tab === 'announcements' ? 'Broadcasts' : tab === 'content' ? 'Drive Links' : tab === 'local-upload' ? 'Local Hub' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+              {tab === 'announcements' ? 'Broadcasts' : tab === 'content' ? 'Drive Links' : tab === 'local-upload' ? 'Cloud Hub' : tab.charAt(0).toUpperCase() + tab.slice(1)}
             </button>
           ))}
         </div>
@@ -218,14 +241,14 @@ export const Admin: React.FC<AdminProps> = ({ user, onNavigate }) => {
           <div className="bg-white dark:bg-slate-800 rounded-[3rem] p-10 border border-slate-100 dark:border-slate-700 shadow-2xl h-fit relative overflow-hidden">
             <div className="flex items-center gap-4 mb-10">
                <div className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-2xl flex items-center justify-center shadow-lg border border-emerald-400/20">
-                  <span className="text-white font-black text-xl">{activeAdminTab === 'local-upload' ? '📁' : '🔗'}</span>
+                  <span className="text-white font-black text-xl">{activeAdminTab === 'local-upload' ? '☁️' : '🔗'}</span>
                </div>
                <div>
                   <h2 className="text-2xl font-black text-slate-900 dark:text-white leading-tight">
-                    {activeAdminTab === 'local-upload' ? 'Upload Local PDF' : 'Post Drive Resource'}
+                    {activeAdminTab === 'local-upload' ? 'Upload to Cloud' : 'Post Drive Resource'}
                   </h2>
                   <p className="text-[10px] font-black uppercase text-emerald-600 tracking-widest">
-                    {activeAdminTab === 'local-upload' ? 'Direct File Hosting' : 'Google Drive Integration'}
+                    {activeAdminTab === 'local-upload' ? 'Supabase Secure Hosting' : 'Google Drive Integration'}
                   </p>
                </div>
             </div>
@@ -274,12 +297,12 @@ export const Admin: React.FC<AdminProps> = ({ user, onNavigate }) => {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Select Local Document</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Select Document for Cloud Hub</label>
                   <div 
-                    onClick={() => fileInputRef.current?.click()}
-                    className={`p-10 border-2 border-dashed rounded-[2rem] text-center cursor-pointer transition-all ${localFile ? 'bg-emerald-50 border-emerald-500' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 hover:border-emerald-300'}`}
+                    onClick={() => !isUploading && fileInputRef.current?.click()}
+                    className={`p-10 border-2 border-dashed rounded-[2rem] text-center cursor-pointer transition-all ${localFile ? 'bg-emerald-50 border-emerald-500' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 hover:border-emerald-300'} ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
-                    <input type="file" accept=".pdf" className="hidden" ref={fileInputRef} onChange={handleFileSelect} />
+                    <input type="file" accept=".pdf" className="hidden" ref={fileInputRef} onChange={handleFileSelect} disabled={isUploading} />
                     <div className="text-4xl mb-3">{localFile ? '📄' : '☁️'}</div>
                     <p className="text-sm font-bold text-slate-600 dark:text-slate-300">
                       {localFile ? localFile.name : 'Click to browse or drag PDF here'}
@@ -289,14 +312,19 @@ export const Admin: React.FC<AdminProps> = ({ user, onNavigate }) => {
                 </div>
               )}
 
-              {error && <p className="text-[10px] text-red-500 font-black uppercase tracking-widest px-2">{error}</p>}
+              {error && <p className="text-[10px] text-red-500 font-black uppercase tracking-widest px-2 leading-relaxed animate-shake">{error}</p>}
 
               <button 
                 type="submit" 
                 disabled={isUploading || (activeAdminTab === 'content' ? !driveLink : !localFile) || !title} 
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-5 rounded-3xl shadow-2xl transition-all uppercase tracking-widest text-xs disabled:opacity-50 active:scale-95 shadow-emerald-100 dark:shadow-none mt-4"
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-5 rounded-3xl shadow-2xl transition-all uppercase tracking-widest text-xs disabled:opacity-50 active:scale-95 shadow-emerald-100 dark:shadow-none mt-4 flex items-center justify-center gap-3"
               >
-                {isUploading ? 'Processing Hub Upload...' : 'Publish to Students'}
+                {isUploading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    <span>Pushing to Cloud...</span>
+                  </>
+                ) : 'Publish to Student Hub'}
               </button>
             </form>
           </div>
@@ -418,14 +446,14 @@ export const Admin: React.FC<AdminProps> = ({ user, onNavigate }) => {
         <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in duration-200">
           <div className="bg-white dark:bg-slate-900 rounded-[3rem] p-10 max-w-md w-full text-center space-y-8 animate-in zoom-in duration-200 shadow-2xl">
             <div className="w-20 h-20 bg-emerald-50 dark:bg-emerald-900/30 rounded-full flex items-center justify-center text-4xl mx-auto border-2 border-emerald-100">
-               {activeAdminTab === 'local-upload' ? '📁' : '🚀'}
+               {activeAdminTab === 'local-upload' ? '☁️' : '🚀'}
             </div>
             <div className="space-y-3">
-              <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Confirm Hub Publish?</h3>
-              <p className="text-slate-500 dark:text-slate-400 font-medium leading-relaxed">This {activeAdminTab === 'local-upload' ? 'file' : 'resource'} will be immediately visible to all registered students in the {grade} library.</p>
+              <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Authorize Cloud Deployment?</h3>
+              <p className="text-slate-500 dark:text-slate-400 font-medium leading-relaxed">This {activeAdminTab === 'local-upload' ? 'file' : 'resource'} will be hosted in the Supabase Cloud Hub and instantly synced to all {grade} students in Malawi.</p>
             </div>
             <div className="space-y-4">
-              <button onClick={handlePublish} className="w-full py-5 bg-emerald-600 text-white font-black rounded-2xl shadow-xl uppercase tracking-widest text-[10px] active:scale-95 transition-all">Authorize & Publish</button>
+              <button onClick={handlePublish} className="w-full py-5 bg-emerald-600 text-white font-black rounded-2xl shadow-xl uppercase tracking-widest text-[10px] active:scale-95 transition-all">Publish to Students</button>
               <button onClick={() => setShowConfirmModal(false)} className="w-full py-5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-300 font-black rounded-2xl uppercase tracking-widest text-[10px] transition-all">Cancel</button>
             </div>
           </div>

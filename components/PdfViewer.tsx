@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { StudyMaterial, ReadingStatus, UserProgress } from '../types';
 
 declare const pdfjsLib: any;
@@ -47,7 +47,6 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
   const flipPageRef = useRef<HTMLCanvasElement | null>(null);
   const currentRenderTask = useRef<any>(null);
 
-  // Sync fullscreen state with browser events (e.g., if user presses Esc)
   useEffect(() => {
     const handleFullscreenChange = () => {
       setIsFullscreen(!!document.fullscreenElement);
@@ -68,28 +67,7 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
     }
   };
 
-  // Digital Note Pagination logic
-  const digitalPages = useMemo(() => {
-    if (!material.isDigital || !material.content) return [];
-    const raw = material.content;
-    const size = 3000; 
-    const pages = [];
-    for (let i = 0; i < raw.length; i += size) {
-      pages.push(raw.substring(i, i + size));
-    }
-    return pages;
-  }, [material]);
-
   useEffect(() => {
-    if (material.isDigital) {
-      setNumPages(digitalPages.length);
-      setIsRenderLoading(false);
-      if (currentProgress?.progressPercent && digitalPages.length > 0) {
-        setCurrentPage(Math.max(1, Math.round((currentProgress.progressPercent / 100) * digitalPages.length)));
-      }
-      return;
-    }
-
     let isMounted = true;
     const loadPdf = async () => {
       try {
@@ -111,7 +89,7 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
     };
     loadPdf();
     return () => { isMounted = false; if (currentRenderTask.current) currentRenderTask.current.cancel(); };
-  }, [material, digitalPages, currentProgress]);
+  }, [material, currentProgress]);
 
   const renderCanvasPage = useCallback(async (pageNum: number, canvas: HTMLCanvasElement) => {
     if (!pdfDoc || !canvas) return;
@@ -131,12 +109,12 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
   }, [pdfDoc, scale]);
 
   useEffect(() => {
-    if (!material.isDigital && flipPageRef.current && pdfDoc) {
+    if (flipPageRef.current && pdfDoc) {
       renderCanvasPage(currentPage, flipPageRef.current);
     }
-  }, [currentPage, pdfDoc, renderCanvasPage, material.isDigital, scale]);
+  }, [currentPage, pdfDoc, renderCanvasPage, scale]);
 
-  const readingProgress = (currentPage / numPages) * 100;
+  const readingProgress = (currentPage / Math.max(1, numPages)) * 100;
 
   const handlePageChange = (val: number) => {
     const target = Math.max(1, Math.min(numPages, val));
@@ -251,15 +229,9 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
 
               <div className="flex-1 flex items-start justify-center min-w-max min-h-max relative">
                 <div className="relative shadow-[0_40px_80px_-20px_rgba(0,0,0,0.4)] bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-sm">
-                    {material.isDigital ? (
-                      <div className="p-12 md:p-24 min-h-[1000px] w-[800px] max-w-full font-serif leading-relaxed text-slate-800 dark:text-slate-200 animate-in fade-in duration-500 select-none">
-                        <div className="whitespace-pre-wrap text-xl md:text-2xl" dangerouslySetInnerHTML={{ __html: digitalPages[currentPage-1]?.replace(/# (.*)/g, '<h2 class="text-4xl font-black text-emerald-800 dark:text-emerald-400 mb-10">$1</h2>').replace(/## (.*)/g, '<h3 class="text-2xl font-black text-slate-900 dark:text-white mt-10 mb-6">$1</h3>') }} />
-                      </div>
-                    ) : (
-                      <div className="rounded-sm overflow-hidden flex items-center justify-center">
-                        <canvas ref={flipPageRef} className="max-w-none block shadow-2xl" />
-                      </div>
-                    )}
+                    <div className="rounded-sm overflow-hidden flex items-center justify-center">
+                      <canvas ref={flipPageRef} className="max-w-none block shadow-2xl" />
+                    </div>
                     
                     {/* Decorative Spine Shadow */}
                     <div className="absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-black/10 to-transparent pointer-events-none"></div>
