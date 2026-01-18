@@ -88,14 +88,17 @@ export const storage = {
           uploadedAt: m.uploaded_at
         }));
         
-        // Ensure seed material is still there even after fetch
-        const final = [...mapped];
-        if (!final.find(x => x.id === CHEMISTRY_NOTES_ID)) {
-          final.unshift(SEED_MATERIAL);
+        // Ensure local consistency
+        const currentLocal = storage.getMaterials();
+        const merged = [...mapped];
+        
+        // Retain seed if it was somehow missing from DB
+        if (!merged.find(x => x.id === CHEMISTRY_NOTES_ID)) {
+          merged.unshift(SEED_MATERIAL);
         }
         
-        localStorage.setItem(MATERIALS_KEY, JSON.stringify(final));
-        return final;
+        localStorage.setItem(MATERIALS_KEY, JSON.stringify(merged));
+        return merged;
       }
     } catch (e) { console.warn("Failed to fetch global materials", e); }
   },
@@ -249,16 +252,6 @@ export const storage = {
 
       localAll[uid] = merged;
       localStorage.setItem(PROGRESS_KEY, JSON.stringify(localAll));
-
-      for (const item of merged) {
-        await supabase.from('user_progress').upsert({
-          user_id: uid,
-          material_id: item.materialId,
-          status: item.status,
-          progress_percent: item.progressPercent,
-          last_read: item.lastRead
-        });
-      }
     } catch (e) { console.warn("Full progress sync failed", e); }
   },
 
