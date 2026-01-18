@@ -12,16 +12,120 @@ const CHAT_ROOMS_KEY = 'study_hub_chat_rooms';
 const EXAMS_KEY = 'study_hub_exams';
 const EXAM_RESULTS_KEY = 'study_hub_exam_results';
 
+const CHEMISTRY_NOTES_ID = 'chem-f1-notes-001';
+
 const DEFAULT_ROOMS: ChatRoom[] = [
   { id: 'general-chat', title: 'General chat', description: 'Casual conversation and connecting with other students.', icon: '💬', activeUsers: 0 },
   { id: 'exam-talk', title: 'Exam Prep', description: 'Strategies and past paper discussions.', icon: '📝', activeUsers: 0 }
 ];
 
+const SEED_MATERIAL: StudyMaterial = {
+  id: CHEMISTRY_NOTES_ID,
+  title: "Complete Form One Chemistry Notes",
+  level: EducationLevel.SECONDARY,
+  grade: "Form 1" as Grade,
+  category: Category.NOTES,
+  subject: "Chemistry",
+  fileUrl: "#",
+  fileName: "chemistry_f1_notes.digital",
+  uploadedAt: "2024-01-01T00:00:00.000Z",
+  isDigital: true,
+  content: `# COMPLETE FORM ONE CHEMISTRY NOTES
+SYLLABUS-BASED
+COMPILED BY: GANIZANI CHIRINDANJI
+CONTACT: 0999326377
+
+## TOPIC 1 : INTRODUCTION TO CHEMISTRY
+### MEANING OF CHEMISTRY
+Chemistry is the branch of science dealing with elements and the compounds they form and the reactions they undergo.
+
+### BRANCHES OF CHEMISTRY
+The branches of chemistry include physical, environmental, analytical, industrial, organic and inorganic chemistry.
+
+- **PHYSICAL CHEMISTRY**: Study of how chemical compounds and their constituents react with each other.
+- **ENVIRONMENTAL CHEMISTRY**: Study of how chemicals react naturally in the environment and human impact.
+- **ANALYTICAL CHEMISTRY**: Study of separation, identification, and quantification of materials.
+- **INDUSTRIAL CHEMISTRY**: Application of physical and chemical processes towards raw materials.
+- **ORGANIC CHEMISTRY**: Study of compounds that contain carbon (except oxides/carbonates).
+- **INORGANIC CHEMISTRY**: Study of compounds that do not contain carbon.
+
+### IMPORTANCE OF CHEMISTRY
+- **Water treatment**: Processes to purify water for safe drinking.
+- **Cooking nsima**: Mixing ingredients applies concepts in chemistry.
+- **Pharmaceuticals**: Creation of medical drugs.
+- **Food industries**: Processing food (e.g., adding lime to sugar).
+
+---
+
+## TOPIC 2 : ESSENTIAL MATHEMATICAL SKILLS
+### STANDARD FORM
+The scientific notation for writing very large or small numbers.
+Example: 4 500 = 4.5 × 10³
+
+### SIGNIFICANT FIGURES
+1. All non-zero digits are significant.
+2. Zeroes between non-zero digits are significant.
+3. Zeroes to the left of non-zero digits are **not** significant.
+
+---
+
+## TOPIC 3: COMPOSITION AND CLASSIFICATION OF MATTER
+### MATTER
+Anything that has mass and occupies space.
+
+### STATES OF MATTER
+- **SOLIDS**: Tightly packed, regular pattern, do not flow, difficult to compress.
+- **LIQUIDS**: Close together, no regular arrangement, they flow.
+- **GASES**: Very far apart, move randomly at high speeds, can be compressed.
+
+### DIFFUSION
+The movement of particles from a region of higher concentration to a region of lower concentration.
+
+---
+
+## TOPIC 4 : ATOMIC STRUCTURE
+An atom consists of three sub-atomic particles:
+- **Protons**: Positive charge (+1), Mass 1 amu, inside nucleus.
+- **Electrons**: Negative charge (-1), Negligible mass, move in shells.
+- **Neutrons**: Neutral charge (0), Mass 1 amu, inside nucleus.
+
+---
+
+## TOPIC 5 : THE PERIODIC TABLE
+A table arranging elements by atomic number, configurations, and properties.
+- **Group I**: Alkali metals (e.g., Lithium, Sodium, Potassium).
+- **Group II**: Alkaline earth metals.
+- **Group VII**: Halogens.
+- **Group VIII**: Noble gases (Inert).
+
+---
+
+## TOPIC 6 : PHYSICAL AND CHEMICAL CHANGES
+- **PHYSICAL CHANGE**: No new substance is formed (e.g., Melting wax).
+- **CHEMICAL CHANGE**: New substance is formed (e.g., Burning wood).
+
+---
+
+## TOPIC 7 : ORGANIC COMPOUNDS
+Compounds containing the element carbon.
+- **Sources**: Plants, animals, fossil fuels, natural gas, coal.
+- **Petroleum**: A mixture of hydrocarbons separated by fractional distillation.
+- **Fractions**: Petrol, Diesel, Paraffin, Bitumen, Lubricants.`
+};
+
 export const storage = {
   // --- MATERIALS ---
   getMaterials: (): StudyMaterial[] => {
     const data = localStorage.getItem(MATERIALS_KEY);
-    return data ? JSON.parse(data) : [];
+    let materials: StudyMaterial[] = data ? JSON.parse(data) : [];
+    
+    // Ensure the seed material exists
+    if (!materials.find(m => m.id === CHEMISTRY_NOTES_ID)) {
+      materials = [SEED_MATERIAL, ...materials];
+      localStorage.setItem(MATERIALS_KEY, JSON.stringify(materials));
+    }
+    
+    return materials;
   },
   
   saveMaterial: async (material: StudyMaterial) => {
@@ -69,8 +173,15 @@ export const storage = {
           isDigital: m.is_digital,
           content: m.content
         }));
-        localStorage.setItem(MATERIALS_KEY, JSON.stringify(mapped));
-        return mapped;
+        
+        // Ensure seed material is still there even after fetch
+        const final = [...mapped];
+        if (!final.find(x => x.id === CHEMISTRY_NOTES_ID)) {
+          final.unshift(SEED_MATERIAL);
+        }
+        
+        localStorage.setItem(MATERIALS_KEY, JSON.stringify(final));
+        return final;
       }
     } catch (e) { console.warn("Failed to fetch global materials", e); }
   },
@@ -96,7 +207,6 @@ export const storage = {
 
   getChatRooms: () => JSON.parse(localStorage.getItem(CHAT_ROOMS_KEY) || JSON.stringify(DEFAULT_ROOMS)),
 
-  // Added saveChatRoom for Community.tsx
   saveChatRoom: (room: ChatRoom) => {
     const rooms = storage.getChatRooms();
     rooms.push(room);
@@ -184,7 +294,6 @@ export const storage = {
           material_id: p.materialId,
           status: p.status,
           progress_percent: p.progressPercent,
-          // Fixed property access: changed p.last_read to p.lastRead
           last_read: p.lastRead
         });
       } catch (e) { console.warn("Cloud progress update failed", e); }
@@ -215,7 +324,6 @@ export const storage = {
           if (lIdx === -1) {
             merged.push(cloudItem);
           } else {
-            // Merge based on most recent timestamp
             const localDate = new Date(merged[lIdx].lastRead).getTime();
             const cloudDate = new Date(cp.last_read).getTime();
             if (cloudDate > localDate) {
@@ -228,7 +336,6 @@ export const storage = {
       localAll[uid] = merged;
       localStorage.setItem(PROGRESS_KEY, JSON.stringify(localAll));
 
-      // Push back any local items that might be newer
       for (const item of merged) {
         await supabase.from('user_progress').upsert({
           user_id: uid,
@@ -267,7 +374,6 @@ export const storage = {
     if (navigator.onLine) await supabase.from('announcements').upsert({ id: ann.id, title: ann.title, content: ann.content, priority: ann.priority, timestamp: ann.timestamp });
   },
 
-  // Added deleteAnnouncement for Admin.tsx
   deleteAnnouncement: async (id: string) => {
     const a = storage.getAnnouncements().filter((x: any) => x.id !== id);
     localStorage.setItem(ANNOUNCEMENTS_KEY, JSON.stringify(a));
@@ -294,7 +400,6 @@ export const storage = {
   getExams: () => JSON.parse(localStorage.getItem(EXAMS_KEY) || '[]'),
   saveExam: (e: any) => { const x = storage.getExams(); x.unshift(e); localStorage.setItem(EXAMS_KEY, JSON.stringify(x)); },
 
-  // Added saveExamResult for ExamCenter.tsx
   saveExamResult: async (result: ExamResult) => {
     const results = JSON.parse(localStorage.getItem(EXAM_RESULTS_KEY) || '[]');
     results.push(result);
@@ -306,7 +411,7 @@ export const storage = {
           exam_id: result.examId,
           user_id: result.userId,
           score: result.score,
-          total_questions: result.total_questions,
+          total_questions: result.totalQuestions,
           answers: result.answers,
           feedback: result.feedback,
           completed_at: result.completedAt
@@ -319,13 +424,11 @@ export const storage = {
   syncWithServer: async (uid: string) => {
     if (!navigator.onLine) return { success: false };
     try {
-      // 1. Full Profile Sync
       const cloudUser = await storage.getUserFromCloud(uid);
       const localUsers = storage.getUsers();
       const localUser = localUsers.find(u => u.id === uid);
 
       if (cloudUser && localUser) {
-        // Merge strategy: Cloud usually wins for global profile, local wins for transient session data
         const mergedUser = { ...localUser, ...cloudUser };
         storage.saveUser(mergedUser);
       } else if (cloudUser) {
@@ -334,13 +437,8 @@ export const storage = {
         await storage.updateUser(localUser);
       }
 
-      // 2. Full Progress Sync
       await storage.syncProgressWithCloud(uid);
-
-      // 3. Update Materials Registry
       await storage.fetchGlobalMaterials();
-      
-      // 4. Update Announcements
       await storage.fetchGlobalAnnouncements();
 
       return { success: true, timestamp: new Date().toISOString() };
