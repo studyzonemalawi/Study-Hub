@@ -32,6 +32,23 @@ export interface EvaluationResult {
 }
 
 export const aiService = {
+  explainPage: async (text: string, lang: string): Promise<string> => {
+    const ai = getAI();
+    const prompt = lang === 'Chichewa' 
+      ? `Fotokozani mfundo zazikulu za tsambali mwachidule komanso m'chilankhulo chosavuta cha Chichewa: \n\n ${text}`
+      : `Explain the key concepts of this textbook page in very simple English, using bullet points for clarity. \n\n ${text}`;
+    
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: prompt,
+      config: {
+        thinkingConfig: { thinkingBudget: 0 },
+        temperature: 0.7,
+      },
+    });
+    return response.text || "Could not generate explanation.";
+  },
+
   generateQuiz: async (title: string, subject: string, grade: string, docContext: string): Promise<QuizChapter[]> => {
     const ai = getAI();
     const response = await ai.models.generateContent({
@@ -88,7 +105,6 @@ export const aiService = {
 
   generateExam: async (level: string, grade: string, subject: string, context: string): Promise<ExamQuestion[]> => {
     const ai = getAI();
-    // Optimization: Precise instructions and strict constraints for 10-15 questions.
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: `ACT AS: Senior Curriculum Examiner for the Malawi National Examinations Board (MANEB).
@@ -142,7 +158,6 @@ export const aiService = {
 
   evaluateExam: async (questions: ExamQuestion[], userAnswers: Record<string, string>): Promise<any> => {
     const ai = getAI();
-    // Optimization: Batch evaluation logic to reduce latency and improve consistency.
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: `ACT AS: Automated Exam Marking System.

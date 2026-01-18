@@ -14,8 +14,6 @@ interface MaterialViewerProps {
   currentProgress?: UserProgress;
 }
 
-type ReaderTheme = 'light' | 'dark' | 'sepia';
-
 export const PdfViewer: React.FC<MaterialViewerProps> = ({ 
   material, 
   userId, 
@@ -24,32 +22,30 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
   currentProgress 
 }) => {
   const [showConfirmClose, setShowConfirmClose] = useState(false);
-  const [viewMode, setViewMode] = useState<'scroll' | 'flip' | 'native' | 'web'>(material.isDigital ? 'web' : 'web');
-  const [readerTheme, setReaderTheme] = useState<ReaderTheme>('light');
-  const [fontSize, setFontSize] = useState(18);
+  // Default to 'flip' for the interactive book experience
+  const [viewMode, setViewMode] = useState<'flip' | 'native'>('flip');
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
-  // Search State
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showSearch, setShowSearch] = useState(false);
+  // AI Sidebar States
+  const [aiExplanation, setAiExplanation] = useState<string | null>(null);
+  const [isExplaining, setIsExplaining] = useState(false);
   
   const lang = localStorage.getItem('study_hub_chat_lang') || 'English';
   
   const t = {
-    flipbook: lang === 'English' ? 'Flip' : 'Lapansi',
-    scroll: lang === 'English' ? 'Scroll' : 'Mndandanda',
-    native: lang === 'English' ? 'Native' : 'Zenizeni',
-    web: lang === 'English' ? 'Web Mode' : 'Mwalemba',
-    loading: lang === 'English' ? 'Optimizing Page...' : 'Tikonza Tsamba...',
+    flipbook: lang === 'English' ? 'Interactive Flip' : 'Lapansi',
+    native: lang === 'English' ? 'Original PDF' : 'Zenizeni',
+    loading: lang === 'English' ? 'Preparing Interactive Book...' : 'Tikukonza Bukuli...',
     next: lang === 'English' ? 'Next' : 'Ena',
     prev: lang === 'English' ? 'Prev' : "M'mbuyo",
-    finish: lang === 'English' ? 'Finish Session?' : 'Kodi Mwamaliza?',
-    resume: lang === 'English' ? 'Resume Reader' : 'Pitirizani Kuwerenga',
-    tts: lang === 'English' ? 'Read Aloud' : 'Mverani',
+    finish: lang === 'English' ? 'Close Reader?' : 'Kodi Mwamaliza?',
+    resume: lang === 'English' ? 'Keep Reading' : 'Pitirizani Kuwerenga',
+    tts: lang === 'English' ? 'Read Page' : 'Mverani',
     stopTts: lang === 'English' ? 'Stop' : 'Imani',
-    search: lang === 'English' ? 'Search book...' : 'Sakasaka m\'bukuli...',
-    sidebar: lang === 'English' ? 'Contents' : 'Zamkati',
+    sidebar: lang === 'English' ? 'Page List' : 'Mndandanda',
+    explain: lang === 'English' ? 'AI Assistant' : 'Wothandiza wa AI',
+    simplifier: lang === 'English' ? 'Explain Page' : 'Masulirani Tsamba',
   };
 
   // PDF & Text Content States
@@ -60,15 +56,13 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
   const [extractedPages, setExtractedPages] = useState<Record<number, string>>({});
   const [extractionProgress, setExtractionProgress] = useState(0);
   
-  const containerRef = useRef<HTMLDivElement>(null);
   const flipPageRef = useRef<HTMLCanvasElement | null>(null);
-  const scrollPageRefs = useRef<(HTMLCanvasElement | null)[]>([]);
   const currentRenderTask = useRef<any>(null);
   const extractionAbortRef = useRef<boolean>(false);
 
-  // AI States
+  // AI Quiz States
   const [isQuizOpen, setIsQuizOpen] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [isGeneratingQuiz, setIsGeneratingQuiz] = useState(false);
   const [chapters, setChapters] = useState<QuizChapter[]>([]);
   const [activeChapterIndex, setActiveChapterIndex] = useState(0);
   const [quizStep, setQuizStep] = useState(0);
@@ -93,7 +87,7 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
     }
   };
 
-  // Progressive Text Extraction
+  // Background Text Extraction for AI features
   const extractTextProgressively = async (pdf: any) => {
     for (let i = 1; i <= pdf.numPages; i++) {
       if (extractionAbortRef.current) break;
@@ -105,8 +99,7 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
       setExtractedPages(prev => ({ ...prev, [i]: pageText }));
       setExtractionProgress(Math.round((i / pdf.numPages) * 100));
       
-      // Yield to main thread for smooth UI
-      if (i % 5 === 0) await new Promise(resolve => setTimeout(resolve, 10));
+      if (i % 3 === 0) await new Promise(resolve => setTimeout(resolve, 5));
     }
   };
 
@@ -135,11 +128,10 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
           setPdfDoc(pdf);
           setNumPages(pdf.numPages);
           setIsRenderLoading(false);
-          // Start background extraction
           extractTextProgressively(pdf);
         }
       } catch (err) {
-        console.error("PDF Load Failed:", err);
+        console.error("PDF Interactive Load Failed:", err);
         if (isMounted) setIsRenderLoading(false);
       }
     };
@@ -153,8 +145,9 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
     };
   }, [material]);
 
-  const renderCanvasPage = useCallback(async (pageNum: number, canvas: HTMLCanvasElement, scale = 1.8) => {
+  const renderCanvasPage = useCallback(async (pageNum: number, canvas: HTMLCanvasElement, scale = 2.0) => {
     if (!pdfDoc || !canvas) return;
+    cleanupRender();
     try {
       const page = await pdfDoc.getPage(pageNum);
       const viewport = page.getViewport({ scale });
@@ -162,45 +155,33 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
       if (!context) return;
       canvas.height = viewport.height;
       canvas.width = viewport.width;
-      const renderTask = page.render({ canvasContext: context, viewport: viewport });
-      await renderTask.promise;
+      currentRenderTask.current = page.render({ canvasContext: context, viewport: viewport });
+      await currentRenderTask.current.promise;
     } catch (err: any) {
       if (err.name !== 'RenderingCancelledException') console.error(err);
     }
   }, [pdfDoc]);
 
-  // View Mode Side Effects
   useEffect(() => {
-    if (!pdfDoc) return;
-    
-    if (viewMode === 'flip' && flipPageRef.current) {
+    if (viewMode === 'flip' && flipPageRef.current && pdfDoc) {
       renderCanvasPage(currentPage, flipPageRef.current);
-    } else if (viewMode === 'scroll') {
-      // Pre-render current and next 2 pages for "Instant" feel
-      const range = [currentPage, currentPage + 1, currentPage + 2];
-      range.forEach(p => {
-        if (p <= numPages && scrollPageRefs.current[p - 1]) {
-          renderCanvasPage(p, scrollPageRefs.current[p - 1] as HTMLCanvasElement);
-        }
-      });
+      setAiExplanation(null); // Reset AI sidebar for new page
     }
-  }, [currentPage, viewMode, pdfDoc, renderCanvasPage, numPages]);
+  }, [currentPage, viewMode, pdfDoc, renderCanvasPage]);
 
-  const handleScroll = () => {
-    if (!containerRef.current || viewMode !== 'scroll') return;
-    const { scrollTop, clientHeight } = containerRef.current;
-    const scrollMiddle = scrollTop + (clientHeight / 2);
-    let cumulativeHeight = 0;
-    
-    for (let i = 0; i < numPages; i++) {
-      const canvas = scrollPageRefs.current[i];
-      if (canvas) {
-        cumulativeHeight += canvas.offsetHeight + 32;
-        if (scrollMiddle < cumulativeHeight) {
-          if (currentPage !== i + 1) setCurrentPage(i + 1);
-          break;
-        }
-      }
+  const handleExplainPage = async () => {
+    const text = extractedPages[currentPage];
+    if (!text) return;
+
+    setIsExplaining(true);
+    setAiExplanation(null);
+    try {
+      const result = await aiService.explainPage(text, lang);
+      setAiExplanation(result);
+    } catch (err) {
+      setAiExplanation("AI Assistant is currently offline. Please try again later.");
+    } finally {
+      setIsExplaining(false);
     }
   };
 
@@ -209,8 +190,8 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
       window.speechSynthesis.cancel();
       setIsSpeaking(false);
     } else {
-      const textToRead = Object.values(extractedPages).join(' ');
-      const utterance = new SpeechSynthesisUtterance(textToRead.slice(0, 10000)); // Limit for stability
+      const textToRead = extractedPages[currentPage] || "";
+      const utterance = new SpeechSynthesisUtterance(textToRead);
       utterance.onend = () => setIsSpeaking(false);
       window.speechSynthesis.speak(utterance);
       setIsSpeaking(true);
@@ -218,36 +199,17 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
   };
 
   const handleGenerateQuiz = async () => {
-    setIsGenerating(true);
+    setIsGeneratingQuiz(true);
     setIsQuizOpen(true);
     setQuizFinished(false);
     try {
-      const context = Object.values(extractedPages).slice(0, 5).join(' ').slice(0, 5000);
+      const context = Object.values(extractedPages).slice(0, 8).join(' ').slice(0, 6000);
       const data = await aiService.generateQuiz(material.title, material.subject, material.grade, context);
       setChapters(data);
     } catch (err) {
       console.error(err);
     } finally {
-      setIsGenerating(false);
-    }
-  };
-
-  const filteredExtractedText = useMemo(() => {
-    if (!searchQuery) return extractedPages;
-    const filtered: Record<number, string> = {};
-    Object.entries(extractedPages).forEach(([page, text]) => {
-      if (text.toLowerCase().includes(searchQuery.toLowerCase())) {
-        filtered[Number(page)] = text;
-      }
-    });
-    return filtered;
-  }, [extractedPages, searchQuery]);
-
-  const getThemeClass = () => {
-    switch (readerTheme) {
-      case 'dark': return 'bg-slate-900 text-slate-100';
-      case 'sepia': return 'bg-[#f4ecd8] text-[#5b4636]';
-      default: return 'bg-white text-slate-900';
+      setIsGeneratingQuiz(false);
     }
   };
 
@@ -255,6 +217,7 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
 
   return (
     <div className="fixed inset-0 z-[100] bg-slate-950 flex flex-col h-screen w-screen overflow-hidden animate-in fade-in duration-300">
+      
       {/* Header */}
       <header className="bg-emerald-900 text-white flex-none flex items-center justify-between px-4 py-3 md:px-8 shadow-2xl z-[110]">
         <div className="flex items-center min-w-0 flex-1">
@@ -265,56 +228,35 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
             <h4 className="font-black text-sm md:text-lg truncate tracking-tight">{material.title}</h4>
             <div className="flex items-center gap-2">
                <div className="flex bg-black/30 rounded-xl p-0.5 border border-white/10">
-                 <button onClick={() => setViewMode('web')} className={`px-3 py-1 text-[8px] font-black uppercase rounded-lg transition-all ${viewMode === 'web' ? 'bg-emerald-600 text-white shadow-lg' : 'text-white/40'}`}>{t.web}</button>
+                 <button onClick={() => setViewMode('flip')} className={`px-3 py-1 text-[8px] font-black uppercase rounded-lg transition-all ${viewMode === 'flip' ? 'bg-emerald-600 text-white shadow-lg' : 'text-white/40'}`}>{t.flipbook}</button>
                  {!material.isDigital && (
-                   <>
-                    <button onClick={() => setViewMode('flip')} className={`px-3 py-1 text-[8px] font-black uppercase rounded-lg transition-all ${viewMode === 'flip' ? 'bg-emerald-600 text-white shadow-lg' : 'text-white/40'}`}>{t.flipbook}</button>
-                    <button onClick={() => setViewMode('scroll')} className={`px-3 py-1 text-[8px] font-black uppercase rounded-lg transition-all ${viewMode === 'scroll' ? 'bg-emerald-600 text-white shadow-lg' : 'text-white/40'}`}>{t.scroll}</button>
-                   </>
+                   <button onClick={() => setViewMode('native')} className={`px-3 py-1 text-[8px] font-black uppercase rounded-lg transition-all ${viewMode === 'native' ? 'bg-emerald-600 text-white shadow-lg' : 'text-white/40'}`}>{t.native}</button>
                  )}
                </div>
-               {extractionProgress < 100 && viewMode === 'web' && (
-                 <span className="text-[8px] font-black uppercase text-emerald-400 animate-pulse">Loading Content {extractionProgress}%</span>
-               )}
             </div>
           </div>
         </div>
 
         <div className="flex items-center space-x-2 md:space-x-4">
-          <button onClick={() => setShowSearch(!showSearch)} className={`p-2.5 rounded-xl transition-all ${showSearch ? 'bg-white/20' : 'hover:bg-white/10'}`}>
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-          </button>
-          <button onClick={toggleSpeech} className={`px-4 py-2.5 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all shadow-lg flex items-center gap-2 ${isSpeaking ? 'bg-red-600 animate-pulse' : 'bg-blue-600 hover:bg-blue-700'}`}>
-            <span>{isSpeaking ? '🔊' : '🔈'}</span>
-            <span className="hidden md:inline">{isSpeaking ? t.stopTts : t.tts}</span>
-          </button>
-          <button onClick={handleGenerateQuiz} className="bg-purple-600 hover:bg-purple-700 text-white px-4 md:px-5 py-2.5 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all shadow-lg">✨ Quiz</button>
+          <button onClick={handleGenerateQuiz} className="bg-purple-600 hover:bg-purple-700 text-white px-4 md:px-5 py-2.5 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all shadow-lg hidden sm:block">✨ Smart Quiz</button>
           <button onClick={() => setShowConfirmClose(true)} className="p-2.5 bg-red-500/20 text-red-100 rounded-xl hover:bg-red-500/30 transition-all"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12" /></svg></button>
         </div>
       </header>
 
-      {/* Reading Progress Top Bar */}
-      <div className="h-1 w-full bg-emerald-950 flex-none overflow-hidden relative z-[105]">
-        <div 
-          className="h-full bg-emerald-500 transition-all duration-300 shadow-[0_0_10px_rgba(16,185,129,0.5)]" 
-          style={{ width: `${readingProgress}%` }}
-        />
-      </div>
-
       <div className="flex-1 flex overflow-hidden relative">
         {/* Navigation Sidebar */}
         <div className={`absolute lg:relative z-[100] h-full bg-slate-900 border-r border-white/5 transition-all duration-300 ease-in-out ${isSidebarOpen ? 'w-72 opacity-100' : 'w-0 opacity-0 overflow-hidden'}`}>
-          <div className="p-6 h-full flex flex-col">
-            <h3 className="text-white font-black uppercase tracking-widest text-xs mb-6 flex items-center gap-2">
-              <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+          <div className="p-8 h-full flex flex-col">
+            <h3 className="text-white font-black uppercase tracking-[0.2em] text-xs mb-8 flex items-center gap-3">
+              <span className="w-1.5 h-6 bg-emerald-500 rounded-full"></span>
               {t.sidebar}
             </h3>
-            <div className="flex-1 overflow-y-auto custom-scrollbar space-y-1">
+            <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2">
               {Array.from({ length: numPages }).map((_, i) => (
                 <button 
                   key={i} 
                   onClick={() => { setCurrentPage(i + 1); setIsSidebarOpen(window.innerWidth > 1024); }}
-                  className={`w-full p-3 rounded-xl text-left transition-all flex items-center justify-between group ${currentPage === i + 1 ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}
+                  className={`w-full p-4 rounded-2xl text-left transition-all flex items-center justify-between group ${currentPage === i + 1 ? 'bg-emerald-600 text-white shadow-xl' : 'text-slate-500 hover:bg-white/5 hover:text-white'}`}
                 >
                   <span className="text-[11px] font-black uppercase tracking-wider">Page {i + 1}</span>
                   {extractedPages[i + 1] && <div className={`w-1.5 h-1.5 rounded-full ${currentPage === i + 1 ? 'bg-white' : 'bg-emerald-500 opacity-0 group-hover:opacity-100'}`} />}
@@ -324,136 +266,121 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
           </div>
         </div>
 
-        {/* Main Reader Content Area */}
-        <div className="flex-1 flex flex-col relative overflow-hidden">
-          {/* Reader Sub-Controls */}
-          <div className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 md:px-8 py-3 flex items-center justify-between z-10 flex-none">
-            <div className="flex items-center gap-4 md:gap-6">
-              <div className="flex bg-white dark:bg-slate-900 rounded-xl p-1 shadow-sm border border-slate-200 dark:border-slate-700">
-                 {(['light', 'sepia', 'dark'] as ReaderTheme[]).map(theme => (
-                   <button 
-                     key={theme}
-                     onClick={() => setReaderTheme(theme)} 
-                     className={`w-8 h-8 rounded-lg transition-all flex items-center justify-center font-bold text-xs ${
-                       readerTheme === theme 
-                        ? (theme === 'sepia' ? 'bg-[#d2c29d] text-[#5b4636] shadow' : 'bg-emerald-500 text-white shadow') 
-                        : 'text-slate-400 hover:text-slate-600'
-                     }`}
-                   >
-                     A
-                   </button>
-                 ))}
-              </div>
-              <div className="flex items-center gap-2">
-                <button onClick={() => setFontSize(p => Math.max(12, p - 2))} className="w-8 h-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg font-black hover:bg-slate-50 transition-colors">-</button>
-                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest min-w-[30px] text-center">{fontSize}pt</span>
-                <button onClick={() => setFontSize(p => Math.min(36, p + 2))} className="w-8 h-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg font-black hover:bg-slate-50 transition-colors">+</button>
-              </div>
-            </div>
-
-            {showSearch && (
-              <div className="flex-1 max-w-xs mx-4 animate-in slide-in-from-right-4">
-                <div className="relative">
-                  <input 
-                    type="text" 
-                    autoFocus
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder={t.search}
-                    className="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-sm font-bold transition-all"
-                  />
-                  <svg className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                </div>
-              </div>
-            )}
-            
-            <div className="hidden sm:block text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">{viewMode.toUpperCase()} VIEWING</div>
-          </div>
-
-          {/* Actual Reader Component */}
-          <div ref={containerRef} onScroll={handleScroll} className={`flex-1 overflow-y-auto custom-scrollbar relative ${getThemeClass()}`}>
-            <div className={`w-full h-full max-w-4xl mx-auto transition-all ${viewMode === 'web' ? 'p-6 md:p-16 lg:p-24' : 'flex items-center justify-center p-4'}`}>
-               {isRenderLoading ? (
-                 <div className="h-full flex flex-col items-center justify-center space-y-6">
-                    <div className="w-16 h-16 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
-                    <p className="text-emerald-500 font-black text-[10px] uppercase tracking-[0.2em] animate-pulse">{t.loading}</p>
-                 </div>
-               ) : viewMode === 'web' ? (
-                 <article className="animate-in fade-in duration-700 space-y-16" style={{ fontSize: `${fontSize}px` }}>
-                    {Object.keys(filteredExtractedText).length === 0 && searchQuery ? (
-                      <div className="py-20 text-center text-slate-400 font-black uppercase tracking-widest text-xs">No results found for "{searchQuery}"</div>
-                    ) : (
-                      Object.entries(filteredExtractedText).map(([pageNum, text]) => (
-                        <div key={pageNum} className="relative group/page">
-                          <div className="absolute -left-12 top-0 text-[9px] font-black text-slate-300 dark:text-slate-600 opacity-0 group-hover/page:opacity-100 transition-opacity uppercase vertical-rl">Page {pageNum}</div>
-                          <div className="leading-[1.8] whitespace-pre-wrap font-medium">
-                             {searchQuery ? (
-                               text.split(new RegExp(`(${searchQuery})`, 'gi')).map((part, i) => 
-                                 part.toLowerCase() === searchQuery.toLowerCase() 
-                                   ? <mark key={i} className="bg-yellow-200 dark:bg-yellow-900/50 dark:text-yellow-100 px-1 rounded">{part}</mark>
-                                   : part
-                               )
-                             ) : text}
-                          </div>
-                          <div className="h-px w-full bg-slate-100 dark:bg-slate-800 mt-12 opacity-50"></div>
-                        </div>
-                      ))
-                    )}
-                    {extractionProgress < 100 && (
-                      <div className="py-10 text-center animate-pulse">
-                         <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Retrieving more pages... {extractionProgress}%</p>
-                      </div>
-                    )}
-                 </article>
-               ) : viewMode === 'flip' ? (
-                 <div className="w-full h-full flex flex-col items-center justify-center gap-12 relative">
-                    <div className="relative perspective-2000">
-                       <div className="bg-white shadow-[0_60px_120px_-20px_rgba(0,0,0,0.6)] rounded-lg overflow-hidden border border-slate-200 transform hover:scale-[1.01] transition-transform duration-700">
-                          <canvas key={currentPage} ref={flipPageRef} className="max-w-[95vw] lg:max-w-[60vw] h-auto" />
-                          <div className="absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-black/10 to-transparent pointer-events-none"></div>
-                       </div>
-                       <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="absolute left-0 -translate-x-1/2 lg:-translate-x-12 top-1/2 -translate-y-1/2 p-5 bg-emerald-600 text-white rounded-full shadow-2xl active:scale-90 transition-all disabled:opacity-0 z-20"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M15 19l-7-7 7-7" /></svg></button>
-                       <button onClick={() => setCurrentPage(p => Math.min(numPages, p + 1))} disabled={currentPage === numPages} className="absolute right-0 translate-x-1/2 lg:translate-x-12 top-1/2 -translate-y-1/2 p-5 bg-emerald-600 text-white rounded-full shadow-2xl active:scale-90 transition-all disabled:opacity-0 z-20"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M9 5l7 7-7 7" /></svg></button>
-                    </div>
-                    <div className="bg-black/80 backdrop-blur-xl px-10 py-4 rounded-[2rem] border border-white/10 shadow-2xl flex items-center gap-6">
-                       <span className="text-white/60 font-black text-[10px] uppercase tracking-widest">Page {currentPage} of {numPages}</span>
-                       <input type="range" min="1" max={numPages} value={currentPage} onChange={(e) => setCurrentPage(parseInt(e.target.value))} className="w-32 md:w-64 h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500" />
-                    </div>
-                 </div>
-               ) : viewMode === 'scroll' ? (
-                 <div className="flex flex-col items-center gap-10">
-                   {Array.from({ length: numPages }).map((_, i) => (
-                     <div key={i} className="bg-white shadow-2xl border border-slate-200/10 rounded-sm overflow-hidden transition-all duration-500 hover:scale-[1.01]">
-                       <canvas ref={el => { scrollPageRefs.current[i] = el; }} className="max-w-full h-auto min-h-[400px] bg-slate-100 dark:bg-slate-900" />
-                       <div className="p-3 bg-slate-50 dark:bg-slate-950 flex justify-center border-t border-slate-100 dark:border-slate-800">
-                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Page {i + 1}</span>
-                       </div>
+        {/* Main Reader Surface */}
+        <div className="flex-1 flex flex-col relative overflow-hidden bg-slate-50 dark:bg-slate-900">
+          <div className={`flex-1 overflow-y-auto custom-scrollbar relative flex items-center justify-center p-4 md:p-8`}>
+            {isRenderLoading ? (
+               <div className="flex flex-col items-center justify-center space-y-6">
+                  <div className="w-16 h-16 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
+                  <p className="text-emerald-500 font-black text-[10px] uppercase tracking-[0.2em] animate-pulse">{t.loading}</p>
+               </div>
+            ) : viewMode === 'flip' ? (
+               <div className="w-full h-full flex flex-col items-center justify-center gap-8 relative max-w-5xl mx-auto">
+                  <div className="relative group/book">
+                     <div className="bg-white shadow-[0_40px_80px_-15px_rgba(0,0,0,0.5)] rounded-sm overflow-hidden border border-slate-200 transition-transform duration-500 hover:scale-[1.01]">
+                        <canvas ref={flipPageRef} className="max-w-[95vw] lg:max-w-[65vw] h-auto block" />
+                        <div className="absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-black/10 to-transparent pointer-events-none"></div>
                      </div>
-                   ))}
-                 </div>
-               ) : (
-                 <div className="w-full h-full relative">
-                    <iframe src={getEmbedUrl(material.fileUrl)} className="w-full h-full border-none bg-slate-900" title={material.title} allow="autoplay" />
-                 </div>
-               )}
-            </div>
+                     
+                     <button 
+                       onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
+                       disabled={currentPage === 1} 
+                       className="absolute left-0 -translate-x-1/2 top-1/2 -translate-y-1/2 p-4 bg-emerald-600 text-white rounded-full shadow-2xl active:scale-90 transition-all disabled:opacity-0 z-20 hover:bg-emerald-700"
+                     >
+                       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M15 19l-7-7 7-7" /></svg>
+                     </button>
+                     
+                     <button 
+                       onClick={() => setCurrentPage(p => Math.min(numPages, p + 1))} 
+                       disabled={currentPage === numPages} 
+                       className="absolute right-0 translate-x-1/2 top-1/2 -translate-y-1/2 p-4 bg-emerald-600 text-white rounded-full shadow-2xl active:scale-90 transition-all disabled:opacity-0 z-20 hover:bg-emerald-700"
+                     >
+                       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M9 5l7 7-7 7" /></svg>
+                     </button>
+                  </div>
+
+                  {/* Progress Indicator */}
+                  <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl px-10 py-3 rounded-full border border-slate-200 dark:border-white/10 shadow-xl flex items-center gap-6">
+                     <span className="text-slate-500 dark:text-white/60 font-black text-[10px] uppercase tracking-widest tabular-nums">Page {currentPage} of {numPages}</span>
+                     <div className="w-32 md:w-64 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden relative">
+                        <div className="h-full bg-emerald-500 transition-all duration-300" style={{ width: `${readingProgress}%` }} />
+                     </div>
+                  </div>
+               </div>
+            ) : (
+               <div className="w-full h-full min-h-[80vh] relative rounded-xl overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-800">
+                  <iframe src={getEmbedUrl(material.fileUrl)} className="w-full h-full border-none bg-slate-900" title={material.title} allow="autoplay" />
+               </div>
+            )}
           </div>
+        </div>
+
+        {/* AI Assistant Sidebar */}
+        <div className={`absolute lg:relative right-0 z-[100] h-full bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-white/5 transition-all duration-300 ease-in-out flex flex-col ${aiExplanation || isExplaining ? 'w-80 lg:w-96' : 'w-0 overflow-hidden'}`}>
+           <div className="p-8 h-full flex flex-col">
+              <div className="flex justify-between items-center mb-8">
+                 <h3 className="text-slate-900 dark:text-white font-black uppercase tracking-widest text-xs flex items-center gap-3">
+                    <span className="w-1.5 h-6 bg-purple-500 rounded-full"></span>
+                    {t.explain}
+                 </h3>
+                 <button onClick={() => setAiExplanation(null)} className="p-2 text-slate-400 hover:text-red-500 transition-colors">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                 </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto custom-scrollbar space-y-6">
+                 {isExplaining ? (
+                   <div className="space-y-6 animate-pulse">
+                      <div className="h-4 bg-slate-100 dark:bg-slate-800 rounded-full w-3/4"></div>
+                      <div className="h-4 bg-slate-100 dark:bg-slate-800 rounded-full"></div>
+                      <div className="flex justify-center py-10">
+                        <div className="w-12 h-12 border-4 border-purple-500/20 border-t-purple-500 rounded-full animate-spin"></div>
+                      </div>
+                   </div>
+                 ) : (
+                   <div className="animate-in fade-in duration-500">
+                      <div className="bg-purple-50 dark:bg-purple-900/20 p-6 rounded-3xl border border-purple-100 dark:border-purple-800 mb-6">
+                         <p className="text-[10px] font-black uppercase tracking-widest text-purple-600 dark:text-purple-400 mb-4">Page {currentPage} Analysis</p>
+                         <div className="text-sm font-medium text-slate-700 dark:text-slate-200 leading-relaxed whitespace-pre-wrap italic">
+                            {aiExplanation}
+                         </div>
+                      </div>
+                      <div className="p-4 bg-slate-50 dark:bg-slate-950/50 rounded-2xl border border-slate-100 dark:border-slate-800 text-center">
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em]">Curriculum Support Powered by Gemini</p>
+                      </div>
+                   </div>
+                 )}
+              </div>
+           </div>
         </div>
       </div>
 
-      {/* Floating Action Menu (Mobile Optimized) */}
-      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[150] flex gap-2">
-         <div className="bg-white dark:bg-slate-900 p-2 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-800 flex items-center gap-1">
-            <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className={`p-3 rounded-xl transition-all ${isSidebarOpen ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:bg-slate-100'}`} title="TOC">
-               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 6h16M4 12h16M4 18h7" /></svg>
+      {/* Floating Interactive Dock */}
+      <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[150] flex gap-3 animate-in slide-in-from-bottom-10 duration-700">
+         <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl px-6 py-4 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-white/20 dark:border-white/5 flex items-center gap-4">
+            
+            <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className={`p-4 rounded-2xl transition-all ${isSidebarOpen ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`} title={t.sidebar}>
+               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 6h16M4 12h16M4 18h7" /></svg>
             </button>
-            <button onClick={() => setShowSearch(!showSearch)} className={`p-3 rounded-xl transition-all ${showSearch ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:bg-slate-100'}`} title="Search">
-               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+
+            <div className="w-px h-10 bg-slate-200 dark:bg-slate-800 mx-1" />
+
+            <button onClick={handleExplainPage} disabled={isExplaining} className={`group flex items-center gap-3 px-6 py-4 rounded-2xl transition-all ${isExplaining ? 'bg-purple-100 text-purple-400' : 'bg-purple-600 text-white shadow-xl hover:bg-purple-700 active:scale-95'}`}>
+               <span className="text-xl leading-none">🧠</span>
+               <span className="font-black uppercase text-[10px] tracking-widest hidden md:inline">{isExplaining ? 'Thinking...' : t.simplifier}</span>
             </button>
-            <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-1" />
-            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} className="p-3 text-slate-400 hover:text-emerald-600 transition-all"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15 19l-7-7 7-7" /></svg></button>
-            <span className="text-[10px] font-black text-slate-900 dark:text-white px-2 tracking-tighter">{currentPage}/{numPages}</span>
-            <button onClick={() => setCurrentPage(p => Math.min(numPages, p + 1))} className="p-3 text-slate-400 hover:text-emerald-600 transition-all"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M9 5l7 7-7 7" /></svg></button>
+
+            <button onClick={toggleSpeech} className={`p-4 rounded-2xl transition-all ${isSpeaking ? 'bg-blue-600 text-white animate-pulse' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-blue-500'}`} title={t.tts}>
+               <span className="text-xl leading-none">{isSpeaking ? '🔊' : '🔈'}</span>
+            </button>
+
+            <div className="w-px h-10 bg-slate-200 dark:bg-slate-800 mx-1" />
+
+            <div className="flex items-center gap-4 bg-slate-50 dark:bg-slate-950 px-5 py-3 rounded-2xl border border-slate-100 dark:border-slate-800">
+               <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} className="text-slate-400 hover:text-emerald-500 transition-all active:scale-75"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15 19l-7-7 7-7" /></svg></button>
+               <span className="text-[12px] font-black text-slate-900 dark:text-white w-14 text-center tabular-nums">{currentPage} / {numPages}</span>
+               <button onClick={() => setCurrentPage(p => Math.min(numPages, p + 1))} className="text-slate-400 hover:text-emerald-500 transition-all active:scale-75"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M9 5l7 7-7 7" /></svg></button>
+            </div>
          </div>
       </div>
 
@@ -463,15 +390,15 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
              <div className="bg-emerald-800 p-8 text-white flex justify-between items-center flex-none">
                 <div>
                    <h4 className="font-black uppercase tracking-widest text-[10px] opacity-60 mb-1">Assessment Tool</h4>
-                   <h2 className="text-2xl font-black tracking-tight">{material.subject} Revision</h2>
+                   <h2 className="text-2xl font-black tracking-tight">{material.subject} Checkup</h2>
                 </div>
                 <button onClick={() => setIsQuizOpen(false)} className="p-3 bg-white/10 rounded-2xl hover:bg-white/20 transition-all"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12" /></svg></button>
              </div>
              <div className="flex-1 overflow-y-auto p-10 bg-slate-50 dark:bg-slate-950/40 custom-scrollbar">
-                {isGenerating ? (
+                {isGeneratingQuiz ? (
                   <div className="h-full flex flex-col items-center justify-center text-center space-y-6">
                     <div className="w-20 h-20 border-[6px] border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
-                    <p className="text-xl font-black text-emerald-900 dark:text-emerald-400 animate-pulse tracking-tight uppercase tracking-widest">Building your quiz...</p>
+                    <p className="text-xl font-black text-emerald-900 dark:text-emerald-400 animate-pulse tracking-tight uppercase tracking-widest">Generating Assessment...</p>
                   </div>
                 ) : (
                   <div className="space-y-8 animate-in slide-in-from-right-4">
@@ -494,8 +421,8 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
                      ) : quizFinished && (
                         <div className="h-full flex flex-col items-center justify-center text-center space-y-8 py-20">
                           <span className="text-[8rem]">🎓</span>
-                          <h3 className="text-4xl font-black text-emerald-900 dark:text-emerald-100">Review Complete!</h3>
-                          <button onClick={() => setIsQuizOpen(false)} className="bg-emerald-600 text-white px-16 py-6 rounded-2xl font-black uppercase tracking-widest text-xs shadow-2xl active:scale-95 transition-all">Back to Reading</button>
+                          <h3 className="text-4xl font-black text-emerald-900 dark:text-emerald-100">Session Complete!</h3>
+                          <button onClick={() => setIsQuizOpen(false)} className="bg-emerald-600 text-white px-16 py-6 rounded-2xl font-black uppercase tracking-widest text-xs shadow-2xl active:scale-95 transition-all">Resume Reading</button>
                         </div>
                      )}
                   </div>
@@ -510,7 +437,7 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
           <div className="bg-white dark:bg-slate-900 rounded-[4rem] p-12 max-w-sm w-full text-center space-y-10 animate-in zoom-in duration-300 shadow-2xl border border-white/10">
             <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-none">{t.finish}</h3>
             <div className="space-y-4">
-              <button onClick={onClose} className="w-full py-6 bg-emerald-600 text-white font-black rounded-2xl shadow-xl uppercase tracking-widest text-[11px] active:scale-95 transition-all">End Session</button>
+              <button onClick={onClose} className="w-full py-6 bg-emerald-600 text-white font-black rounded-2xl shadow-xl uppercase tracking-widest text-[11px] active:scale-95 transition-all">Close Session</button>
               <button onClick={() => setShowConfirmClose(false)} className="w-full py-6 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-300 font-black rounded-2xl uppercase tracking-widest text-[11px] transition-all hover:bg-slate-200">{t.resume}</button>
             </div>
           </div>
@@ -521,8 +448,6 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #059669; border-radius: 10px; }
-        .vertical-rl { writing-mode: vertical-rl; }
-        .perspective-2000 { perspective: 3000px; }
       `}</style>
     </div>
   );
