@@ -1,4 +1,5 @@
-import { StudyMaterial, Message, User, UserProgress, Testimonial, Announcement, CommunityMessage, ChatRoom, ReadingStatus, Exam, ExamResult, EducationLevel, Grade, Category } from '../types';
+
+import { StudyMaterial, User, UserProgress, Announcement, ChatRoom, ReadingStatus, Exam, ExamResult, EducationLevel, Grade, Category } from '../types';
 import { supabase } from './supabase';
 
 const MATERIALS_KEY = 'study_hub_materials';
@@ -6,7 +7,6 @@ const MESSAGES_KEY = 'study_hub_messages';
 const COMMUNITY_MESSAGES_KEY = 'study_hub_community_messages';
 const USERS_KEY = 'study_hub_users';
 const PROGRESS_KEY = 'study_hub_progress';
-const TESTIMONIALS_KEY = 'study_hub_testimonials';
 const ANNOUNCEMENTS_KEY = 'study_hub_announcements';
 const CHAT_ROOMS_KEY = 'study_hub_chat_rooms';
 const EXAMS_KEY = 'study_hub_exams';
@@ -14,6 +14,78 @@ const EXAM_RESULTS_KEY = 'study_hub_exam_results';
 const LAST_SYNC_KEY = 'study_hub_last_sync';
 
 const SEED_MATERIALS: StudyMaterial[] = [
+  {
+    id: 'form1-chemistry-chirindanji',
+    title: 'Complete Form One Chemistry Notes',
+    level: EducationLevel.SECONDARY,
+    grade: 'Form 1' as Grade,
+    category: Category.NOTES,
+    subject: 'Chemistry',
+    fileUrl: '#digital',
+    fileName: 'Form1_Chemistry_Notes.digital',
+    isDigital: true,
+    uploadedAt: new Date().toISOString(),
+    content: `
+# TOPIC 1: INTRODUCTION TO CHEMISTRY
+## MEANING OF CHEMISTRY
+Chemistry is the branch of science dealing with elements and the compounds they form and the reactions they undergo.
+
+## BRANCHES OF CHEMISTRY
+The branches of chemistry include physical, environmental, analytical, industrial, organic and inorganic chemistry.
+
+**a. PHYSICAL CHEMISTRY**
+It is the study of how chemical compounds and their constituents react with each other.
+
+**b. ENVIRONMENTAL CHEMISTRY**
+It is the study of how chemicals react naturally in the environment and human impact on natural systems.
+
+**c. ANALYTICAL CHEMISTRY**
+It is the study of separation, identification, and quantification of the chemical components of natural and artificial materials.
+
+**d. INDUSTRIAL CHEMISTRY**
+It is the study of the application of physical and chemical processes towards the change of raw materials into beneficial products.
+
+**e. ORGANIC CHEMISTRY**
+It is the study of compounds that contain carbon except oxides of carbon and carbonates.
+
+**f. INORGANIC CHEMISTRY**
+It is the study of compounds that do not contain carbon and non-living things.
+
+---
+
+## IMPORTANCE OF CHEMISTRY IN EVERYDAY LIFE
+Chemistry is important in everyday life and it is applied in different ways. Some of the applications of chemistry are:
+• Water treatment. Different chemical processes are used to purify water so that it is safe for drinking.
+• Cooking nsima. Mixing of the ingredients applies concepts in chemistry.
+• Making a cup of tea.
+• Pharmaceuticals.
+• Food industries. Chemistry is involved in the processing of the food. For example, lime is added to brown sugar so that it becomes white.
+• Manufacture of soap and detergents also applies knowledge of chemistry.
+• Manufacture of pesticides.
+
+---
+
+## TOPIC 2: ESSENTIAL MATHEMATICAL SKILLS IN CHEMISTRY
+## EXPRESSING NUMBERS IN STANDARD FORM
+The standard form or the scientific notation is a special way of writing very large number or very small numbers. When a number is expressed in standard form, its meaning or value does not change.
+The number is written in two parts which give the original number when multiplied. One of the numbers must be between 1 and 10 and the other is a power of ten.
+
+## TOPIC 3: COMPOSITION AND CLASSIFICATION OF MATTER
+## MATTER
+Matter is defined as anything that has mass and occupies space.
+
+## STATES OF MATTER
+There are three states of matter. These are solids, liquids and gases.
+
+---
+
+## TOPIC 4: ATOMIC STRUCTURE
+## ATOM
+An atom is defined as the smallest particle of matter.
+An atom consists of three sub-atomic particles. These include protons, neutrons and electrons.
+The central part of the atom is called the nucleus.
+    `
+  },
   {
     id: 'jce-social-studies-holly',
     title: 'JCE Social Studies (Forms 1 & 2)',
@@ -24,267 +96,21 @@ const SEED_MATERIALS: StudyMaterial[] = [
     fileUrl: 'https://raw.githubusercontent.com/mozilla/pdf.js/ba2edeae/web/compressed.tracemonkey-pldi-09.pdf',
     fileName: 'JCE_Social_Studies_Holly.pdf',
     uploadedAt: new Date().toISOString()
-  },
-  {
-    id: 'msce-chemistry-form3-chirindanji',
-    title: 'Complete Chemistry Notes (Form 3)',
-    level: EducationLevel.SECONDARY,
-    grade: 'Form 3' as Grade,
-    category: Category.NOTES,
-    subject: 'Chemistry',
-    fileUrl: '#digital',
-    fileName: 'Complete_Chemistry_Form3.digital',
-    isDigital: true,
-    uploadedAt: new Date().toISOString(),
-    content: `
-# Complete Chemistry Notes
-## Senior Secondary (Form 3) - Syllabus Based
-### Compiled by: Ganizani Chirindanji
-
----
-
-## TOPIC 1: EXPERIMENTAL TECHNIQUES
-
-### 1.1 Chemical Waste Management
-Chemical waste is a product or unwanted material from a chemical reaction or an expired product no longer needed.
-**Examples of Waste Products:**
-- Unused chemicals (acids, alkalis).
-- Broken laboratory glassware and sharp objects.
-- Plastics, waste papers, and rubbers.
-- Poisonous gases from reactions.
-
-**Safe Disposal Methods:**
-- **Normal Waste Bins:** For non-recyclable plastics, wood, and paper.
-- **Controlled Containers:** For sharp objects (scalpels) and hazardous items.
-- **Water Draining:** For harmless soluble inorganic salts and diluted detergents.
-- **Incineration:** High-temperature burning for syringes, needles, and organic solvents.
-
-### 1.2 Scientific Investigation
-A systematic process to find an answer to a problem.
-**Key Components:**
-1. **Problem Identification:** Asking questions (e.g., What causes rusting?).
-2. **Hypothesis:** A guessed answer based on experience.
-3. **Variables:**
-   - **Independent (IV):** The quantity you decide to change (x-axis).
-   - **Dependent (DV):** The quantity you observe/measure (y-axis).
-   - **Control (CV):** Factors kept constant.
-
-### 1.3 Purity of a Substance
-A pure substance has constant composition and consistent properties.
-**Criteria for Purity:**
-- **Melting Point:** Pure substances have a specific MP. Impurities lower the MP.
-- **Boiling Point:** Pure substances have a fixed BP. Impurities raise the BP.
-- **Chromatography:** Used to separate mixtures of soluble substances (dyes, inks).
-
-**Relative Flow Values (Rf):**
-Rf = (Distance travelled by substance) / (Distance travelled by solvent).
-*Rf values are always less than 1.*
-
----
-
-## TOPIC 2: NITROGEN, SULPHUR AND PHOSPHORUS
-
-### 2.1 Nitrogen (Group V)
-- Makes up 78% of the air.
-- Atomic Number: 7, Configuration: 2.5, Valency: 3.
-- **Properties:** Colorless, odorless, inert (triple covalent bond N≡N).
-- **Industrial Preparation:** The Haber Process.
-  - Nitrogen + Hydrogen ⇌ Ammonia (NH3).
-  - Conditions: Iron catalyst, 450°C, 300 atmospheres.
-
-### 2.2 Sulphur (Group VI)
-- Found in volcanic regions and metal ores.
-- **Extraction:** The Frasch Process.
-  - Super-heated water melts sulphur; compressed air forces it to the surface.
-- **Allotropes:** Rhombic (stable below 96°C) and Monoclinic (stable above 96°C).
-- **Industrial Use:** Manufacture of Sulphuric Acid via the Contact Process.
-  - Catalyst: Vanadium (V) Oxide.
-
-### 2.3 Phosphorus (Group V)
-- Atomic Number: 15, Configuration: 2.8.5.
-- **Allotropes:** White and Red phosphorus.
-- **Uses:** Fertilizers (NPK), matches, and detergents.
-
----
-
-## TOPIC 3: CHEMICAL BONDING AND PROPERTIES OF MATTER
-
-### 3.1 Ionic (Electrovalent) Bonding
-- Formed by transferring electrons from a metal (cation) to a non-metal (anion).
-- **Properties:** High MP/BP, conduct electricity in molten/aqueous state, soluble in water.
-
-### 3.2 Covalent Bonding
-- Formed by sharing electrons between non-metals.
-- **Properties:** Low MP/BP, insulators (non-electrolytes), volatile.
-- **Types:** Pure covalent (equal sharing) and Dative (one atom provides both electrons).
-
-### 3.3 Allotropy (Carbon)
-- **Graphite:** Hexagonal rings in layers. Conducts electricity due to delocalized electrons. Used as a lubricant.
-- **Diamond:** Tetrahedral structure. Hardest known substance. Non-conductor.
-
----
-
-## TOPIC 4: STOICHIOMETRY
-
-### 4.1 The Mole Concept
-- **The Mole:** Amount containing 6.023 x 10^23 particles (Avogadro's Constant).
-- **Molar Mass:** Mass of 1 mole (g/mol).
-- **Formulas:**
-  - Moles = Mass / Molar Mass.
-  - Molarity = Moles / Volume (dm³).
-
-### 4.2 Standard Solutions
-- A solution of known concentration.
-- **Dilution Law:** C1V1 = C2V2.
-
-### 4.3 Titration
-- Gradual addition of a titrant to an analyte to find unknown concentration.
-- **Indicators:** Phenolphthalein (pink in base) and Methyl Orange.
-
----
-
-## TOPIC 5: HEATS OF REACTION
-
-### 5.1 Enthalpy Change (ΔH)
-- **Exothermic:** Heat released to surroundings. ΔH is negative. Temperature rises. (e.g., Combustion, Neutralization).
-- **Endothermic:** Heat absorbed from surroundings. ΔH is positive. Temperature falls. (e.g., Photosynthesis).
-
----
-
-## TOPIC 6: ORGANIC CHEMISTRY (ALKANOLS)
-
-- **Functional Group:** Hydroxyl group (-OH).
-- **General Formula:** CnH2n+1OH.
-- **Primary Alkanol:** -OH bonded to a carbon with only one other carbon bond.
-- **Secondary Alkanol:** -OH bonded to a carbon with two other carbon bonds.
-- **Tertiary Alkanol:** -OH bonded to a carbon with three other carbon bonds.
-
----
-
-## TOPIC 10: IDENTIFICATION OF UNKNOWN COMPOUNDS
-
-**Test Results for Families:**
-- **Alkanes:** Insoluble in water, no reaction with Bromine.
-- **Alkenes:** Decolorize orange/brown Bromine solution.
-- **Alkanols:** Soluble in water, react with Sodium to produce Hydrogen gas.
-- **Alkanoic Acids:** Turn blue litmus red, pH < 7.
-- **Alkanals (Aldehydes):** Form orange precipitate with 2,4-DNPH; Silver mirror with Tollen's reagent.
-- **Alkanones (Ketones):** Form orange precipitate with 2,4-DNPH; No reaction with Tollen's.
-    `
-  },
-  {
-    id: 'msce-chemistry-chuzu',
-    title: 'Basic Principles Chemistry (Form 4)',
-    level: EducationLevel.SECONDARY,
-    grade: 'Form 4' as Grade,
-    category: Category.BOOKS,
-    subject: 'Chemistry',
-    fileUrl: '#digital',
-    fileName: 'MSCE_Chemistry_Chuzu.digital',
-    isDigital: true,
-    uploadedAt: new Date().toISOString(),
-    content: `
-# Basic Principles Chemistry
-## Senior Secondary Students (Form 3 & 4)
-### Author: Chuzu Elisha C.
-
-**Foreword**
-This book is a continuation of Basic Principle Chemistry for junior students. It contains special basics that will help students to understand Chemistry easily as they are studying to prepare for the Malawi School Certificate of Examination (MSCE).
-
----
-
-## UNIT 1: Nitrogen, Sulphur and Phosphorus
-
-### 1.11 Nitrogen
-Nitrogen is an essential element, which makes up 78% of air. In the periodic table, nitrogen is in Group V and Period 2. It is a non-metallic substance with a valance of three.
-
-#### Sources of Nitrogen
-- **The Air:** Nitrogen makes up 78% of the atmosphere.
-- **The Soil:** Found in nitrogen-containing compounds called nitrates, produced by lighting effects and decaying organic matter.
-
-#### Physical Properties of Nitrogen
-- It has no smell.
-- It is a colourless gas.
-- Almost insoluble in water.
-- Less dense than air.
-
-#### Chemical Properties
-- **Diatomic Molecule:** Exists as N2 with a triple covalent bond (N≡N).
-- **Reaction with Alkali Metals:** Forms nitrogen alkalides (e.g., Magnesium nitride).
-- **Haber Process:** Reacts with Hydrogen to form Ammonia (NH3) under 300 atm and 450°C.
-
-### 1.19 Sulphur
-Sulphur is a non-metallic element found in Group VI and Period 2. It is extracted by the Frasch process.
-
-#### Sources of Sulphur
-- Crude oil and natural gases.
-- Metal ores like Copper pyrites (CuFeS2).
-- Volcanic regions.
-
-#### Properties of Sulphur
-- Does not conduct electricity.
-- Yellow brittle solid at room temperature.
-- Insoluble in water.
-
----
-
-## UNIT 2: Chemical Bonding II
-
-### 2.10 Introduction
-Chemical bond is defined as a force of attraction between two particles.
-
-#### Types of Bonds
-1. **Ionic Bond:** Involves transfer of electrons from metal to non-metal.
-2. **Covalent Bond:** Involves sharing of electrons between non-metals.
-3. **Metallic Bond:** Occurs among metals, involving a sea of delocalized electrons.
-
----
-
-## UNIT 3: Stoichiometry
-
-### 3.10 Introduction
-Stoichiometry is the branch of chemistry based on the law of conservation of mass: "the total mass of the reactants equals the total mass of the products."
-
-#### The Mole
-One mole is the amount of substance which contains 6.023 x 10^23 elementary particles (Avogadro's constant).
-
----
-
-## UNIT 13: Oxidation and Reduction Reactions
-
-### 13.11 Oxidation Number
-Oxidation refers to the loss of electrons or addition of oxygen. Reduction refers to the gain of electrons or loss of oxygen.
-
----
-
-## UNIT 14: Electrolysis
-
-### 14.11 Process
-Electrolysis is the process of splitting up substances by passing an electric current through them.
-- **Anode:** Positive electrode (attracts anions).
-- **Cathode:** Negative electrode (attracts cations).
-    `
   }
 ];
 
 const DEFAULT_ROOMS: ChatRoom[] = [
-  { id: 'difficult-topics', title: 'Understanding difficult topics', description: 'Break down complex concepts with your peers.', icon: '🧠', activeUsers: 156 },
-  { id: 'homework-help', title: 'Homework Help', description: 'Stuck on a problem? Ask the community for a hand.', icon: '📚', activeUsers: 203 },
-  { id: 'exam-talk', title: 'Exam Talk/Question & Answer', description: 'Strategies, past paper discussions, and exam tips.', icon: '📝', activeUsers: 342 },
-  { id: 'wellbeing', title: 'Student Life & Wellbeing', description: 'Balance, mental health, and life as a student in Malawi.', icon: '🌱', activeUsers: 89 },
-  { id: 'careers', title: 'Careers & Life After School', description: 'Discuss university choices, jobs, and future paths.', icon: '🚀', activeUsers: 124 },
-  { id: 'general-chat', title: 'General chat', description: 'Casual conversation and connecting with other students.', icon: '💬', activeUsers: 412 }
+  { id: 'general-chat', title: 'General chat', description: 'Casual conversation and connecting with other students.', icon: '💬', activeUsers: 412 },
+  { id: 'exam-talk', title: 'Exam Prep', description: 'Strategies and past paper discussions.', icon: '📝', activeUsers: 342 }
 ];
 
 export const storage = {
   getMaterials: (): StudyMaterial[] => {
     const data = localStorage.getItem(MATERIALS_KEY);
     const materials = data ? JSON.parse(data) : [];
-    
     const seedIds = SEED_MATERIALS.map(sm => sm.id);
     const existingIds = materials.map((m: any) => m.id);
     const needsSeeding = seedIds.some(id => !existingIds.includes(id));
-
     if (materials.length === 0 || needsSeeding) {
       const missingSeeds = SEED_MATERIALS.filter(sm => !existingIds.includes(sm.id));
       const combined = [...materials, ...missingSeeds];
@@ -298,7 +124,6 @@ export const storage = {
     const materials = storage.getMaterials();
     materials.push(material);
     localStorage.setItem(MATERIALS_KEY, JSON.stringify(materials));
-    
     if (navigator.onLine) {
       try {
         await supabase.from('materials').upsert({
@@ -312,309 +137,115 @@ export const storage = {
           file_name: material.fileName,
           uploaded_at: material.uploadedAt
         });
-      } catch (e) {
-        console.warn("Cloud sync deferred", e);
-      }
+      } catch (e) { console.warn(e); }
     }
   },
 
   deleteMaterial: async (id: string) => {
     const materials = storage.getMaterials().filter(m => m.id !== id);
     localStorage.setItem(MATERIALS_KEY, JSON.stringify(materials));
-    if (navigator.onLine) {
-      await supabase.from('materials').delete().eq('id', id);
-    }
+    if (navigator.onLine) await supabase.from('materials').delete().eq('id', id);
   },
 
-  getMessages: (): Message[] => {
-    const data = localStorage.getItem(MESSAGES_KEY);
-    return data ? JSON.parse(data) : [];
+  getMessages: () => JSON.parse(localStorage.getItem(MESSAGES_KEY) || '[]'),
+  saveMessage: (msg: any) => {
+    const m = storage.getMessages(); m.push(msg);
+    localStorage.setItem(MESSAGES_KEY, JSON.stringify(m));
   },
 
-  saveMessage: (msg: Message) => {
-    const messages = storage.getMessages();
-    messages.push(msg);
-    localStorage.setItem(MESSAGES_KEY, JSON.stringify(messages));
+  getCommunityMessages: (roomId: string) => JSON.parse(localStorage.getItem(COMMUNITY_MESSAGES_KEY) || '[]').filter((m: any) => m.roomId === roomId),
+  saveCommunityMessage: (msg: any) => {
+    const all = JSON.parse(localStorage.getItem(COMMUNITY_MESSAGES_KEY) || '[]');
+    all.push(msg); localStorage.setItem(COMMUNITY_MESSAGES_KEY, JSON.stringify(all));
   },
 
-  getCommunityMessages: (roomId: string): CommunityMessage[] => {
-    const data = localStorage.getItem(COMMUNITY_MESSAGES_KEY);
-    const all = data ? JSON.parse(data) : [];
-    return all.filter((m: CommunityMessage) => m.roomId === roomId);
+  getChatRooms: () => JSON.parse(localStorage.getItem(CHAT_ROOMS_KEY) || JSON.stringify(DEFAULT_ROOMS)),
+  saveChatRoom: (room: any) => {
+    const r = storage.getChatRooms(); r.push(room);
+    localStorage.setItem(CHAT_ROOMS_KEY, JSON.stringify(r));
   },
 
-  saveCommunityMessage: (msg: CommunityMessage) => {
-    const data = localStorage.getItem(COMMUNITY_MESSAGES_KEY);
-    const all = data ? JSON.parse(data) : [];
-    all.push(msg);
-    localStorage.setItem(COMMUNITY_MESSAGES_KEY, JSON.stringify(all));
+  getUsers: () => JSON.parse(localStorage.getItem(USERS_KEY) || '[]'),
+  saveUser: (user: any) => {
+    const u = storage.getUsers();
+    const idx = u.findIndex((x: any) => x.id === user.id);
+    if (idx === -1) u.push(user); else u[idx] = user;
+    localStorage.setItem(USERS_KEY, JSON.stringify(u));
   },
 
-  getChatRooms: (): ChatRoom[] => {
-    const data = localStorage.getItem(CHAT_ROOMS_KEY);
-    if (!data) {
-      localStorage.setItem(CHAT_ROOMS_KEY, JSON.stringify(DEFAULT_ROOMS));
-      return DEFAULT_ROOMS;
-    }
-    return JSON.parse(data);
+  updateUser: (updatedUser: any) => {
+    const u = storage.getUsers();
+    const idx = u.findIndex((x: any) => x.id === updatedUser.id);
+    if (idx !== -1) u[idx] = updatedUser; else u.push(updatedUser);
+    localStorage.setItem(USERS_KEY, JSON.stringify(u));
+    const sess = localStorage.getItem('study_hub_session');
+    if (sess && JSON.parse(sess).id === updatedUser.id) localStorage.setItem('study_hub_session', JSON.stringify(updatedUser));
   },
 
-  saveChatRoom: (room: ChatRoom) => {
-    const rooms = storage.getChatRooms();
-    rooms.push(room);
-    localStorage.setItem(CHAT_ROOMS_KEY, JSON.stringify(rooms));
-  },
+  deleteUser: (uid: string) => localStorage.setItem(USERS_KEY, JSON.stringify(storage.getUsers().filter((u: any) => u.id !== uid))),
 
-  getUsers: (): User[] => {
-    const data = localStorage.getItem(USERS_KEY);
-    return data ? JSON.parse(data) : [];
-  },
-
-  saveUser: (user: User) => {
-    const users = storage.getUsers();
-    const existingIndex = users.findIndex(u => u.id === user.id);
-    if (existingIndex === -1) {
-      users.push(user);
-    } else {
-      users[existingIndex] = user;
-    }
-    localStorage.setItem(USERS_KEY, JSON.stringify(users));
-  },
-
-  updateUser: (updatedUser: User) => {
-    const users = storage.getUsers();
-    const index = users.findIndex(u => u.id === updatedUser.id);
-    if (index !== -1) {
-      users[index] = updatedUser;
-    } else {
-      users.push(updatedUser);
-    }
-    localStorage.setItem(USERS_KEY, JSON.stringify(users));
-    
-    const session = localStorage.getItem('study_hub_session');
-    if (session) {
-      const parsed = JSON.parse(session);
-      if (parsed.id === updatedUser.id) {
-        localStorage.setItem('study_hub_session', JSON.stringify(updatedUser));
-      }
-    }
-  },
-
-  deleteUser: (userId: string) => {
-    const users = storage.getUsers().filter(u => u.id !== userId);
-    localStorage.setItem(USERS_KEY, JSON.stringify(users));
-  },
-
-  getUserFromCloud: async (userId: string): Promise<Partial<User> | null> => {
+  getUserFromCloud: async (uid: string) => {
     try {
-      const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
+      const { data, error } = await supabase.from('profiles').select('*').eq('id', uid).single();
       if (error) return null;
-      return {
-        id: data.id,
-        name: data.name,
-        email: data.email,
-        district: data.district,
-        schoolName: data.school_name,
-        currentGrade: data.grade,
-        accountRole: data.role,
-        bio: data.bio,
-        isProfileComplete: !!data.name && !!data.district
-      };
-    } catch (e) {
-      return null;
-    }
+      return { id: data.id, name: data.name, email: data.email, district: data.district, schoolName: data.school_name, currentGrade: data.grade, accountRole: data.role, isProfileComplete: true };
+    } catch { return null; }
   },
 
-  getAllProgress: (): Record<string, UserProgress[]> => {
-    const data = localStorage.getItem(PROGRESS_KEY);
-    return data ? JSON.parse(data) : {};
-  },
-
-  getUserProgress: (userId: string): UserProgress[] => {
+  getAllProgress: () => JSON.parse(localStorage.getItem(PROGRESS_KEY) || '{}'),
+  getUserProgress: (uid: string) => storage.getAllProgress()[uid] || [],
+  updateProgress: (uid: string, p: UserProgress) => {
     const all = storage.getAllProgress();
-    return all[userId] || [];
-  },
-
-  updateProgress: (userId: string, progress: UserProgress) => {
-    const all = storage.getAllProgress();
-    if (!all[userId]) all[userId] = [];
-    const index = all[userId].findIndex(p => p.materialId === progress.materialId);
-    if (index !== -1) {
-      all[userId][index] = { ...all[userId][index], ...progress };
-    } else {
-      all[userId].push(progress);
-    }
+    if (!all[uid]) all[uid] = [];
+    const idx = all[uid].findIndex((x: any) => x.materialId === p.materialId);
+    if (idx !== -1) all[uid][idx] = p; else all[uid].push(p);
     localStorage.setItem(PROGRESS_KEY, JSON.stringify(all));
   },
 
-  recordDownload: (userId: string, materialId: string) => {
-    const users = storage.getUsers();
-    const user = users.find(u => u.id === userId);
-    if (user && !user.downloadedIds.includes(materialId)) {
-      user.downloadedIds.push(materialId);
-      storage.updateUser(user);
-    }
+  recordDownload: (uid: string, mid: string) => {
+    const u = storage.getUsers().find((x: any) => x.id === uid);
+    if (u && !u.downloadedIds.includes(mid)) { u.downloadedIds.push(mid); storage.updateUser(u); }
   },
 
-  removeDownload: (userId: string, materialId: string) => {
-    const users = storage.getUsers();
-    const user = users.find(u => u.id === userId);
-    if (user) {
-      user.downloadedIds = user.downloadedIds.filter(id => id !== materialId);
-      storage.updateUser(user);
-    }
+  removeDownload: (uid: string, mid: string) => {
+    const u = storage.getUsers().find((x: any) => x.id === uid);
+    if (u) { u.downloadedIds = u.downloadedIds.filter((x: string) => x !== mid); storage.updateUser(u); }
   },
 
-  getAnnouncements: (): Announcement[] => {
-    const data = localStorage.getItem(ANNOUNCEMENTS_KEY);
-    return data ? JSON.parse(data) : [];
-  },
-
-  saveAnnouncement: async (announcement: Announcement) => {
-    const announcements = storage.getAnnouncements();
-    announcements.unshift(announcement);
-    localStorage.setItem(ANNOUNCEMENTS_KEY, JSON.stringify(announcements));
-    
-    if (navigator.onLine) {
-      try {
-        await supabase.from('announcements').upsert({
-          id: announcement.id,
-          title: announcement.title,
-          content: announcement.content,
-          priority: announcement.priority,
-          timestamp: announcement.timestamp
-        });
-      } catch (e) {
-        console.warn("Announcement sync deferred", e);
-      }
-    }
+  getAnnouncements: () => JSON.parse(localStorage.getItem(ANNOUNCEMENTS_KEY) || '[]'),
+  saveAnnouncement: async (ann: Announcement) => {
+    const a = storage.getAnnouncements(); a.unshift(ann);
+    localStorage.setItem(ANNOUNCEMENTS_KEY, JSON.stringify(a));
+    if (navigator.onLine) await supabase.from('announcements').upsert({ id: ann.id, title: ann.title, content: ann.content, priority: ann.priority, timestamp: ann.timestamp });
   },
 
   deleteAnnouncement: async (id: string) => {
-    const announcements = storage.getAnnouncements().filter(a => a.id !== id);
-    localStorage.setItem(ANNOUNCEMENTS_KEY, JSON.stringify(announcements));
-    if (navigator.onLine) {
-      await supabase.from('announcements').delete().eq('id', id);
-    }
+    localStorage.setItem(ANNOUNCEMENTS_KEY, JSON.stringify(storage.getAnnouncements().filter((x: any) => x.id !== id)));
+    if (navigator.onLine) await supabase.from('announcements').delete().eq('id', id);
   },
 
-  getTestimonials: (): Testimonial[] => {
-    const data = localStorage.getItem(TESTIMONIALS_KEY);
-    return data ? JSON.parse(data) : [];
+  getTestimonials: () => JSON.parse(localStorage.getItem('study_hub_testimonials') || '[]'),
+  saveTestimonial: (t: any) => {
+    const all = storage.getTestimonials(); all.unshift(t);
+    localStorage.setItem('study_hub_testimonials', JSON.stringify(all));
   },
 
-  saveTestimonial: (testimonial: Testimonial) => {
-    const testimonials = storage.getTestimonials();
-    testimonials.unshift(testimonial);
-    localStorage.setItem(TESTIMONIALS_KEY, JSON.stringify(testimonials));
+  getExams: () => JSON.parse(localStorage.getItem(EXAMS_KEY) || '[]'),
+  saveExam: (e: any) => { const x = storage.getExams(); x.unshift(e); localStorage.setItem(EXAMS_KEY, JSON.stringify(x)); },
+  deleteExam: (id: string) => localStorage.setItem(EXAMS_KEY, JSON.stringify(storage.getExams().filter((x: any) => x.id !== id))),
+
+  getExamResults: (uid: string) => JSON.parse(localStorage.getItem(EXAM_RESULTS_KEY) || '[]').filter((r: any) => r.userId === uid),
+  saveExamResult: (res: any) => {
+    const all = JSON.parse(localStorage.getItem(EXAM_RESULTS_KEY) || '[]');
+    all.unshift(res); localStorage.setItem(EXAM_RESULTS_KEY, JSON.stringify(all));
   },
 
-  getExams: (): Exam[] => {
-    const data = localStorage.getItem(EXAMS_KEY);
-    return data ? JSON.parse(data) : [];
-  },
-
-  saveExam: (exam: Exam) => {
-    const exams = storage.getExams();
-    exams.unshift(exam);
-    localStorage.setItem(EXAMS_KEY, JSON.stringify(exams));
-  },
-
-  deleteExam: (examId: string) => {
-    const exams = storage.getExams().filter(e => e.id !== examId);
-    localStorage.setItem(EXAMS_KEY, JSON.stringify(exams));
-  },
-
-  getExamResults: (userId: string): ExamResult[] => {
-    const data = localStorage.getItem(EXAM_RESULTS_KEY);
-    const all = data ? JSON.parse(data) : [];
-    return all.filter((r: ExamResult) => r.userId === userId);
-  },
-
-  saveExamResult: (result: ExamResult) => {
-    const data = localStorage.getItem(EXAM_RESULTS_KEY);
-    const all = data ? JSON.parse(data) : [];
-    all.unshift(result);
-    localStorage.setItem(EXAM_RESULTS_KEY, JSON.stringify(all));
-  },
-
-  syncWithServer: async (userId: string) => {
-    if (!navigator.onLine) return { success: false, timestamp: null };
-
+  syncWithServer: async (uid: string) => {
+    if (!navigator.onLine) return { success: false };
     try {
-      const users = storage.getUsers();
-      const user = users.find(u => u.id === userId);
-      
-      if (user && user.isProfileComplete) {
-        await supabase.from('profiles').upsert({
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          district: user.district,
-          school_name: user.schoolName,
-          grade: user.currentGrade,
-          role: user.accountRole,
-          bio: user.bio,
-          updated_at: new Date().toISOString()
-        });
-      }
-
-      const userProgress = storage.getUserProgress(userId);
-      if (userProgress.length > 0) {
-        await supabase.from('user_progress').upsert(
-          userProgress.map(p => ({
-            user_id: userId,
-            material_id: p.materialId,
-            status: p.status,
-            progress_percent: p.progressPercent,
-            last_read: p.lastRead
-          }))
-        );
-      }
-
-      const [materialsRes, annRes, progRes] = await Promise.all([
-        supabase.from('materials').select('*'),
-        supabase.from('announcements').select('*').order('timestamp', { ascending: false }),
-        supabase.from('user_progress').select('*').eq('user_id', userId)
-      ]);
-
-      if (materialsRes.data) {
-        const localMaterials: StudyMaterial[] = materialsRes.data.map(rm => ({
-          id: rm.id,
-          title: rm.title,
-          level: rm.level,
-          grade: rm.grade,
-          category: rm.category,
-          subject: rm.subject,
-          fileUrl: rm.file_url,
-          fileName: rm.file_name,
-          uploadedAt: rm.uploaded_at
-        }));
-        localStorage.setItem(MATERIALS_KEY, JSON.stringify(localMaterials));
-      }
-
-      if (annRes.data) {
-        localStorage.setItem(ANNOUNCEMENTS_KEY, JSON.stringify(annRes.data));
-      }
-
-      if (progRes.data) {
-        const cloudProgress: UserProgress[] = progRes.data.map(rp => ({
-          materialId: rp.material_id,
-          status: rp.status as ReadingStatus,
-          progressPercent: rp.progress_percent,
-          lastRead: rp.last_read
-        }));
-        const allProgress = storage.getAllProgress();
-        allProgress[userId] = cloudProgress;
-        localStorage.setItem(PROGRESS_KEY, JSON.stringify(allProgress));
-      }
-
-      const syncTimestamp = new Date().toISOString();
-      localStorage.setItem(LAST_SYNC_KEY, syncTimestamp);
-      return { success: true, timestamp: syncTimestamp };
-    } catch (err) {
-      console.error("[Sync] Error:", err);
-      return { success: false, timestamp: null };
-    }
+      const u = storage.getUsers().find((x: any) => x.id === uid);
+      if (u) await supabase.from('profiles').upsert({ id: u.id, name: u.name, email: u.email, district: u.district, grade: u.currentGrade, role: u.accountRole });
+      return { success: true, timestamp: new Date().toISOString() };
+    } catch { return { success: false }; }
   }
 };
