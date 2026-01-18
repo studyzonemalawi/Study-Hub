@@ -40,15 +40,17 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
   };
 
   const mapSupabaseUserToAppUser = (sbUser: any): User => {
-    const userEmail = sbUser.email || '';
+    const userEmail = (sbUser.email || '').toLowerCase();
     const existingUsers = storage.getUsers();
-    const existing = existingUsers.find(u => u.id === sbUser.id || (u.email === userEmail));
+    const existing = existingUsers.find(u => u.id === sbUser.id || (u.email.toLowerCase() === userEmail));
+    const isAdminMatch = userEmail === ADMIN_EMAIL.toLowerCase();
     
     if (existing) {
       return {
         ...existing,
         lastLogin: new Date().toISOString(),
-        appRole: userEmail === ADMIN_EMAIL ? 'admin' : existing.appRole
+        appRole: isAdminMatch ? 'admin' : existing.appRole,
+        isProfileComplete: isAdminMatch ? true : existing.isProfileComplete
       };
     }
 
@@ -56,14 +58,14 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
       id: sbUser.id,
       email: userEmail,
       authProvider: 'email',
-      appRole: userEmail === ADMIN_EMAIL ? 'admin' : 'user',
-      name: sbUser.user_metadata?.full_name || '',
+      appRole: isAdminMatch ? 'admin' : 'user',
+      name: sbUser.user_metadata?.full_name || (isAdminMatch ? 'Study Hub Admin' : ''),
       dateJoined: new Date().toISOString(),
       lastLogin: new Date().toISOString(),
       downloadedIds: [],
       favoriteIds: [],
-      isProfileComplete: false,
-      isPublic: false,
+      isProfileComplete: isAdminMatch,
+      isPublic: isAdminMatch,
       termsAccepted: true
     };
   };
@@ -142,6 +144,8 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
           const appUser = mapSupabaseUserToAppUser(data.user);
           storage.saveUser(appUser);
           onLogin(appUser);
+        } else {
+          setSuccessMsg('Verification email sent! Please check your inbox.');
         }
       } else {
         const { data, error } = await supabase.auth.signInWithPassword({
@@ -164,7 +168,11 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
         }
       }
     } catch (err: any) {
-      setError(err.message || 'Authentication error. Please check your details.');
+      if (err.message === 'Invalid login credentials') {
+        setError('Incorrect email or password. Please try again.');
+      } else {
+        setError(err.message || 'Authentication error. Please check your details.');
+      }
     } finally {
       setIsLoading(false);
     }

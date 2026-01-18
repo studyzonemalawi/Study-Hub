@@ -51,8 +51,12 @@ const App: React.FC = () => {
     if (session?.user) {
       const sbUser = session.user;
       const email = sbUser.email || '';
+      const isAdmin = email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
 
+      // Priority 1: Check Cloud
       const cloudProfile = await storage.getUserFromCloud(sbUser.id);
+      
+      // Priority 2: Check Local Storage
       const existingUsers = storage.getUsers();
       let appUser = existingUsers.find(u => u.id === sbUser.id);
       
@@ -62,27 +66,30 @@ const App: React.FC = () => {
           ...cloudProfile,
           id: sbUser.id,
           email: email,
-          appRole: (email === ADMIN_EMAIL) ? 'admin' : (appUser?.appRole || 'user'),
+          appRole: isAdmin ? 'admin' : (cloudProfile.accountRole === 'Admin' ? 'admin' : 'user'),
           lastLogin: new Date().toISOString()
         } as User;
       } else if (!appUser) {
+        // First time user or cleared cache
         appUser = {
           id: sbUser.id,
           email: email,
           authProvider: 'email',
-          appRole: (email === ADMIN_EMAIL) ? 'admin' : 'user',
-          name: sbUser.user_metadata?.full_name || '',
+          appRole: isAdmin ? 'admin' : 'user',
+          name: sbUser.user_metadata?.full_name || (isAdmin ? 'Study Hub Admin' : ''),
           dateJoined: new Date().toISOString(),
           lastLogin: new Date().toISOString(),
           downloadedIds: [],
           favoriteIds: [],
-          isProfileComplete: false,
-          isPublic: false,
+          isProfileComplete: isAdmin, // Admins skip profile completion
+          isPublic: isAdmin,
           termsAccepted: true
         };
       } else {
+        // Existing local user
         appUser = {
           ...appUser,
+          appRole: isAdmin ? 'admin' : appUser.appRole,
           lastLogin: new Date().toISOString()
         };
       }
@@ -109,10 +116,12 @@ const App: React.FC = () => {
   }, [isDarkMode]);
 
   useEffect(() => {
+    // Initial check
     supabase.auth.getSession().then(({ data: { session } }) => {
       handleAuthChange(session);
     });
 
+    // Listen for changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       handleAuthChange(session);
     });
@@ -159,7 +168,7 @@ const App: React.FC = () => {
     switch (activeTab) {
       case 'home': return <Home user={user} onNavigate={setActiveTab} />;
       case 'announcements': return <Announcements />;
-      case 'library': case 'papers': return <Library onNavigate={setActiveTab} />;
+      case 'library': case 'papers': return <Library user={user} onNavigate={setActiveTab} />;
       case 'testimonials': return <Community user={user} />;
       case 'faqs': return <FAQs onNavigate={setActiveTab} />;
       case 'activity': return <Activity user={user} onNavigate={setActiveTab} />;
@@ -167,7 +176,7 @@ const App: React.FC = () => {
       case 'settings': return <Settings user={user} onUpdate={handleUpdateUser} onNavigate={setActiveTab} />;
       case 'exams': return <ExamCenter user={user} onNavigate={setActiveTab} />;
       case 'admin-exam-form': return isAdmin ? <AdminExamForm onNavigate={setActiveTab} /> : <Home user={user} onNavigate={setActiveTab} />;
-      case 'admin': return isAdmin ? <Admin onNavigate={setActiveTab} /> : <Home user={user} onNavigate={setActiveTab} />;
+      case 'admin': return isAdmin ? <Admin user={user} onNavigate={setActiveTab} /> : <Home user={user} onNavigate={setActiveTab} />;
       default: return <Home user={user} onNavigate={setActiveTab} />;
     }
   };
