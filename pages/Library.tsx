@@ -22,8 +22,12 @@ interface LibraryProps {
 }
 
 export const Library: React.FC<LibraryProps> = ({ user, onNavigate }) => {
-  // Use user's permanent education level instead of a local state toggle
-  const level = user.educationLevel || EducationLevel.PRIMARY;
+  const isAdmin = user.appRole === 'admin';
+  
+  // Admins can switch levels, regular users are locked to their profile selection
+  const [level, setLevel] = useState<EducationLevel>(
+    user.educationLevel || EducationLevel.PRIMARY
+  );
   
   const [selectedGrade, setSelectedGrade] = useState<Grade>(
     level === EducationLevel.PRIMARY ? PRIMARY_GRADES[0] : SECONDARY_GRADES[0]
@@ -49,7 +53,9 @@ export const Library: React.FC<LibraryProps> = ({ user, onNavigate }) => {
 
   useEffect(() => {
     setSelectedSubject(null);
-  }, [level, selectedGrade, activeView]);
+    // When level changes (Admin only), reset grade to appropriate default
+    setSelectedGrade(level === EducationLevel.PRIMARY ? PRIMARY_GRADES[0] : SECONDARY_GRADES[0]);
+  }, [level, activeView]);
 
   const triggerNotification = (text: string, type: 'success' | 'info' = 'success') => {
     setNotification({ text, type });
@@ -151,7 +157,7 @@ export const Library: React.FC<LibraryProps> = ({ user, onNavigate }) => {
             {activeView === 'browse' ? `${level} Library` : 'My Saved Resources'}
           </h2>
           <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">
-            {activeView === 'browse' ? `Personalized academic resources for your ${level} studies.` : 'Manage your offline materials for gapless learning.'}
+            {activeView === 'browse' ? `Academic resources for ${level} studies.` : 'Manage your offline materials for gapless learning.'}
           </p>
         </div>
         
@@ -171,9 +177,26 @@ export const Library: React.FC<LibraryProps> = ({ user, onNavigate }) => {
             </button>
           </div>
 
-          <div className="hidden md:flex px-6 py-3 bg-emerald-50 dark:bg-emerald-950/30 rounded-2xl border border-emerald-100 dark:border-emerald-800">
-            <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400">{level} Student</span>
-          </div>
+          {isAdmin ? (
+            <div className="flex p-1.5 bg-emerald-50 dark:bg-emerald-900/30 rounded-2xl border border-emerald-100 dark:border-emerald-800">
+              <button 
+                onClick={() => setLevel(EducationLevel.PRIMARY)}
+                className={`px-4 py-2 rounded-xl text-[9px] uppercase font-black tracking-widest transition-all ${level === EducationLevel.PRIMARY ? 'bg-emerald-600 text-white shadow-sm' : 'text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-800/50'}`}
+              >
+                Primary
+              </button>
+              <button 
+                onClick={() => setLevel(EducationLevel.SECONDARY)}
+                className={`px-4 py-2 rounded-xl text-[9px] uppercase font-black tracking-widest transition-all ${level === EducationLevel.SECONDARY ? 'bg-emerald-600 text-white shadow-sm' : 'text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-800/50'}`}
+              >
+                Secondary
+              </button>
+            </div>
+          ) : (
+            <div className="hidden md:flex px-6 py-3 bg-emerald-50 dark:bg-emerald-950/30 rounded-2xl border border-emerald-100 dark:border-emerald-800">
+              <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400">{level} Student</span>
+            </div>
+          )}
         </div>
       </div>
 

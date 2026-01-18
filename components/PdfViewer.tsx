@@ -1,8 +1,6 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { StudyMaterial, ReadingStatus, UserProgress } from '../types';
-import { storage } from '../services/storage';
-import { aiService, QuizQuestion, QuizChapter } from '../services/ai';
 
 declare const pdfjsLib: any;
 
@@ -23,8 +21,6 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
 }) => {
   const [showConfirmClose, setShowConfirmClose] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [aiExplanation, setAiExplanation] = useState<string | null>(null);
-  const [isExplaining, setIsExplaining] = useState(false);
   
   const lang = localStorage.getItem('study_hub_chat_lang') || 'English';
   const t = {
@@ -32,27 +28,25 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
     finish: lang === 'English' ? 'Close Reader?' : 'Kodi Mwamaliza?',
     resume: lang === 'English' ? 'Keep Reading' : 'Pitirizani Kuwerenga',
     sidebar: lang === 'English' ? 'Contents' : 'Zamkati',
-    explain: lang === 'English' ? 'AI Tutor' : 'Mlangizi wa AI',
-    simplifier: lang === 'English' ? 'Explain Page' : 'Masulirani',
     page: lang === 'English' ? 'Page' : 'Tsamba',
+    prev: lang === 'English' ? 'Previous' : 'Zakale',
+    next: lang === 'English' ? 'Next' : 'Zotsatira',
   };
 
   const [numPages, setNumPages] = useState<number>(0);
-  const [currentPage, setCurrentPage] = useState<number>(currentProgress?.progressPercent ? Math.max(1, Math.round((currentProgress.progressPercent / 100) * (numPages || 1))) : 1);
+  const [currentPage, setCurrentPage] = useState<number>(1);
   const [isRenderLoading, setIsRenderLoading] = useState(true);
   const [pdfDoc, setPdfDoc] = useState<any>(null);
-  const [extractedPages, setExtractedPages] = useState<Record<number, string>>({});
+  const [scale, setScale] = useState(1.5); // Default scale for readability
   
   const flipPageRef = useRef<HTMLCanvasElement | null>(null);
   const currentRenderTask = useRef<any>(null);
-  const extractionAbortRef = useRef<boolean>(false);
 
   // Digital Note Pagination logic
   const digitalPages = useMemo(() => {
     if (!material.isDigital || !material.content) return [];
-    // Simple logic to split long text into "pages" based on length (~2000 chars)
     const raw = material.content;
-    const size = 1800;
+    const size = 3000; // Large page size for optimized view
     const pages = [];
     for (let i = 0; i < raw.length; i += size) {
       pages.push(raw.substring(i, i + size));
@@ -60,19 +54,18 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
     return pages;
   }, [material]);
 
+  // Initial setup for pages and progress
   useEffect(() => {
     if (material.isDigital) {
       setNumPages(digitalPages.length);
-      const initialTextMap: Record<number, string> = {};
-      digitalPages.forEach((p, i) => initialTextMap[i+1] = p);
-      setExtractedPages(initialTextMap);
       setIsRenderLoading(false);
+      if (currentProgress?.progressPercent && digitalPages.length > 0) {
+        setCurrentPage(Math.max(1, Math.round((currentProgress.progressPercent / 100) * digitalPages.length)));
+      }
       return;
     }
 
     let isMounted = true;
-    extractionAbortRef.current = false;
-    
     const loadPdf = async () => {
       try {
         setIsRenderLoading(true);
@@ -83,12 +76,8 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
           setPdfDoc(pdf);
           setNumPages(pdf.numPages);
           setIsRenderLoading(false);
-          // Background extraction
-          for (let i = 1; i <= pdf.numPages; i++) {
-            if (extractionAbortRef.current) break;
-            const page = await pdf.getPage(i);
-            const content = await page.getTextContent();
-            setExtractedPages(prev => ({ ...prev, [i]: content.items.map((it: any) => it.str).join(' ') }));
+          if (currentProgress?.progressPercent) {
+             setCurrentPage(Math.max(1, Math.round((currentProgress.progressPercent / 100) * pdf.numPages)));
           }
         }
       } catch (err) {
@@ -96,15 +85,16 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
       }
     };
     loadPdf();
-    return () => { isMounted = false; extractionAbortRef.current = true; if (currentRenderTask.current) currentRenderTask.current.cancel(); };
-  }, [material, digitalPages]);
+    return () => { isMounted = false; if (currentRenderTask.current) currentRenderTask.current.cancel(); };
+  }, [material, digitalPages, currentProgress]);
 
+  // Render logic
   const renderCanvasPage = useCallback(async (pageNum: number, canvas: HTMLCanvasElement) => {
     if (!pdfDoc || !canvas) return;
     if (currentRenderTask.current) { currentRenderTask.current.cancel(); }
     try {
       const page = await pdfDoc.getPage(pageNum);
-      const viewport = page.getViewport({ scale: 1.8 });
+      const viewport = page.getViewport({ scale: scale });
       const context = canvas.getContext('2d', { alpha: false });
       if (!context) return;
       canvas.height = viewport.height;
@@ -114,146 +104,167 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
     } catch (err: any) {
       if (err.name !== 'RenderingCancelledException') console.error(err);
     }
-  }, [pdfDoc]);
+  }, [pdfDoc, scale]);
 
   useEffect(() => {
     if (!material.isDigital && flipPageRef.current && pdfDoc) {
       renderCanvasPage(currentPage, flipPageRef.current);
     }
-    setAiExplanation(null);
-  }, [currentPage, pdfDoc, renderCanvasPage, material.isDigital]);
-
-  const handleExplainPage = async () => {
-    const text = extractedPages[currentPage];
-    if (!text) return;
-    setIsExplaining(true);
-    try {
-      const result = await aiService.explainPage(text, lang);
-      setAiExplanation(result);
-    } catch {
-      setAiExplanation("Tutor is busy. Try again.");
-    } finally {
-      setIsExplaining(false);
-    }
-  };
+  }, [currentPage, pdfDoc, renderCanvasPage, material.isDigital, scale]);
 
   const readingProgress = (currentPage / numPages) * 100;
 
+  const handlePageChange = (val: number) => {
+    const target = Math.max(1, Math.min(numPages, val));
+    setCurrentPage(target);
+    onUpdateStatus(ReadingStatus.READING);
+  };
+
   return (
-    <div className="fixed inset-0 z-[100] bg-slate-950 flex flex-col h-screen w-screen overflow-hidden animate-in fade-in duration-300">
-      <header className="bg-emerald-900 text-white flex-none flex items-center justify-between px-4 py-3 md:px-8 shadow-2xl z-[110]">
+    <div className="fixed inset-0 z-[100] bg-slate-100 dark:bg-slate-950 flex flex-col h-screen w-screen overflow-hidden animate-in fade-in duration-300">
+      {/* 1. Header (Outside) */}
+      <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex-none flex items-center justify-between px-4 py-3 md:px-8 z-[110] shadow-sm">
         <div className="flex items-center min-w-0 flex-1">
-          <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2.5 hover:bg-white/10 rounded-2xl transition-all mr-2">
+          <button 
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
+            className={`p-2.5 rounded-xl transition-all mr-4 ${isSidebarOpen ? 'bg-emerald-600 text-white shadow-lg' : 'bg-slate-50 dark:bg-slate-800 text-slate-500 hover:bg-slate-100'}`}
+          >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 6h16M4 12h16M4 18h7" /></svg>
           </button>
           <div className="min-w-0">
-            <h4 className="font-black text-sm md:text-lg truncate tracking-tight">{material.title}</h4>
-            <p className="text-[9px] uppercase font-black tracking-widest text-emerald-300 opacity-80">{material.subject} • {material.grade}</p>
+            <h4 className="font-black text-sm md:text-lg truncate tracking-tight text-slate-900 dark:text-white leading-tight">{material.title}</h4>
+            <div className="flex items-center gap-2">
+              <span className="text-[9px] uppercase font-black tracking-[0.2em] text-emerald-600">{material.subject}</span>
+              <span className="w-1 h-1 bg-slate-300 dark:bg-slate-600 rounded-full"></span>
+              <span className="text-[9px] uppercase font-black tracking-[0.2em] text-slate-400">{material.grade}</span>
+            </div>
           </div>
         </div>
-        <button onClick={() => setShowConfirmClose(true)} className="p-2.5 bg-red-500/20 text-red-100 rounded-xl hover:bg-red-500/30 transition-all"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12" /></svg></button>
+
+        <div className="flex items-center gap-2 md:gap-4">
+           {/* Zoom settings (Outside) */}
+           <div className="flex items-center bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-1">
+              <button onClick={() => setScale(s => Math.max(0.5, s - 0.25))} className="p-2 text-slate-400 hover:text-emerald-500 transition-colors">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M20 12H4" /></svg>
+              </button>
+              <span className="text-[10px] font-black w-10 text-center text-slate-600 dark:text-slate-300 tabular-nums">{Math.round(scale * 100)}%</span>
+              <button onClick={() => setScale(s => Math.min(4, s + 0.25))} className="p-2 text-slate-400 hover:text-emerald-500 transition-colors">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M12 4v16m8-8H4" /></svg>
+              </button>
+           </div>
+           
+           <button 
+             onClick={() => setShowConfirmClose(true)} 
+             className="p-3 bg-red-50 dark:bg-red-900/20 text-red-600 rounded-xl hover:bg-red-100 transition-all border border-red-100 dark:border-red-900/30 shadow-sm"
+           >
+             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12" /></svg>
+           </button>
+        </div>
       </header>
 
       <div className="flex-1 flex overflow-hidden relative">
-        {/* Contents Sidebar */}
-        <div className={`absolute lg:relative z-[100] h-full bg-slate-900 border-r border-white/5 transition-all duration-300 ease-in-out ${isSidebarOpen ? 'w-64' : 'w-0 overflow-hidden'}`}>
-          <div className="p-6 h-full flex flex-col">
-            <h3 className="text-white font-black uppercase tracking-widest text-[10px] mb-6">{t.sidebar}</h3>
-            <div className="flex-1 overflow-y-auto custom-scrollbar space-y-1">
+        {/* 2. Contents Sidebar (Outside) */}
+        <aside className={`flex-none h-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-all duration-300 ease-in-out ${isSidebarOpen ? 'w-64' : 'w-0 overflow-hidden'}`}>
+          <div className="w-64 h-full flex flex-col p-6">
+            <h3 className="text-slate-900 dark:text-white font-black uppercase tracking-widest text-[10px] mb-6 flex items-center gap-2">
+              <span className="w-1.5 h-4 bg-emerald-500 rounded-full"></span>
+              {t.sidebar}
+            </h3>
+            <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2">
               {Array.from({ length: numPages }).map((_, i) => (
-                <button key={i} onClick={() => setCurrentPage(i + 1)} className={`w-full p-3 rounded-xl text-left text-[11px] font-black uppercase tracking-wider transition-all ${currentPage === i + 1 ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-500 hover:text-white hover:bg-white/5'}`}>
+                <button 
+                  key={i} 
+                  onClick={() => handlePageChange(i + 1)} 
+                  className={`w-full p-4 rounded-2xl text-left text-[11px] font-black uppercase tracking-wider transition-all border ${currentPage === i + 1 ? 'bg-emerald-600 border-emerald-600 text-white shadow-lg' : 'bg-slate-50 dark:bg-slate-800 border-transparent text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
+                >
                   {t.page} {i + 1}
                 </button>
               ))}
             </div>
           </div>
-        </div>
+        </aside>
 
-        {/* Flipbook Stage */}
-        <div className="flex-1 flex flex-col relative overflow-hidden bg-slate-100 dark:bg-slate-900">
-          <div className="flex-1 overflow-y-auto custom-scrollbar relative flex items-center justify-center p-4">
-            {isRenderLoading ? (
-               <div className="flex flex-col items-center gap-4 animate-pulse">
-                  <div className="w-12 h-12 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
-                  <p className="text-emerald-500 font-black text-[10px] uppercase tracking-widest">{t.loading}</p>
-               </div>
-            ) : (
-               <div className="w-full h-full flex flex-col items-center justify-center gap-8 relative max-w-5xl mx-auto">
-                  <div className="relative group/book">
-                     <div className="bg-white shadow-[0_50px_100px_-20px_rgba(0,0,0,0.4)] rounded-sm overflow-hidden border border-slate-200 transition-all duration-500 relative min-w-[300px] min-h-[400px]">
-                        {material.isDigital ? (
-                          <div className="p-8 md:p-16 h-full font-serif leading-relaxed text-slate-800 animate-in fade-in slide-in-from-right-4 duration-500 select-none">
-                             <div className="whitespace-pre-wrap text-lg" dangerouslySetInnerHTML={{ __html: digitalPages[currentPage-1].replace(/# (.*)/g, '<h2 class="text-3xl font-black text-emerald-800 mb-8">$1</h2>').replace(/## (.*)/g, '<h3 class="text-xl font-black text-slate-900 mt-6 mb-4">$1</h3>') }} />
-                          </div>
-                        ) : (
-                          <canvas ref={flipPageRef} className="max-w-[95vw] lg:max-w-[55vw] h-auto block" />
-                        )}
-                        <div className="absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-black/10 to-transparent pointer-events-none border-l-4 border-slate-50"></div>
-                     </div>
-                     <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="absolute left-0 -translate-x-1/2 top-1/2 -translate-y-1/2 p-4 bg-emerald-600 text-white rounded-full shadow-2xl active:scale-90 transition-all disabled:opacity-0 z-20 hover:bg-emerald-700">
-                       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M15 19l-7-7 7-7" /></svg>
-                     </button>
-                     <button onClick={() => setCurrentPage(p => Math.min(numPages, p + 1))} disabled={currentPage === numPages} className="absolute right-0 translate-x-1/2 top-1/2 -translate-y-1/2 p-4 bg-emerald-600 text-white rounded-full shadow-2xl active:scale-90 transition-all disabled:opacity-0 z-20 hover:bg-emerald-700">
-                       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M9 5l7 7-7 7" /></svg>
-                     </button>
-                  </div>
-                  <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl px-10 py-3 rounded-full border border-slate-200 dark:border-white/10 shadow-xl flex items-center gap-6">
-                     <span className="text-slate-500 dark:text-white/60 font-black text-[10px] uppercase tracking-widest tabular-nums">{t.page} {currentPage} / {numPages}</span>
-                     <div className="w-32 md:w-64 h-1 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden relative">
-                        <div className="h-full bg-emerald-500 transition-all duration-300" style={{ width: `${readingProgress}%` }} />
-                     </div>
-                  </div>
-               </div>
-            )}
-          </div>
-        </div>
-
-        {/* AI Sidebar */}
-        <div className={`absolute lg:relative right-0 z-[100] h-full bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-white/5 transition-all duration-300 ease-in-out flex flex-col ${aiExplanation || isExplaining ? 'w-80 lg:w-96' : 'w-0 overflow-hidden'}`}>
-           <div className="p-8 h-full flex flex-col">
-              <div className="flex justify-between items-center mb-8">
-                 <h3 className="text-slate-900 dark:text-white font-black uppercase tracking-widest text-xs flex items-center gap-3">
-                    <span className="w-1.5 h-6 bg-purple-500 rounded-full"></span>
-                    {t.explain}
-                 </h3>
-                 <button onClick={() => setAiExplanation(null)} className="text-slate-400 hover:text-red-500 transition-colors"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
-              </div>
-              <div className="flex-1 overflow-y-auto custom-scrollbar">
-                 {isExplaining ? (
-                   <div className="space-y-4 animate-pulse"><div className="h-4 bg-slate-100 dark:bg-slate-800 rounded-full w-3/4"></div><div className="h-4 bg-slate-100 dark:bg-slate-800 rounded-full"></div><div className="flex justify-center py-10"><div className="w-12 h-12 border-4 border-purple-500/20 border-t-purple-500 rounded-full animate-spin"></div></div></div>
-                 ) : (
-                   <div className="bg-purple-50 dark:bg-purple-900/20 p-6 rounded-3xl border border-purple-100 dark:border-purple-800 text-sm font-medium text-slate-700 dark:text-slate-200 leading-relaxed italic whitespace-pre-wrap">{aiExplanation}</div>
-                 )}
-              </div>
-           </div>
-        </div>
-      </div>
-
-      {/* Interactive Dock */}
-      <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[150] animate-in slide-in-from-bottom-10 duration-700">
-         <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl px-6 py-4 rounded-full shadow-2xl border border-white/20 dark:border-white/5 flex items-center gap-4">
-            <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className={`p-4 rounded-2xl transition-all ${isSidebarOpen ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 6h16M4 12h16M4 18h7" /></svg></button>
-            <div className="w-px h-10 bg-slate-200 dark:bg-slate-800" />
-            <button onClick={handleExplainPage} disabled={isExplaining} className={`group flex items-center gap-3 px-6 py-4 rounded-2xl transition-all ${isExplaining ? 'bg-purple-100 text-purple-400' : 'bg-purple-600 text-white shadow-xl hover:bg-purple-700 active:scale-95'}`}>
-               <span className="text-xl">🧠</span>
-               <span className="font-black uppercase text-[10px] tracking-widest hidden md:inline">{isExplaining ? 'Thinking...' : t.simplifier}</span>
-            </button>
-            <div className="w-px h-10 bg-slate-200 dark:bg-slate-800" />
-            <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-950 px-5 py-3 rounded-2xl border border-slate-100 dark:border-slate-800">
-               <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} className="text-slate-400 hover:text-emerald-500 transition-all active:scale-75"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15 19l-7-7 7-7" /></svg></button>
-               <span className="text-[12px] font-black text-slate-900 dark:text-white w-14 text-center tabular-nums">{currentPage} / {numPages}</span>
-               <button onClick={() => setCurrentPage(p => Math.min(numPages, p + 1))} className="text-slate-400 hover:text-emerald-500 transition-all active:scale-75"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M9 5l7 7-7 7" /></svg></button>
+        {/* 3. Main Reading Space (Optimized for full content and sideways/vertical scrolling) */}
+        <main className="flex-1 overflow-auto custom-scrollbar relative bg-slate-200 dark:bg-slate-950 p-4 md:p-12 scroll-smooth">
+          {isRenderLoading ? (
+            <div className="h-full flex flex-col items-center justify-center gap-4 animate-pulse">
+              <div className="w-14 h-14 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
+              <p className="text-emerald-600 dark:text-emerald-400 font-black text-[10px] uppercase tracking-[0.2em]">{t.loading}</p>
             </div>
-         </div>
+          ) : (
+            <div className="flex justify-center min-h-full min-w-full">
+               <div className="inline-block relative shadow-[0_35px_60px_-15px_rgba(0,0,0,0.3)]">
+                  {material.isDigital ? (
+                    <div className="bg-white dark:bg-slate-800 p-12 md:p-24 rounded-lg shadow-2xl min-h-full font-serif leading-relaxed text-slate-800 dark:text-slate-200 animate-in fade-in duration-500 select-none max-w-4xl mx-auto w-full">
+                       <div className="whitespace-pre-wrap text-xl md:text-2xl" dangerouslySetInnerHTML={{ __html: digitalPages[currentPage-1]?.replace(/# (.*)/g, '<h2 class="text-4xl font-black text-emerald-800 dark:text-emerald-400 mb-10">$1</h2>').replace(/## (.*)/g, '<h3 class="text-2xl font-black text-slate-900 dark:text-white mt-10 mb-6">$1</h3>') }} />
+                    </div>
+                  ) : (
+                    <div className="bg-white rounded-sm overflow-hidden border border-slate-300 dark:border-slate-800">
+                       <canvas ref={flipPageRef} className="max-w-none block h-auto" />
+                    </div>
+                  )}
+                  {/* Digital Spine Detail */}
+                  <div className="absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-black/5 to-transparent pointer-events-none"></div>
+               </div>
+            </div>
+          )}
+        </main>
       </div>
 
+      {/* 4. Footer Navigation (Outside) */}
+      <footer className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex-none px-4 md:px-8 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 z-[110] shadow-[0_-4px_20px_rgba(0,0,0,0.03)]">
+         <div className="flex items-center gap-3 w-full sm:w-auto order-2 sm:order-1">
+            <button 
+              onClick={() => handlePageChange(currentPage - 1)} 
+              disabled={currentPage === 1} 
+              className="flex-1 sm:flex-none px-6 py-3 bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 hover:text-emerald-600 rounded-2xl border border-slate-200 dark:border-slate-700 transition-all font-black uppercase text-[10px] tracking-widest disabled:opacity-30 disabled:pointer-events-none active:scale-95"
+            >
+              ← {t.prev}
+            </button>
+            <div className="px-5 py-3 bg-slate-100 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 text-center min-w-[110px] shadow-inner">
+               <span className="text-[12px] font-black text-slate-900 dark:text-white tabular-nums">{currentPage} / {numPages}</span>
+            </div>
+            <button 
+              onClick={() => handlePageChange(currentPage + 1)} 
+              disabled={currentPage === numPages} 
+              className="flex-1 sm:flex-none px-6 py-3 bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 hover:text-emerald-600 rounded-2xl border border-slate-200 dark:border-slate-700 transition-all font-black uppercase text-[10px] tracking-widest disabled:opacity-30 disabled:pointer-events-none active:scale-95"
+            >
+              {t.next} →
+            </button>
+         </div>
+
+         <div className="flex items-center gap-6 w-full sm:w-auto sm:flex-1 sm:max-w-md order-1 sm:order-2">
+            <div className="flex-1 h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden border border-slate-200 dark:border-slate-700 relative">
+               <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${readingProgress}%` }} />
+            </div>
+            <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] whitespace-nowrap tabular-nums">
+              {Math.round(readingProgress)}% {lang === 'English' ? 'COMPLETED' : 'CWAMALIZA'}
+            </span>
+         </div>
+      </footer>
+
+      {/* Close Confirmation Modal */}
       {showConfirmClose && (
-        <div className="fixed inset-0 z-[300] bg-black/90 backdrop-blur-xl flex items-center justify-center p-6 animate-in zoom-in duration-300 shadow-2xl border border-white/10">
-          <div className="bg-white dark:bg-slate-900 rounded-[4rem] p-12 max-w-sm w-full text-center space-y-10">
-            <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{t.finish}</h3>
+        <div className="fixed inset-0 z-[300] bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-6 animate-in zoom-in duration-300 shadow-2xl">
+          <div className="bg-white dark:bg-slate-900 rounded-[3rem] p-12 max-w-md w-full text-center space-y-10 border border-slate-200 dark:border-slate-700 shadow-2xl">
+            <div className="w-20 h-20 bg-emerald-50 dark:bg-emerald-900/30 rounded-3xl flex items-center justify-center text-5xl mx-auto shadow-inner border border-emerald-100/50">📖</div>
+            <div className="space-y-3">
+              <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-none">{t.finish}</h3>
+              <p className="text-slate-500 dark:text-slate-400 font-medium">Your reading progress ({currentPage}/{numPages}) is safely stored.</p>
+            </div>
             <div className="space-y-4">
-              <button onClick={onClose} className="w-full py-6 bg-emerald-600 text-white font-black rounded-2xl shadow-xl uppercase tracking-widest text-[11px] active:scale-95 transition-all">Close Session</button>
-              <button onClick={() => setShowConfirmClose(false)} className="w-full py-6 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-300 font-black rounded-2xl uppercase tracking-widest text-[11px] transition-all">{t.resume}</button>
+              <button 
+                onClick={onClose} 
+                className="w-full py-6 bg-emerald-600 text-white font-black rounded-3xl shadow-xl uppercase tracking-widest text-[11px] active:scale-95 transition-all shadow-emerald-500/20"
+              >
+                Close Hub Reader
+              </button>
+              <button 
+                onClick={() => setShowConfirmClose(false)} 
+                className="w-full py-6 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-300 font-black rounded-3xl uppercase tracking-widest text-[11px] transition-all hover:bg-slate-200 active:scale-95"
+              >
+                {t.resume}
+              </button>
             </div>
           </div>
         </div>

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { StudyMaterial, ReadingStatus, UserProgress, User } from '../types';
+import { StudyMaterial, ReadingStatus, UserProgress, User, EducationLevel } from '../types';
 import { storage } from '../services/storage';
 import { PdfViewer } from '../components/PdfViewer';
 
@@ -15,13 +15,16 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, user }) => {
   const [viewingMaterial, setViewingMaterial] = useState<StudyMaterial | null>(null);
 
   const userId = user?.id || 'guest';
+  const isAdmin = user.appRole === 'admin';
 
   useEffect(() => {
     const all = storage.getMaterials();
     const progress = storage.getUserProgress(userId);
 
-    // Filter by user's permanent level
-    const sorted = all.filter(m => m.level === user.educationLevel).sort((a, b) => 
+    // If Admin, show everything. If student, filter by their permanent level.
+    const filteredAll = isAdmin ? all : all.filter(m => m.level === user.educationLevel);
+    
+    const sorted = filteredAll.sort((a, b) => 
       new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
     ).slice(0, 5);
     setRecentMaterials(sorted);
@@ -31,12 +34,20 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, user }) => {
         ...m, 
         progress: progress.find(p => p.materialId === m.id) 
       }))
-      .filter(m => m.progress && m.progress.status === ReadingStatus.READING && m.level === user.educationLevel)
-      .sort((a, b) => new Date(b.progress!.lastRead).getTime() - new Date(a.progress!.lastRead).getTime())
+      .filter(m => {
+        const isReading = m.progress && m.progress.status === ReadingStatus.READING;
+        // For admin, show any reading. For students, filter by level.
+        return isReading && (isAdmin || m.level === user.educationLevel);
+      })
+      .sort((a, b) => {
+          const aTime = a.progress?.lastRead ? new Date(a.progress.lastRead).getTime() : 0;
+          const bTime = b.progress?.lastRead ? new Date(b.progress.lastRead).getTime() : 0;
+          return bTime - aTime;
+      })
       .slice(0, 1) as (StudyMaterial & { progress: UserProgress })[];
 
     setActiveReading(readingItems);
-  }, [userId, viewingMaterial, user.educationLevel]);
+  }, [userId, viewingMaterial, user.educationLevel, isAdmin]);
 
   const handleReadOnline = (m: StudyMaterial) => {
     setViewingMaterial(m);
@@ -97,7 +108,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, user }) => {
             </h1>
             <div className="flex flex-col items-center gap-2">
               <p className="text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest text-[10px] md:text-xs">
-                {user.educationLevel} Student • {user.currentGrade} • {user.district} District
+                {isAdmin ? 'System Administrator' : `${user.educationLevel} Student • ${user.currentGrade}`} • {user.district || 'Study Hub'} District
               </p>
               <div className="h-1 w-20 bg-emerald-500/20 rounded-full mt-2"></div>
             </div>
@@ -108,7 +119,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, user }) => {
               onClick={() => onNavigate('library')} 
               className="group px-10 py-5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black rounded-3xl shadow-2xl hover:shadow-emerald-500/10 transition-all active:scale-95 uppercase tracking-widest text-[11px] flex items-center gap-3"
             >
-              <span>Browse {user.educationLevel} Materials</span>
+              <span>{isAdmin ? 'Access All Libraries' : `Browse ${user.educationLevel} Materials`}</span>
               <svg className="w-5 h-5 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
             </button>
             <button 
@@ -164,7 +175,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, user }) => {
           <div>
             <h3 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white flex items-center gap-3">
               <span className="w-2 h-8 bg-emerald-500 rounded-full"></span>
-              Newly Released ({user.educationLevel})
+              Newly Released {isAdmin ? '(All Levels)' : `(${user.educationLevel})`}
             </h3>
             <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mt-1">Updates to the national resource bank.</p>
           </div>
@@ -173,7 +184,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, user }) => {
 
         <div className="grid gap-4 relative z-10">
           {recentMaterials.length === 0 ? (
-            <div className="text-center py-16 text-slate-400 font-black uppercase tracking-widest text-[10px] bg-slate-50 dark:bg-slate-900/50 rounded-[2rem]">No recent uploads for {user.educationLevel} found.</div>
+            <div className="text-center py-16 text-slate-400 font-black uppercase tracking-widest text-[10px] bg-slate-50 dark:bg-slate-900/50 rounded-[2rem]">No recent uploads found.</div>
           ) : (
             recentMaterials.map((m) => (
               <div key={m.id} className="group bg-slate-50 dark:bg-slate-900/50 p-5 rounded-[2rem] border border-transparent hover:border-emerald-500/20 hover:bg-white dark:hover:bg-slate-900 transition-all flex items-center justify-between shadow-sm">
@@ -183,7 +194,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, user }) => {
                   </div>
                   <div className="min-w-0">
                     <h4 className="font-bold text-slate-800 dark:text-slate-100 group-hover:text-emerald-600 transition-colors truncate">{m.title}</h4>
-                    <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1 truncate">{m.grade} • {m.subject}</p>
+                    <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1 truncate">{m.grade} • {m.subject} {isAdmin && `• ${m.level}`}</p>
                   </div>
                 </div>
                 <button onClick={() => handleReadOnline(m)} className="px-6 py-3 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg active:scale-95 transition-all ml-4 flex-none">Open</button>
