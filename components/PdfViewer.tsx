@@ -22,19 +22,27 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
   currentProgress 
 }) => {
   const [showConfirmClose, setShowConfirmClose] = useState(false);
+  const [viewMode, setViewMode] = useState<'scroll' | 'flip'>('flip');
   const lang = localStorage.getItem('study_hub_chat_lang') || 'English';
+  
   const t = {
-    liveSupport: lang === 'English' ? 'AI Smart Tutor' : 'Mlangizi wa AI'
+    liveSupport: lang === 'English' ? 'AI Smart Tutor' : 'Mlangizi wa AI',
+    flipbook: lang === 'English' ? 'Flipbook' : 'Buku Lapansi',
+    scroll: lang === 'English' ? 'Scroll' : 'Mndandanda',
+    next: lang === 'English' ? 'Next' : 'Ena',
+    prev: lang === 'English' ? 'Prev' : "M'mbuyo"
   };
 
   // PDF Rendering States
   const [numPages, setNumPages] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [zoom, setZoom] = useState<number>(1.2);
+  const [zoom, setZoom] = useState<number>(1.0);
   const [isRenderLoading, setIsRenderLoading] = useState(true);
   const [pdfDoc, setPdfDoc] = useState<any>(null);
+  
   const containerRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<(HTMLCanvasElement | null)[]>([]);
+  const flipPageRef = useRef<HTMLCanvasElement | null>(null);
 
   // AI Quiz States
   const [isQuizOpen, setIsQuizOpen] = useState(false);
@@ -46,9 +54,8 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
   const [userAnswers, setUserAnswers] = useState<Record<string, string>>({});
   const [evaluations, setEvaluations] = useState<Record<string, EvaluationResult>>({});
   const [quizFinished, setQuizFinished] = useState(false);
-  const [loadingMsg, setLoadingMsg] = useState("Analyzing curriculum...");
 
-  // Initialize Rendering
+  // Load PDF
   useEffect(() => {
     if (material.isDigital) {
       setIsRenderLoading(false);
@@ -72,12 +79,14 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
     loadPdf();
   }, [material]);
 
-  const renderPage = useCallback(async (pageNum: number, canvas: HTMLCanvasElement) => {
-    if (!pdfDoc) return;
+  const renderPage = useCallback(async (pageNum: number, canvas: HTMLCanvasElement, scale: number = zoom) => {
+    if (!pdfDoc || !canvas) return;
     try {
       const page = await pdfDoc.getPage(pageNum);
-      const viewport = page.getViewport({ scale: zoom });
+      const viewport = page.getViewport({ scale });
       const context = canvas.getContext('2d');
+      if (!context) return;
+
       canvas.height = viewport.height;
       canvas.width = viewport.width;
       await page.render({ canvasContext: context, viewport: viewport }).promise;
@@ -86,16 +95,24 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
     }
   }, [pdfDoc, zoom]);
 
+  // Initial render for scroll mode
   useEffect(() => {
-    if (pdfDoc && !isRenderLoading) {
+    if (pdfDoc && !isRenderLoading && viewMode === 'scroll') {
       pageRefs.current.forEach((canvas, idx) => {
         if (canvas) renderPage(idx + 1, canvas);
       });
     }
-  }, [pdfDoc, isRenderLoading, zoom, renderPage]);
+  }, [pdfDoc, isRenderLoading, zoom, renderPage, viewMode]);
+
+  // Specific render for Flip mode (Single page rendering)
+  useEffect(() => {
+    if (pdfDoc && !isRenderLoading && viewMode === 'flip') {
+      if (flipPageRef.current) renderPage(currentPage, flipPageRef.current, 1.4);
+    }
+  }, [currentPage, viewMode, pdfDoc, isRenderLoading, renderPage]);
 
   const handleScroll = () => {
-    if (!containerRef.current || material.isDigital) return;
+    if (!containerRef.current || material.isDigital || viewMode === 'flip') return;
     const { scrollTop, clientHeight } = containerRef.current;
     const scrollMiddle = scrollTop + (clientHeight / 2);
     let cumulativeHeight = 0;
@@ -111,11 +128,18 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
     }
   };
 
+  const handlePageTurn = (direction: 'next' | 'prev') => {
+    if (direction === 'next' && currentPage < numPages) {
+      setCurrentPage(prev => Math.min(prev + 1, numPages));
+    } else if (direction === 'prev' && currentPage > 1) {
+      setCurrentPage(prev => Math.max(prev - 1, 1));
+    }
+  };
+
   const handleGenerateQuiz = async () => {
     setIsGenerating(true);
     setIsQuizOpen(true);
     setQuizFinished(false);
-    
     try {
       const context = material.isDigital ? material.content || "" : "PDF Text Extraction Placeholder";
       const data = await aiService.generateQuiz(material.title, material.subject, material.grade, context);
@@ -164,18 +188,36 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
           </button>
           <div className="min-w-0">
             <h4 className="font-black text-sm md:text-lg truncate">{material.title}</h4>
-            <p className="text-[10px] uppercase font-bold opacity-60 tracking-widest">{material.isDigital ? 'Digital Format' : `Page ${currentPage} of ${numPages}`}</p>
+            <div className="flex items-center gap-3">
+               <p className="text-[10px] uppercase font-bold opacity-60 tracking-widest">{material.isDigital ? 'Digital' : `Page ${currentPage} of ${numPages}`}</p>
+               {!material.isDigital && (
+                 <div className="flex bg-black/30 rounded-lg p-0.5 border border-white/10">
+                   <button 
+                     onClick={() => setViewMode('flip')}
+                     className={`px-3 py-1 text-[8px] font-black uppercase rounded ${viewMode === 'flip' ? 'bg-emerald-600 text-white' : 'text-white/40'}`}
+                   >
+                     {t.flipbook}
+                   </button>
+                   <button 
+                     onClick={() => setViewMode('scroll')}
+                     className={`px-3 py-1 text-[8px] font-black uppercase rounded ${viewMode === 'scroll' ? 'bg-emerald-600 text-white' : 'text-white/40'}`}
+                   >
+                     {t.scroll}
+                   </button>
+                 </div>
+               )}
+            </div>
           </div>
         </div>
 
-        <div className="flex items-center space-x-4">
-          <button onClick={handleGenerateQuiz} className="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all">✨ Smart Quiz</button>
-          <button onClick={() => setShowConfirmClose(true)} className="p-3 bg-red-500/20 text-red-100 rounded-2xl"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12" /></svg></button>
+        <div className="flex items-center space-x-2 md:space-x-4">
+          <button onClick={handleGenerateQuiz} className="bg-purple-600 hover:bg-purple-700 text-white px-4 md:px-5 py-2 md:py-2.5 rounded-2xl text-[9px] md:text-[10px] font-black uppercase tracking-widest transition-all">✨ Quiz</button>
+          <button onClick={() => setShowConfirmClose(true)} className="p-3 bg-red-500/20 text-red-100 rounded-2xl"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12" /></svg></button>
         </div>
       </header>
 
-      <div ref={containerRef} onScroll={handleScroll} className="flex-1 overflow-y-auto bg-slate-800 custom-scrollbar">
-        <div className="max-w-4xl mx-auto p-4 md:p-12 pb-40">
+      <div ref={containerRef} onScroll={handleScroll} className="flex-1 overflow-y-auto bg-slate-800 custom-scrollbar relative">
+        <div className={`max-w-7xl mx-auto p-4 md:p-12 pb-40 ${viewMode === 'flip' ? 'h-full flex items-center justify-center overflow-hidden' : ''}`}>
            {isRenderLoading ? (
              <div className="h-[60vh] flex flex-col items-center justify-center space-y-4">
                 <div className="w-12 h-12 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
@@ -191,8 +233,52 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
                                             .replace(/- (.*)/g, '<li class="ml-6 mb-2">$1</li>') || "" 
                 }} />
              </div>
+           ) : viewMode === 'flip' ? (
+             <div className="w-full h-full flex flex-col items-center justify-center gap-12 animate-in zoom-in-95 duration-500">
+                <div className="relative group perspective-1000 flex items-center justify-center">
+                   {/* Single Page Display */}
+                   <div className="relative bg-white shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] rounded-xl overflow-hidden border border-slate-200 transform transition-all duration-500 ease-out hover:scale-[1.01] hover:rotate-y-2">
+                      <canvas key={currentPage} ref={flipPageRef} className="max-w-[85vw] md:max-w-[60vw] lg:max-w-[45vw] h-auto animate-in slide-in-from-right-4 fade-in duration-300" />
+                      
+                      {/* Depth Decorations */}
+                      <div className="absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-black/5 to-transparent pointer-events-none border-l-4 border-slate-50"></div>
+                      <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-black/5 to-transparent pointer-events-none"></div>
+                      <div className="absolute bottom-0 right-0 w-20 h-20 bg-gradient-to-tl from-black/5 to-transparent pointer-events-none"></div>
+                   </div>
+
+                   {/* Floating Nav Buttons */}
+                   <button 
+                     onClick={() => handlePageTurn('prev')}
+                     className={`absolute left-0 -translate-x-1/2 md:-translate-x-24 p-5 bg-emerald-600/90 text-white rounded-full shadow-2xl hover:bg-emerald-500 transition-all z-30 active:scale-90 ${currentPage === 1 ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+                   >
+                     <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M15 19l-7-7 7-7" /></svg>
+                   </button>
+                   <button 
+                     onClick={() => handlePageTurn('next')}
+                     className={`absolute right-0 translate-x-1/2 md:translate-x-24 p-5 bg-emerald-600/90 text-white rounded-full shadow-2xl hover:bg-emerald-500 transition-all z-30 active:scale-90 ${currentPage === numPages ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+                   >
+                     <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M9 5l7 7-7 7" /></svg>
+                   </button>
+                </div>
+
+                <div className="flex flex-col items-center gap-4">
+                   <div className="flex items-center gap-6 px-8 py-3 bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl">
+                      <span className="text-white/40 font-black text-[10px] uppercase tracking-widest">1</span>
+                      <input 
+                        type="range" 
+                        min="1" 
+                        max={numPages} 
+                        value={currentPage} 
+                        onChange={(e) => setCurrentPage(parseInt(e.target.value))}
+                        className="w-48 md:w-64 h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500 transition-all" 
+                      />
+                      <span className="text-white/40 font-black text-[10px] uppercase tracking-widest">{numPages}</span>
+                   </div>
+                   <p className="text-emerald-400 font-black text-[9px] tracking-[0.25em] uppercase opacity-80">Quick Nav Slider</p>
+                </div>
+             </div>
            ) : (
-             <div className="flex flex-col items-center gap-8">
+             <div className="flex flex-col items-center gap-8 animate-in fade-in duration-500">
                {Array.from({ length: numPages }).map((_, i) => (
                  <div key={i} className="shadow-2xl bg-white border border-white/10 rounded-sm">
                    <canvas ref={el => { pageRefs.current[i] = el; }} className="max-w-full h-auto" />
@@ -247,7 +333,9 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
                         )}
                       </div>
                     )}
-                    <button onClick={nextQuestion} className="w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 py-5 rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg">Next Concept</button>
+                    <div className="flex gap-4">
+                       <button onClick={nextQuestion} className="flex-1 bg-slate-900 dark:bg-white text-white dark:text-slate-900 py-5 rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg">Next Concept</button>
+                    </div>
                   </div>
                 ) : null}
              </div>
@@ -267,6 +355,15 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
           </div>
         </div>
       )}
+      
+      <style>{`
+        .perspective-1000 {
+          perspective: 2000px;
+        }
+        .rotate-y-2 {
+          transform: rotateY(2deg);
+        }
+      `}</style>
     </div>
   );
 };
