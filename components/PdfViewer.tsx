@@ -37,7 +37,7 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [isRenderLoading, setIsRenderLoading] = useState(true);
   const [pdfDoc, setPdfDoc] = useState<any>(null);
-  const [scale, setScale] = useState(1.5); // Default scale for readability
+  const [scale, setScale] = useState(1.2); // Balanced default scale
   
   const flipPageRef = useRef<HTMLCanvasElement | null>(null);
   const currentRenderTask = useRef<any>(null);
@@ -46,7 +46,7 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
   const digitalPages = useMemo(() => {
     if (!material.isDigital || !material.content) return [];
     const raw = material.content;
-    const size = 3000; // Large page size for optimized view
+    const size = 3000; 
     const pages = [];
     for (let i = 0; i < raw.length; i += size) {
       pages.push(raw.substring(i, i + size));
@@ -54,7 +54,6 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
     return pages;
   }, [material]);
 
-  // Initial setup for pages and progress
   useEffect(() => {
     if (material.isDigital) {
       setNumPages(digitalPages.length);
@@ -88,7 +87,6 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
     return () => { isMounted = false; if (currentRenderTask.current) currentRenderTask.current.cancel(); };
   }, [material, digitalPages, currentProgress]);
 
-  // Render logic
   const renderCanvasPage = useCallback(async (pageNum: number, canvas: HTMLCanvasElement) => {
     if (!pdfDoc || !canvas) return;
     if (currentRenderTask.current) { currentRenderTask.current.cancel(); }
@@ -122,7 +120,7 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
 
   return (
     <div className="fixed inset-0 z-[100] bg-slate-100 dark:bg-slate-950 flex flex-col h-screen w-screen overflow-hidden animate-in fade-in duration-300">
-      {/* 1. Header (Outside) */}
+      {/* Header Bar */}
       <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex-none flex items-center justify-between px-4 py-3 md:px-8 z-[110] shadow-sm">
         <div className="flex items-center min-w-0 flex-1">
           <button 
@@ -142,13 +140,13 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
         </div>
 
         <div className="flex items-center gap-2 md:gap-4">
-           {/* Zoom settings (Outside) */}
-           <div className="flex items-center bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-1">
-              <button onClick={() => setScale(s => Math.max(0.5, s - 0.25))} className="p-2 text-slate-400 hover:text-emerald-500 transition-colors">
+           {/* Zoom settings */}
+           <div className="flex items-center bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-1 shadow-sm">
+              <button onClick={() => setScale(s => Math.max(0.5, s - 0.2))} className="p-2 text-slate-400 hover:text-emerald-500 transition-colors">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M20 12H4" /></svg>
               </button>
               <span className="text-[10px] font-black w-10 text-center text-slate-600 dark:text-slate-300 tabular-nums">{Math.round(scale * 100)}%</span>
-              <button onClick={() => setScale(s => Math.min(4, s + 0.25))} className="p-2 text-slate-400 hover:text-emerald-500 transition-colors">
+              <button onClick={() => setScale(s => Math.min(4, s + 0.2))} className="p-2 text-slate-400 hover:text-emerald-500 transition-colors">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M12 4v16m8-8H4" /></svg>
               </button>
            </div>
@@ -163,8 +161,8 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
       </header>
 
       <div className="flex-1 flex overflow-hidden relative">
-        {/* 2. Contents Sidebar (Outside) */}
-        <aside className={`flex-none h-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-all duration-300 ease-in-out ${isSidebarOpen ? 'w-64' : 'w-0 overflow-hidden'}`}>
+        {/* Sidebar */}
+        <aside className={`flex-none h-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-all duration-300 ease-in-out z-20 ${isSidebarOpen ? 'w-64 translate-x-0' : 'w-0 -translate-x-full overflow-hidden'}`}>
           <div className="w-64 h-full flex flex-col p-6">
             <h3 className="text-slate-900 dark:text-white font-black uppercase tracking-widest text-[10px] mb-6 flex items-center gap-2">
               <span className="w-1.5 h-4 bg-emerald-500 rounded-full"></span>
@@ -184,35 +182,37 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
           </div>
         </aside>
 
-        {/* 3. Main Reading Space (Optimized for full content and sideways/vertical scrolling) */}
-        <main className="flex-1 overflow-auto custom-scrollbar relative bg-slate-200 dark:bg-slate-950 p-4 md:p-12 scroll-smooth">
+        {/* Reading Stage (Fix: Correct Centering and Scrollability) */}
+        <main className="flex-1 overflow-auto custom-scrollbar bg-slate-200 dark:bg-slate-950 p-4 md:p-12 relative flex flex-col">
           {isRenderLoading ? (
-            <div className="h-full flex flex-col items-center justify-center gap-4 animate-pulse">
+            <div className="flex-1 flex flex-col items-center justify-center gap-4 animate-pulse">
               <div className="w-14 h-14 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
               <p className="text-emerald-600 dark:text-emerald-400 font-black text-[10px] uppercase tracking-[0.2em]">{t.loading}</p>
             </div>
           ) : (
-            <div className="flex justify-center min-h-full min-w-full">
-               <div className="inline-block relative shadow-[0_35px_60px_-15px_rgba(0,0,0,0.3)]">
+            <div className="flex-1 flex items-start justify-center min-w-max min-h-max">
+               <div className="relative shadow-[0_40px_80px_-20px_rgba(0,0,0,0.4)] bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-sm">
                   {material.isDigital ? (
-                    <div className="bg-white dark:bg-slate-800 p-12 md:p-24 rounded-lg shadow-2xl min-h-full font-serif leading-relaxed text-slate-800 dark:text-slate-200 animate-in fade-in duration-500 select-none max-w-4xl mx-auto w-full">
+                    <div className="p-12 md:p-24 min-h-[1000px] w-[800px] max-w-full font-serif leading-relaxed text-slate-800 dark:text-slate-200 animate-in fade-in duration-500 select-none">
                        <div className="whitespace-pre-wrap text-xl md:text-2xl" dangerouslySetInnerHTML={{ __html: digitalPages[currentPage-1]?.replace(/# (.*)/g, '<h2 class="text-4xl font-black text-emerald-800 dark:text-emerald-400 mb-10">$1</h2>').replace(/## (.*)/g, '<h3 class="text-2xl font-black text-slate-900 dark:text-white mt-10 mb-6">$1</h3>') }} />
                     </div>
                   ) : (
-                    <div className="bg-white rounded-sm overflow-hidden border border-slate-300 dark:border-slate-800">
-                       <canvas ref={flipPageRef} className="max-w-none block h-auto" />
+                    <div className="rounded-sm overflow-hidden flex items-center justify-center">
+                       <canvas ref={flipPageRef} className="max-w-none block shadow-2xl" />
                     </div>
                   )}
-                  {/* Digital Spine Detail */}
-                  <div className="absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-black/5 to-transparent pointer-events-none"></div>
+                  
+                  {/* Decorative Spine Shadow */}
+                  <div className="absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-black/10 to-transparent pointer-events-none"></div>
+                  <div className="absolute inset-y-0 left-0 w-1 bg-white/20 pointer-events-none"></div>
                </div>
             </div>
           )}
         </main>
       </div>
 
-      {/* 4. Footer Navigation (Outside) */}
-      <footer className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex-none px-4 md:px-8 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 z-[110] shadow-[0_-4px_20px_rgba(0,0,0,0.03)]">
+      {/* Footer Navigation Bar */}
+      <footer className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex-none px-4 md:px-8 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 z-[110] shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
          <div className="flex items-center gap-3 w-full sm:w-auto order-2 sm:order-1">
             <button 
               onClick={() => handlePageChange(currentPage - 1)} 
@@ -238,26 +238,26 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
                <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${readingProgress}%` }} />
             </div>
             <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] whitespace-nowrap tabular-nums">
-              {Math.round(readingProgress)}% {lang === 'English' ? 'COMPLETED' : 'CWAMALIZA'}
+              {Math.round(readingProgress)}% {lang === 'English' ? 'DONE' : 'CWAMALIZA'}
             </span>
          </div>
       </footer>
 
-      {/* Close Confirmation Modal */}
+      {/* Exit Dialog */}
       {showConfirmClose && (
-        <div className="fixed inset-0 z-[300] bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-6 animate-in zoom-in duration-300 shadow-2xl">
+        <div className="fixed inset-0 z-[300] bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-6 animate-in zoom-in duration-300">
           <div className="bg-white dark:bg-slate-900 rounded-[3rem] p-12 max-w-md w-full text-center space-y-10 border border-slate-200 dark:border-slate-700 shadow-2xl">
             <div className="w-20 h-20 bg-emerald-50 dark:bg-emerald-900/30 rounded-3xl flex items-center justify-center text-5xl mx-auto shadow-inner border border-emerald-100/50">📖</div>
             <div className="space-y-3">
               <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-none">{t.finish}</h3>
-              <p className="text-slate-500 dark:text-slate-400 font-medium">Your reading progress ({currentPage}/{numPages}) is safely stored.</p>
+              <p className="text-slate-500 dark:text-slate-400 font-medium">Your progress ({currentPage}/{numPages}) is stored and will sync automatically.</p>
             </div>
             <div className="space-y-4">
               <button 
                 onClick={onClose} 
                 className="w-full py-6 bg-emerald-600 text-white font-black rounded-3xl shadow-xl uppercase tracking-widest text-[11px] active:scale-95 transition-all shadow-emerald-500/20"
               >
-                Close Hub Reader
+                Exit Reader
               </button>
               <button 
                 onClick={() => setShowConfirmClose(false)} 
