@@ -13,109 +13,22 @@ const EXAMS_KEY = 'study_hub_exams';
 const EXAM_RESULTS_KEY = 'study_hub_exam_results';
 const LAST_SYNC_KEY = 'study_hub_last_sync';
 
-const SEED_MATERIALS: StudyMaterial[] = [
-  {
-    id: 'form1-chemistry-chirindanji',
-    title: 'Complete Form One Chemistry Notes',
-    level: EducationLevel.SECONDARY,
-    grade: 'Form 1' as Grade,
-    category: Category.NOTES,
-    subject: 'Chemistry',
-    fileUrl: '#digital',
-    fileName: 'Form1_Chemistry_Notes.digital',
-    isDigital: true,
-    uploadedAt: new Date().toISOString(),
-    content: `
-# TOPIC 1: INTRODUCTION TO CHEMISTRY
-## MEANING OF CHEMISTRY
-Chemistry is the branch of science dealing with elements and the compounds they form and the reactions they undergo.
-
-## BRANCHES OF CHEMISTRY
-The branches of chemistry include physical, environmental, analytical, industrial, organic and inorganic chemistry.
-
-**a. PHYSICAL CHEMISTRY**
-It is the study of how chemical compounds and their constituents react with each other.
-
-**b. ENVIRONMENTAL CHEMISTRY**
-It is the study of how chemicals react naturally in the environment and human impact on natural systems.
-
-**c. ANALYTICAL CHEMISTRY**
-It is the study of separation, identification, and quantification of the chemical components of natural and artificial materials.
-
-**d. INDUSTRIAL CHEMISTRY**
-It is the study of the application of physical and chemical processes towards the change of raw materials into beneficial products.
-
-**e. ORGANIC CHEMISTRY**
-It is the study of compounds that contain carbon except oxides of carbon and carbonates.
-
-**f. INORGANIC CHEMISTRY**
-It is the study of compounds that do not contain carbon and non-living things.
-
----
-
-## IMPORTANCE OF CHEMISTRY IN EVERYDAY LIFE
-Chemistry is important in everyday life and it is applied in different ways. Some of the applications of chemistry are:
-• Water treatment. Different chemical processes are used to purify water so that it is safe for drinking.
-• Cooking nsima. Mixing of the ingredients applies concepts in chemistry.
-• Making a cup of tea.
-• Pharmaceuticals.
-• Food industries. Chemistry is involved in the processing of the food. For example, lime is added to brown sugar so that it becomes white.
-• Manufacture of soap and detergents also applies knowledge of chemistry.
-• Manufacture of pesticides.
-
----
-
-## TOPIC 2: ESSENTIAL MATHEMATICAL SKILLS IN CHEMISTRY
-## EXPRESSING NUMBERS IN STANDARD FORM
-The standard form or the scientific notation is a special way of writing very large number or very small numbers. When a number is expressed in standard form, its meaning or value does not change.
-The number is written in two parts which give the original number when multiplied. One of the numbers must be between 1 and 10 and the other is a power of ten.
-
-## TOPIC 3: COMPOSITION AND CLASSIFICATION OF MATTER
-## MATTER
-Matter is defined as anything that has mass and occupies space.
-
-## STATES OF MATTER
-There are three states of matter. These are solids, liquids and gases.
-
----
-
-## TOPIC 4: ATOMIC STRUCTURE
-## ATOM
-An atom is defined as the smallest particle of matter.
-An atom consists of three sub-atomic particles. These include protons, neutrons and electrons.
-The central part of the atom is called the nucleus.
-    `
-  },
-  {
-    id: 'jce-social-studies-holly',
-    title: 'JCE Social Studies (Forms 1 & 2)',
-    level: EducationLevel.SECONDARY,
-    grade: 'Form 2' as Grade,
-    category: Category.BOOKS,
-    subject: 'Social Studies',
-    fileUrl: 'https://raw.githubusercontent.com/mozilla/pdf.js/ba2edeae/web/compressed.tracemonkey-pldi-09.pdf',
-    fileName: 'JCE_Social_Studies_Holly.pdf',
-    uploadedAt: new Date().toISOString()
-  }
-];
+// Emptying the seed materials to allow a fresh start
+const SEED_MATERIALS: StudyMaterial[] = [];
 
 const DEFAULT_ROOMS: ChatRoom[] = [
-  { id: 'general-chat', title: 'General chat', description: 'Casual conversation and connecting with other students.', icon: '💬', activeUsers: 412 },
-  { id: 'exam-talk', title: 'Exam Prep', description: 'Strategies and past paper discussions.', icon: '📝', activeUsers: 342 }
+  { id: 'general-chat', title: 'General chat', description: 'Casual conversation and connecting with other students.', icon: '💬', activeUsers: 0 },
+  { id: 'exam-talk', title: 'Exam Prep', description: 'Strategies and past paper discussions.', icon: '📝', activeUsers: 0 }
 ];
 
 export const storage = {
   getMaterials: (): StudyMaterial[] => {
     const data = localStorage.getItem(MATERIALS_KEY);
     const materials = data ? JSON.parse(data) : [];
-    const seedIds = SEED_MATERIALS.map(sm => sm.id);
-    const existingIds = materials.map((m: any) => m.id);
-    const needsSeeding = seedIds.some(id => !existingIds.includes(id));
-    if (materials.length === 0 || needsSeeding) {
-      const missingSeeds = SEED_MATERIALS.filter(sm => !existingIds.includes(sm.id));
-      const combined = [...materials, ...missingSeeds];
-      localStorage.setItem(MATERIALS_KEY, JSON.stringify(combined));
-      return combined;
+    // If user specifically requested to clear everything and SEED is empty, we respect that.
+    if (materials.length === 0 && SEED_MATERIALS.length > 0) {
+      localStorage.setItem(MATERIALS_KEY, JSON.stringify(SEED_MATERIALS));
+      return SEED_MATERIALS;
     }
     return materials;
   },

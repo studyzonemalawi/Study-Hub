@@ -1,6 +1,6 @@
 
-import React, { useState, useRef } from 'react';
-import { User, AccountRole, MALAWI_DISTRICTS, JOIN_REASONS, PRIMARY_GRADES, SECONDARY_GRADES, OTHER_GRADE_OPTIONS, Grade } from '../types';
+import React, { useState } from 'react';
+import { User, AccountRole, EducationLevel, MALAWI_DISTRICTS, JOIN_REASONS, PRIMARY_GRADES, SECONDARY_GRADES, OTHER_GRADE_OPTIONS, Grade } from '../types';
 import { storage } from '../services/storage';
 
 interface RegisterProfileProps {
@@ -12,12 +12,12 @@ export const RegisterProfile: React.FC<RegisterProfileProps> = ({ user, onComple
   const [name, setName] = useState('');
   const [age, setAge] = useState<string>('');
   const [accountRole, setAccountRole] = useState<AccountRole | ''>('');
+  const [educationLevel, setEducationLevel] = useState<EducationLevel | ''>('');
   const [district, setDistrict] = useState('');
   const [reason, setReason] = useState('');
   const [schoolName, setSchoolName] = useState('');
   const [currentGrade, setCurrentGrade] = useState<Grade | ''>('');
   const [bio, setBio] = useState('');
-  const [profilePic, setProfilePic] = useState<string>('initials'); // Marker for initials-based avatar
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [error, setError] = useState('');
@@ -30,7 +30,7 @@ export const RegisterProfile: React.FC<RegisterProfileProps> = ({ user, onComple
     e.preventDefault();
     setError('');
 
-    if (!name || !age || !accountRole || !district || !reason || !currentGrade || !bio) {
+    if (!name || !age || !accountRole || !educationLevel || !district || !reason || !currentGrade || !bio) {
       setError('All fields are mandatory.');
       return;
     }
@@ -52,6 +52,7 @@ export const RegisterProfile: React.FC<RegisterProfileProps> = ({ user, onComple
         name,
         age: parseInt(age),
         accountRole: accountRole as AccountRole,
+        educationLevel: educationLevel as EducationLevel,
         district,
         reason,
         schoolName,
@@ -66,12 +67,15 @@ export const RegisterProfile: React.FC<RegisterProfileProps> = ({ user, onComple
       storage.updateUser(finalUpdatedUser);
       setIsSubmitting(false);
       setIsSaved(true);
-      // Callback after small delay to show success state
       setTimeout(() => onComplete(finalUpdatedUser), 1000);
     }, 1200);
   };
 
-  const allGrades = [...PRIMARY_GRADES, ...SECONDARY_GRADES, ...OTHER_GRADE_OPTIONS];
+  const availableGrades = educationLevel === EducationLevel.PRIMARY 
+    ? [...PRIMARY_GRADES, ...OTHER_GRADE_OPTIONS] 
+    : educationLevel === EducationLevel.SECONDARY 
+      ? [...SECONDARY_GRADES, ...OTHER_GRADE_OPTIONS] 
+      : [...OTHER_GRADE_OPTIONS];
 
   if (isSaved) {
     return (
@@ -91,11 +95,10 @@ export const RegisterProfile: React.FC<RegisterProfileProps> = ({ user, onComple
     <div className="min-h-screen bg-emerald-50 flex items-center justify-center p-4 py-12">
       <div className="max-w-4xl w-full bg-white rounded-[2.5rem] shadow-2xl overflow-hidden border border-emerald-100 flex flex-col md:flex-row">
         
-        {/* Sidebar Info */}
         <div className="md:w-1/3 bg-emerald-800 p-10 text-white flex flex-col justify-between">
           <div>
             <h2 className="text-3xl font-black mb-4 tracking-tighter">FINALIZE HUB ACCESS</h2>
-            <p className="text-emerald-100 opacity-80 leading-relaxed text-sm">Let's personalize your Study Hub experience. Complete your profile to get full access to Malawian academic resources.</p>
+            <p className="text-emerald-100 opacity-80 leading-relaxed text-sm">Let's personalize your Study Hub experience. Your level choice will permanently filter the academic content for your specific needs.</p>
           </div>
           <div className="hidden md:block">
             <div className="p-4 bg-white/10 rounded-2xl border border-white/10">
@@ -105,7 +108,6 @@ export const RegisterProfile: React.FC<RegisterProfileProps> = ({ user, onComple
           </div>
         </div>
 
-        {/* Main Form */}
         <form onSubmit={handleSubmit} className="md:w-2/3 p-10 space-y-8 max-h-[90vh] overflow-y-auto custom-scrollbar">
           {error && <div className="bg-red-50 text-red-600 p-4 rounded-2xl text-sm font-bold border border-red-100">{error}</div>}
           
@@ -132,6 +134,26 @@ export const RegisterProfile: React.FC<RegisterProfileProps> = ({ user, onComple
             </div>
 
             <div className="space-y-2">
+              <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Education Level (Permanent)</label>
+              <select required value={educationLevel} onChange={(e) => { 
+                setEducationLevel(e.target.value as EducationLevel);
+                setCurrentGrade(''); // Reset grade when level changes
+              }} className="w-full p-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none">
+                <option value="">Select Level</option>
+                <option value={EducationLevel.PRIMARY}>Primary (Standards 5-8)</option>
+                <option value={EducationLevel.SECONDARY}>Secondary (Forms 1-4)</option>
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Current Grade/Form</label>
+              <select required value={currentGrade} onChange={(e) => setCurrentGrade(e.target.value as Grade)} className="w-full p-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none">
+                <option value="">Select Grade</option>
+                {availableGrades.map(g => <option key={g} value={g}>{g}</option>)}
+              </select>
+            </div>
+
+            <div className="space-y-2">
               <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Account Role</label>
               <select required value={accountRole} onChange={(e) => setAccountRole(e.target.value as AccountRole)} className="w-full p-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none">
                 <option value="">Select Role</option>
@@ -147,15 +169,7 @@ export const RegisterProfile: React.FC<RegisterProfileProps> = ({ user, onComple
               </select>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Current Grade/Form</label>
-              <select required value={currentGrade} onChange={(e) => setCurrentGrade(e.target.value as Grade)} className="w-full p-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none">
-                <option value="">Select Grade</option>
-                {allGrades.map(g => <option key={g} value={g}>{g}</option>)}
-              </select>
-            </div>
-
-            <div className="space-y-2">
+            <div className="col-span-2 space-y-2">
               <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Reason for Joining</label>
               <select required value={reason} onChange={(e) => setReason(e.target.value)} className="w-full p-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none">
                 <option value="">Select Reason</option>
@@ -187,7 +201,6 @@ export const RegisterProfile: React.FC<RegisterProfileProps> = ({ user, onComple
         </form>
       </div>
 
-      {/* Terms Modal */}
       {showTerms && (
         <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-[2.5rem] max-w-2xl w-full max-h-[80vh] flex flex-col overflow-hidden shadow-2xl animate-in zoom-in duration-300">

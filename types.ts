@@ -135,6 +135,7 @@ export interface User {
   name: string;
   age?: number;
   accountRole?: AccountRole;
+  educationLevel?: EducationLevel; // Permanent Level selection
   isProfileComplete?: boolean;
   district?: string;
   reason?: string;

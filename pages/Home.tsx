@@ -20,7 +20,8 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, user }) => {
     const all = storage.getMaterials();
     const progress = storage.getUserProgress(userId);
 
-    const sorted = [...all].sort((a, b) => 
+    // Filter by user's permanent level
+    const sorted = all.filter(m => m.level === user.educationLevel).sort((a, b) => 
       new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
     ).slice(0, 5);
     setRecentMaterials(sorted);
@@ -30,12 +31,12 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, user }) => {
         ...m, 
         progress: progress.find(p => p.materialId === m.id) 
       }))
-      .filter(m => m.progress && m.progress.status === ReadingStatus.READING)
+      .filter(m => m.progress && m.progress.status === ReadingStatus.READING && m.level === user.educationLevel)
       .sort((a, b) => new Date(b.progress!.lastRead).getTime() - new Date(a.progress!.lastRead).getTime())
       .slice(0, 1) as (StudyMaterial & { progress: UserProgress })[];
 
     setActiveReading(readingItems);
-  }, [userId, viewingMaterial]);
+  }, [userId, viewingMaterial, user.educationLevel]);
 
   const handleReadOnline = (m: StudyMaterial) => {
     setViewingMaterial(m);
@@ -89,14 +90,14 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, user }) => {
           
           <div className="space-y-4 max-w-2xl">
             <h1 className="text-4xl md:text-7xl font-black text-slate-900 dark:text-white leading-[1.1] tracking-tighter">
-              Takulandirani,<br />
+              You are most welcome,<br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-blue-600 dark:from-emerald-400 dark:to-blue-400">
                 {getFirstName(user.name)}!
               </span>
             </h1>
             <div className="flex flex-col items-center gap-2">
               <p className="text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest text-[10px] md:text-xs">
-                {user.currentGrade} • {user.district} District
+                {user.educationLevel} Student • {user.currentGrade} • {user.district} District
               </p>
               <div className="h-1 w-20 bg-emerald-500/20 rounded-full mt-2"></div>
             </div>
@@ -107,7 +108,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, user }) => {
               onClick={() => onNavigate('library')} 
               className="group px-10 py-5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black rounded-3xl shadow-2xl hover:shadow-emerald-500/10 transition-all active:scale-95 uppercase tracking-widest text-[11px] flex items-center gap-3"
             >
-              <span>Browse Materials</span>
+              <span>Browse {user.educationLevel} Materials</span>
               <svg className="w-5 h-5 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
             </button>
             <button 
@@ -163,7 +164,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, user }) => {
           <div>
             <h3 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white flex items-center gap-3">
               <span className="w-2 h-8 bg-emerald-500 rounded-full"></span>
-              Newly Released
+              Newly Released ({user.educationLevel})
             </h3>
             <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mt-1">Updates to the national resource bank.</p>
           </div>
@@ -172,7 +173,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, user }) => {
 
         <div className="grid gap-4 relative z-10">
           {recentMaterials.length === 0 ? (
-            <div className="text-center py-16 text-slate-400 font-black uppercase tracking-widest text-[10px] bg-slate-50 dark:bg-slate-900/50 rounded-[2rem]">No recent uploads found.</div>
+            <div className="text-center py-16 text-slate-400 font-black uppercase tracking-widest text-[10px] bg-slate-50 dark:bg-slate-900/50 rounded-[2rem]">No recent uploads for {user.educationLevel} found.</div>
           ) : (
             recentMaterials.map((m) => (
               <div key={m.id} className="group bg-slate-50 dark:bg-slate-900/50 p-5 rounded-[2rem] border border-transparent hover:border-emerald-500/20 hover:bg-white dark:hover:bg-slate-900 transition-all flex items-center justify-between shadow-sm">

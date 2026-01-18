@@ -8,7 +8,8 @@ import {
   SECONDARY_GRADES, 
   OTHER_GRADE_OPTIONS, 
   Grade, 
-  AccountRole 
+  AccountRole,
+  EducationLevel
 } from '../types';
 import { storage } from '../services/storage';
 
@@ -32,7 +33,8 @@ export const Settings: React.FC<SettingsProps> = ({ user, onUpdate, onNavigate }
     reason: user.reason,
     bio: user.bio || '',
     isPublic: user.isPublic || false,
-    email: user.email || ''
+    email: user.email || '',
+    educationLevel: user.educationLevel
   });
 
   const [newPassword, setNewPassword] = useState('');
@@ -66,7 +68,11 @@ export const Settings: React.FC<SettingsProps> = ({ user, onUpdate, onNavigate }
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
-  const allGrades = [...PRIMARY_GRADES, ...SECONDARY_GRADES, ...OTHER_GRADE_OPTIONS];
+  const availableGrades = formData.educationLevel === EducationLevel.PRIMARY 
+    ? [...PRIMARY_GRADES, ...OTHER_GRADE_OPTIONS] 
+    : formData.educationLevel === EducationLevel.SECONDARY 
+      ? [...SECONDARY_GRADES, ...OTHER_GRADE_OPTIONS] 
+      : [...OTHER_GRADE_OPTIONS];
 
   const sections = [
     { id: 'profile' as const, label: 'Profile Info', icon: '👤' },
@@ -92,7 +98,6 @@ export const Settings: React.FC<SettingsProps> = ({ user, onUpdate, onNavigate }
       </div>
 
       <div className="flex flex-col lg:flex-row gap-8 min-h-[600px]">
-        {/* Sidebar Navigation */}
         <aside className="w-full lg:w-72 flex-none space-y-4">
           <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] border border-slate-100 dark:border-slate-700 p-4 shadow-xl">
             <nav className="flex lg:flex-col gap-2 overflow-x-auto no-scrollbar lg:overflow-visible">
@@ -112,20 +117,8 @@ export const Settings: React.FC<SettingsProps> = ({ user, onUpdate, onNavigate }
               ))}
             </nav>
           </div>
-
-          <div className="hidden lg:block bg-slate-900 dark:bg-slate-950 rounded-[2.5rem] p-8 text-white relative overflow-hidden shadow-2xl">
-            <div className="relative z-10">
-              <div className="w-16 h-16 rounded-full bg-emerald-600 flex items-center justify-center text-xl font-black border-4 border-slate-900 mb-4 mx-auto">
-                {getInitials(user.name)}
-              </div>
-              <h4 className="text-center font-black truncate">{user.name}</h4>
-              <p className="text-center text-[10px] font-black uppercase tracking-widest text-emerald-400 mt-1 opacity-80">{user.email}</p>
-            </div>
-            <div className="absolute top-0 right-0 p-4 opacity-10 text-6xl">✨</div>
-          </div>
         </aside>
 
-        {/* Main Content Area */}
         <div className="flex-1 bg-white dark:bg-slate-800 rounded-[3rem] border border-slate-100 dark:border-slate-700 shadow-2xl overflow-hidden flex flex-col">
           <form onSubmit={handleSubmit} className="flex flex-col h-full">
             <div className="p-8 md:p-12 space-y-10 flex-1">
@@ -140,7 +133,6 @@ export const Settings: React.FC<SettingsProps> = ({ user, onUpdate, onNavigate }
                 </div>
               )}
 
-              {/* Profile Section */}
               {activeSection === 'profile' && (
                 <div className="space-y-8 animate-in fade-in duration-500">
                   <div className="border-b border-slate-50 dark:border-slate-700 pb-4">
@@ -202,15 +194,20 @@ export const Settings: React.FC<SettingsProps> = ({ user, onUpdate, onNavigate }
                 </div>
               )}
 
-              {/* Academic Section */}
               {activeSection === 'academic' && (
                 <div className="space-y-8 animate-in fade-in duration-500">
                   <div className="border-b border-slate-50 dark:border-slate-700 pb-4">
                     <h3 className="text-2xl font-black text-slate-800 dark:text-white">Academic Status</h3>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">Tailor your textbook feed based on your current studies.</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Your level choice is permanent to maintain your structured resource feed.</p>
                   </div>
 
                   <div className="grid md:grid-cols-2 gap-8">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] px-1">Education Level (Fixed)</label>
+                      <div className="w-full p-5 rounded-[1.5rem] border border-slate-100 dark:border-slate-700 bg-slate-100 dark:bg-slate-900 font-bold text-slate-500 dark:text-slate-400">
+                        {formData.educationLevel}
+                      </div>
+                    </div>
                     <div className="space-y-2">
                       <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] px-1">Current Grade/Form</label>
                       <select 
@@ -218,10 +215,10 @@ export const Settings: React.FC<SettingsProps> = ({ user, onUpdate, onNavigate }
                         value={formData.currentGrade} 
                         onChange={(e) => setFormData({ ...formData, currentGrade: e.target.value as Grade })}
                       >
-                        {allGrades.map(g => <option key={g} value={g}>{g}</option>)}
+                        {availableGrades.map(g => <option key={g} value={g}>{g}</option>)}
                       </select>
                     </div>
-                    <div className="space-y-2">
+                    <div className="col-span-2 space-y-2">
                       <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] px-1">School Name</label>
                       <input 
                         type="text" 
@@ -234,7 +231,6 @@ export const Settings: React.FC<SettingsProps> = ({ user, onUpdate, onNavigate }
                 </div>
               )}
 
-              {/* Security Section */}
               {activeSection === 'security' && (
                 <div className="space-y-8 animate-in fade-in duration-500">
                   <div className="border-b border-slate-50 dark:border-slate-700 pb-4">
@@ -272,7 +268,6 @@ export const Settings: React.FC<SettingsProps> = ({ user, onUpdate, onNavigate }
                 </div>
               )}
 
-              {/* Privacy Section */}
               {activeSection === 'privacy' && (
                 <div className="space-y-8 animate-in fade-in duration-500">
                   <div className="border-b border-slate-50 dark:border-slate-700 pb-4">

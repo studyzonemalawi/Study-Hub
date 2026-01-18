@@ -17,25 +17,27 @@ import { storage } from '../services/storage';
 import { PdfViewer } from '../components/PdfViewer';
 
 interface LibraryProps {
+  user: User;
   onNavigate: (tab: string) => void;
 }
 
-export const Library: React.FC<LibraryProps> = ({ onNavigate }) => {
-  const [level, setLevel] = useState<EducationLevel>(EducationLevel.PRIMARY);
-  const [selectedGrade, setSelectedGrade] = useState<Grade>(PRIMARY_GRADES[0]);
+export const Library: React.FC<LibraryProps> = ({ user, onNavigate }) => {
+  // Use user's permanent education level instead of a local state toggle
+  const level = user.educationLevel || EducationLevel.PRIMARY;
+  
+  const [selectedGrade, setSelectedGrade] = useState<Grade>(
+    level === EducationLevel.PRIMARY ? PRIMARY_GRADES[0] : SECONDARY_GRADES[0]
+  );
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [materials, setMaterials] = useState<StudyMaterial[]>([]);
   const [viewingMaterial, setViewingMaterial] = useState<StudyMaterial | null>(null);
   const [userProgress, setUserProgress] = useState<UserProgress[]>([]);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [currentUser, setCurrentUser] = useState<User>(user);
   const [activeView, setActiveView] = useState<'browse' | 'downloads'>('browse');
 
-  // Feedback State
   const [notification, setNotification] = useState<{ type: 'success' | 'info', text: string } | null>(null);
 
-  const userStr = localStorage.getItem('study_hub_session');
-  const sessionUser = userStr ? JSON.parse(userStr) : null;
-  const userId = sessionUser?.id || 'guest';
+  const userId = user?.id || 'guest';
 
   useEffect(() => {
     setMaterials(storage.getMaterials());
@@ -133,7 +135,6 @@ export const Library: React.FC<LibraryProps> = ({ onNavigate }) => {
   return (
     <div className="space-y-10 pb-32 animate-in fade-in duration-500 relative">
       
-      {/* Dynamic Success Toast */}
       {notification && (
         <div className={`fixed top-24 left-1/2 -translate-x-1/2 z-[200] px-8 py-4 rounded-3xl shadow-2xl border flex items-center gap-4 animate-in slide-in-from-top-4 duration-300 ${
           notification.type === 'success' ? 'bg-emerald-600 border-emerald-500 text-white' : 'bg-slate-900 border-slate-700 text-white'
@@ -147,10 +148,10 @@ export const Library: React.FC<LibraryProps> = ({ onNavigate }) => {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-8">
         <div>
           <h2 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
-            {activeView === 'browse' ? 'Academic Library' : 'My Saved Resources'}
+            {activeView === 'browse' ? `${level} Library` : 'My Saved Resources'}
           </h2>
           <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">
-            {activeView === 'browse' ? `Access premium Malawian education content for ${level} students.` : 'Manage your offline materials for gapless learning.'}
+            {activeView === 'browse' ? `Personalized academic resources for your ${level} studies.` : 'Manage your offline materials for gapless learning.'}
           </p>
         </div>
         
@@ -169,23 +170,10 @@ export const Library: React.FC<LibraryProps> = ({ onNavigate }) => {
               Offline ({currentUser?.downloadedIds.length || 0})
             </button>
           </div>
-          
-          {activeView === 'browse' && (
-            <div className="flex p-1.5 bg-slate-200/50 dark:bg-slate-800 rounded-2xl w-fit border border-slate-200 dark:border-slate-700">
-              <button 
-                onClick={() => { setLevel(EducationLevel.PRIMARY); setSelectedGrade(PRIMARY_GRADES[0]); }}
-                className={`px-5 py-2.5 rounded-xl text-[10px] uppercase font-black tracking-widest transition-all ${level === EducationLevel.PRIMARY ? 'bg-white dark:bg-slate-700 shadow-sm text-emerald-700 dark:text-emerald-400' : 'text-slate-500 hover:text-slate-700 dark:text-slate-500'}`}
-              >
-                Primary
-              </button>
-              <button 
-                onClick={() => { setLevel(EducationLevel.SECONDARY); setSelectedGrade(SECONDARY_GRADES[0]); }}
-                className={`px-5 py-2.5 rounded-xl text-[10px] uppercase font-black tracking-widest transition-all ${level === EducationLevel.SECONDARY ? 'bg-white dark:bg-slate-700 shadow-sm text-emerald-700 dark:text-emerald-400' : 'text-slate-500 hover:text-slate-700 dark:text-slate-500'}`}
-              >
-                Secondary
-              </button>
-            </div>
-          )}
+
+          <div className="hidden md:flex px-6 py-3 bg-emerald-50 dark:bg-emerald-950/30 rounded-2xl border border-emerald-100 dark:border-emerald-800">
+            <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400">{level} Student</span>
+          </div>
         </div>
       </div>
 
@@ -260,7 +248,7 @@ export const Library: React.FC<LibraryProps> = ({ onNavigate }) => {
             {filteredMaterials.length === 0 ? (
               <div className="bg-white dark:bg-slate-800 rounded-[3rem] p-24 text-center border-2 border-dashed border-slate-200 dark:border-slate-700 shadow-sm">
                 <div className="text-7xl mb-8 opacity-20 grayscale">📂</div>
-                <h3 className="text-2xl font-black text-slate-800 dark:text-slate-200">No Content Found</h3>
+                <h3 className="text-2xl font-black text-slate-800 dark:text-white">No Content Found</h3>
                 <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium">Try checking another category or academic year.</p>
               </div>
             ) : (
