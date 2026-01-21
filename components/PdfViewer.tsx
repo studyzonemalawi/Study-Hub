@@ -12,6 +12,18 @@ interface MaterialViewerProps {
   currentProgress?: UserProgress;
 }
 
+const CUSTOM_TOC: Record<string, { title: string; page: number }[]> = {
+  'chem-f1-notes-001': [
+    { title: "Introduction to Chemistry", page: 1 },
+    { title: "Essential Mathematical Skills", page: 11 },
+    { title: "Composition of Matter", page: 16 },
+    { title: "Atomic Structure", page: 34 },
+    { title: "The Periodic Table", page: 42 },
+    { title: "Physical & Chemical Changes", page: 47 },
+    { title: "Organic Compounds", page: 58 }
+  ]
+};
+
 export const PdfViewer: React.FC<MaterialViewerProps> = ({ 
   material, 
   userId, 
@@ -122,6 +134,8 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
     onUpdateStatus(ReadingStatus.READING);
   };
 
+  const materialToc = CUSTOM_TOC[material.id];
+
   return (
     <div ref={containerRef} className="fixed inset-0 z-[100] bg-slate-100 dark:bg-slate-950 flex flex-col h-screen w-screen overflow-hidden animate-in fade-in duration-300">
       {/* Header Bar */}
@@ -144,7 +158,6 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
         </div>
 
         <div className="flex items-center gap-2 md:gap-4">
-           {/* Zoom settings */}
            <div className="hidden sm:flex items-center bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-1 shadow-sm">
               <button onClick={() => setScale(s => Math.max(0.5, s - 0.2))} className="p-2 text-slate-400 hover:text-emerald-500 transition-colors">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M20 12H4" /></svg>
@@ -155,7 +168,6 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
               </button>
            </div>
            
-           {/* Fullscreen Toggle Button */}
            <button 
              onClick={toggleFullscreen} 
              title={isFullscreen ? t.exitFullscreen : t.fullscreen}
@@ -178,28 +190,55 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
       </header>
 
       <div className="flex-1 flex overflow-hidden relative">
-        {/* Sidebar */}
-        <aside className={`flex-none h-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-all duration-300 ease-in-out z-20 ${isSidebarOpen ? 'w-64 translate-x-0' : 'w-0 -translate-x-full overflow-hidden'}`}>
-          <div className="w-64 h-full flex flex-col p-6">
+        <aside className={`flex-none h-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-all duration-300 ease-in-out z-20 ${isSidebarOpen ? 'w-64 md:w-72 translate-x-0' : 'w-0 -translate-x-full overflow-hidden'}`}>
+          <div className="w-64 md:w-72 h-full flex flex-col p-6">
             <h3 className="text-slate-900 dark:text-white font-black uppercase tracking-widest text-[10px] mb-6 flex items-center gap-2">
               <span className="w-1.5 h-4 bg-emerald-500 rounded-full"></span>
               {t.sidebar}
             </h3>
             <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2">
-              {Array.from({ length: numPages }).map((_, i) => (
-                <button 
-                  key={i} 
-                  onClick={() => handlePageChange(i + 1)} 
-                  className={`w-full p-4 rounded-2xl text-left text-[11px] font-black uppercase tracking-wider transition-all border ${currentPage === i + 1 ? 'bg-emerald-600 border-emerald-600 text-white shadow-lg' : 'bg-slate-50 dark:bg-slate-800 border-transparent text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
-                >
-                  {t.page} {i + 1}
-                </button>
-              ))}
+              {materialToc ? (
+                 <div className="space-y-4">
+                    {materialToc.map((item, idx) => (
+                      <button 
+                        key={idx}
+                        onClick={() => handlePageChange(item.page)}
+                        className={`w-full p-4 rounded-2xl text-left transition-all border flex flex-col gap-1 ${currentPage >= item.page && (idx === materialToc.length - 1 || currentPage < materialToc[idx+1].page) ? 'bg-emerald-600 border-emerald-600 text-white shadow-lg' : 'bg-slate-50 dark:bg-slate-800 border-transparent text-slate-600 dark:text-slate-300 hover:bg-slate-100'}`}
+                      >
+                         <span className="text-[10px] font-black uppercase tracking-widest opacity-60">Topic {idx + 1}</span>
+                         <span className="font-bold text-xs leading-tight">{item.title}</span>
+                         <span className="text-[9px] font-bold opacity-50 mt-1">Page {item.page}</span>
+                      </button>
+                    ))}
+                    <div className="h-px bg-slate-100 dark:bg-slate-800 my-6"></div>
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1 mb-2">All Pages</p>
+                    <div className="grid grid-cols-4 gap-2">
+                       {Array.from({ length: numPages }).map((_, i) => (
+                         <button 
+                           key={i} 
+                           onClick={() => handlePageChange(i + 1)} 
+                           className={`h-10 rounded-lg flex items-center justify-center text-[10px] font-black transition-all ${currentPage === i + 1 ? 'bg-emerald-600 text-white' : 'bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-emerald-500'}`}
+                         >
+                           {i + 1}
+                         </button>
+                       ))}
+                    </div>
+                 </div>
+              ) : (
+                Array.from({ length: numPages }).map((_, i) => (
+                  <button 
+                    key={i} 
+                    onClick={() => handlePageChange(i + 1)} 
+                    className={`w-full p-4 rounded-2xl text-left text-[11px] font-black uppercase tracking-wider transition-all border ${currentPage === i + 1 ? 'bg-emerald-600 border-emerald-600 text-white shadow-lg' : 'bg-slate-50 dark:bg-slate-800 border-transparent text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
+                  >
+                    {t.page} {i + 1}
+                  </button>
+                ))
+              )}
             </div>
           </div>
         </aside>
 
-        {/* Reading Stage */}
         <main className="flex-1 overflow-auto custom-scrollbar bg-slate-200 dark:bg-slate-950 p-4 md:p-12 relative flex flex-col group/reader">
           {isRenderLoading ? (
             <div className="flex-1 flex flex-col items-center justify-center gap-4 animate-pulse">
@@ -208,17 +247,15 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
             </div>
           ) : (
             <>
-              {/* Floating Back Arrow */}
               <button 
                 onClick={() => handlePageChange(currentPage - 1)}
                 disabled={currentPage === 1}
                 className={`fixed left-[calc(var(--sidebar-width,0px)+2rem)] top-1/2 -translate-y-1/2 z-[90] p-4 rounded-full bg-white/20 hover:bg-white/40 dark:bg-slate-800/20 dark:hover:bg-slate-800/40 backdrop-blur-md text-slate-600 dark:text-slate-300 transition-all duration-300 border border-white/30 dark:border-slate-700/30 shadow-2xl ${currentPage === 1 ? 'opacity-0 pointer-events-none' : 'opacity-0 group-hover/reader:opacity-100 hover:scale-110 active:scale-90'}`}
-                style={{ '--sidebar-width': isSidebarOpen ? '16rem' : '0rem' } as React.CSSProperties}
+                style={{ '--sidebar-width': isSidebarOpen ? (window.innerWidth >= 768 ? '18rem' : '16rem') : '0rem' } as React.CSSProperties}
               >
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M15 19l-7-7 7-7" /></svg>
               </button>
 
-              {/* Floating Forward Arrow */}
               <button 
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage === numPages}
@@ -232,8 +269,6 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
                     <div className="rounded-sm overflow-hidden flex items-center justify-center">
                       <canvas ref={flipPageRef} className="max-w-none block shadow-2xl" />
                     </div>
-                    
-                    {/* Decorative Spine Shadow */}
                     <div className="absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-black/10 to-transparent pointer-events-none"></div>
                     <div className="absolute inset-y-0 left-0 w-1 bg-white/20 pointer-events-none"></div>
                 </div>
@@ -243,7 +278,6 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
         </main>
       </div>
 
-      {/* Footer Navigation Bar */}
       <footer className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex-none px-4 md:px-8 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 z-[110] shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
          <div className="flex items-center gap-3 w-full sm:w-auto order-2 sm:order-1">
             <button 
@@ -275,7 +309,6 @@ export const PdfViewer: React.FC<MaterialViewerProps> = ({
          </div>
       </footer>
 
-      {/* Exit Dialog */}
       {showConfirmClose && (
         <div className="fixed inset-0 z-[300] bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-6 animate-in zoom-in duration-300">
           <div className="bg-white dark:bg-slate-900 rounded-[3rem] p-12 max-w-md w-full text-center space-y-10 border border-slate-200 dark:border-slate-700 shadow-2xl">

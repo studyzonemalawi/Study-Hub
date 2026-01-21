@@ -28,7 +28,9 @@ const SEED_MATERIAL: StudyMaterial = {
   subject: "Chemistry",
   fileUrl: "https://vkykmbxpdmvvdtmciolo.supabase.co/storage/v1/object/public/materials/chemistry_f1_notes.pdf",
   fileName: "chemistry_f1_notes.pdf",
-  uploadedAt: "2024-01-01T00:00:00.000Z"
+  uploadedAt: new Date().toISOString(), // Use current date for featured display
+  author: "Ganizani Chirindanji",
+  description: "Syllabus-based comprehensive notes covering topics from Introduction to Chemistry through Organic Compounds."
 };
 
 export const storage = {
@@ -37,10 +39,15 @@ export const storage = {
     const data = localStorage.getItem(MATERIALS_KEY);
     let materials: StudyMaterial[] = data ? JSON.parse(data) : [];
     
-    // Ensure the seed material exists
-    if (!materials.find(m => m.id === CHEMISTRY_NOTES_ID)) {
+    // Ensure the seed material exists and is up to date
+    const seedIdx = materials.findIndex(m => m.id === CHEMISTRY_NOTES_ID);
+    if (seedIdx === -1) {
       materials = [SEED_MATERIAL, ...materials];
       localStorage.setItem(MATERIALS_KEY, JSON.stringify(materials));
+    } else if (!materials[seedIdx].author) {
+       // Refresh metadata if missing
+       materials[seedIdx] = SEED_MATERIAL;
+       localStorage.setItem(MATERIALS_KEY, JSON.stringify(materials));
     }
     
     return materials;

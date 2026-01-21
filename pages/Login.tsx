@@ -45,12 +45,17 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
     const existing = existingUsers.find(u => u.id === sbUser.id || (u.email.toLowerCase() === userEmail));
     const isAdminMatch = userEmail === ADMIN_EMAIL.toLowerCase();
     
+    const fullName = sbUser.user_metadata?.full_name || sbUser.user_metadata?.name || (isAdminMatch ? 'Study Hub Admin' : '');
+    const avatarUrl = sbUser.user_metadata?.avatar_url || 'initials';
+
     if (existing) {
       return {
         ...existing,
         lastLogin: new Date().toISOString(),
         appRole: isAdminMatch ? 'admin' : existing.appRole,
-        isProfileComplete: isAdminMatch ? true : existing.isProfileComplete
+        isProfileComplete: isAdminMatch ? true : existing.isProfileComplete,
+        name: existing.name || fullName,
+        profilePic: existing.profilePic || avatarUrl
       };
     }
 
@@ -59,14 +64,15 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
       email: userEmail,
       authProvider: 'email',
       appRole: isAdminMatch ? 'admin' : 'user',
-      name: sbUser.user_metadata?.full_name || (isAdminMatch ? 'Study Hub Admin' : ''),
+      name: fullName,
       dateJoined: new Date().toISOString(),
       lastLogin: new Date().toISOString(),
       downloadedIds: [],
       favoriteIds: [],
       isProfileComplete: isAdminMatch,
       isPublic: isAdminMatch,
-      termsAccepted: true
+      termsAccepted: true,
+      profilePic: avatarUrl
     };
   };
 

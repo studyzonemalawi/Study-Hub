@@ -11,6 +11,7 @@ interface HomeProps {
 
 export const Home: React.FC<HomeProps> = ({ onNavigate, user }) => {
   const [recentMaterials, setRecentMaterials] = useState<StudyMaterial[]>([]);
+  const [featuredMaterial, setFeaturedMaterial] = useState<StudyMaterial | null>(null);
   const [activeReading, setActiveReading] = useState<(StudyMaterial & { progress: UserProgress })[]>([]);
   const [viewingMaterial, setViewingMaterial] = useState<StudyMaterial | null>(null);
 
@@ -21,9 +22,15 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, user }) => {
     const all = storage.getMaterials();
     const progress = storage.getUserProgress(userId);
 
-    // If Admin, show everything. If student, filter by their permanent level.
+    // Filter by level for students
     const filteredAll = isAdmin ? all : all.filter(m => m.level === user.educationLevel);
     
+    // Find featured material (specific chemistry notes)
+    const chemNotes = all.find(m => m.id === 'chem-f1-notes-001');
+    if (chemNotes && (isAdmin || user.educationLevel === EducationLevel.SECONDARY)) {
+      setFeaturedMaterial(chemNotes);
+    }
+
     const sorted = filteredAll.sort((a, b) => 
       new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
     ).slice(0, 5);
@@ -36,7 +43,6 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, user }) => {
       }))
       .filter(m => {
         const isReading = m.progress && m.progress.status === ReadingStatus.READING;
-        // For admin, show any reading. For students, filter by level.
         return isReading && (isAdmin || m.level === user.educationLevel);
       })
       .sort((a, b) => {
@@ -137,6 +143,45 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, user }) => {
             <span className="text-[12rem] font-black leading-none select-none">SH</span>
         </div>
       </section>
+
+      {featuredMaterial && (
+        <section className="bg-emerald-900 rounded-[3rem] p-10 md:p-14 text-white shadow-2xl relative overflow-hidden flex flex-col md:flex-row items-center gap-12 group">
+          <div className="md:w-1/2 space-y-6 relative z-10">
+            <div className="inline-flex items-center gap-3 px-4 py-2 bg-white/10 rounded-xl border border-white/10 text-[9px] font-black uppercase tracking-[0.2em]">
+              <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+              Featured for Your Level
+            </div>
+            <h2 className="text-3xl md:text-5xl font-black leading-tight tracking-tight">{featuredMaterial.title}</h2>
+            <p className="text-emerald-100/70 font-medium leading-relaxed max-w-md">
+              {featuredMaterial.description} Compiled by <span className="text-white font-black">{featuredMaterial.author}</span>.
+            </p>
+            <button 
+              onClick={() => handleReadOnline(featuredMaterial)}
+              className="bg-white text-emerald-900 px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-[11px] shadow-2xl hover:scale-105 active:scale-95 transition-all flex items-center gap-3"
+            >
+              Start Reading Now
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+            </button>
+          </div>
+          <div className="md:w-1/2 flex justify-center relative z-10">
+            <div className="w-64 h-80 bg-white rounded-xl shadow-2xl rotate-6 group-hover:rotate-0 transition-transform duration-700 flex flex-col p-6 overflow-hidden border-8 border-slate-100 relative">
+               <div className="text-emerald-900 font-black text-center text-xs uppercase tracking-widest mb-6">Study Hub Malawi</div>
+               <div className="h-px bg-slate-200 w-full mb-8"></div>
+               <div className="text-slate-900 font-black text-2xl tracking-tighter leading-none mb-4">CHEMISTRY</div>
+               <div className="text-slate-400 font-bold text-xs uppercase tracking-[0.2em] mb-auto">Form 1 Notes</div>
+               <div className="mt-auto pt-6 border-t border-slate-100 flex items-center justify-between">
+                  <span className="text-[8px] font-black uppercase text-emerald-600">Syllabus Based</span>
+                  <div className="w-6 h-6 bg-emerald-600 rounded flex items-center justify-center text-[10px] font-black text-white">SH</div>
+               </div>
+               {/* Spine shadow */}
+               <div className="absolute inset-y-0 left-0 w-4 bg-gradient-to-r from-black/10 to-transparent"></div>
+            </div>
+            {/* Background elements */}
+            <div className="absolute -top-10 -right-10 w-40 h-40 bg-emerald-400/20 blur-3xl rounded-full"></div>
+          </div>
+          <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.05),transparent)] pointer-events-none"></div>
+        </section>
+      )}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8">
         {activeReading.length > 0 && (

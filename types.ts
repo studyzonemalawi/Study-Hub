@@ -37,6 +37,8 @@ export interface StudyMaterial {
   fileUrl: string;
   fileName: string;
   uploadedAt: string;
+  author?: string;
+  description?: string;
 }
 
 export interface UserProgress {

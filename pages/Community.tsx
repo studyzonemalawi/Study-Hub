@@ -33,6 +33,7 @@ export const Community: React.FC<CommunityProps> = ({ user }) => {
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
   const [isRoomDropdownOpen, setIsRoomDropdownOpen] = useState(false);
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
   
   // Create Room States
   const [isCreateRoomModalOpen, setIsCreateRoomModalOpen] = useState(false);
@@ -104,16 +105,25 @@ export const Community: React.FC<CommunityProps> = ({ user }) => {
     shareStory: lang === 'English' ? 'Share My Story' : 'Uzani Ena Nkhani Yanga',
     postStory: lang === 'English' ? 'Post Story' : 'Tumizani Nkhani',
     communityStories: lang === 'English' ? 'Community Testimonies' : 'Umboni wa Ophunzira',
-    storyPrompt: lang === 'English' ? 'How has Study Hub helped your education?' : 'Kodi Study Hub yakuthandizani bwanji pamaphunziro anu?',
+    storyPrompt: lang === 'English' ? 'How has Study Hub helped your education?' : 'Kodi Study Hub yakuthandizani bwanji pamaphunziro anu lero?',
     active: lang === 'English' ? 'Active' : 'Amoyo',
+    exitRoom: lang === 'English' ? 'Exit Room' : 'Tulukani muno',
+    exitConfirmTitle: lang === 'English' ? 'Leave Room?' : 'Kodi mutuluka?',
+    exitConfirmSub: lang === 'English' ? 'Are you sure you want to leave this conversation? You can rejoin anytime.' : 'Kodi mukufuna kutuluka m’macheza awa? Mutha kubweranso nthawi ina iliyonse.',
+    yesExit: lang === 'English' ? 'Yes, Exit' : 'Inde, Tulukani',
+    noStay: lang === 'English' ? 'No, Stay' : 'Ayi, Pitirizani',
+    roomGallery: lang === 'English' ? 'Select a Room' : 'Sankhani Chipinda'
   };
 
   useEffect(() => {
     const storedRooms = storage.getChatRooms();
     setTestimonials(storage.getTestimonials());
     setRooms(storedRooms);
-    const defaultRoom = storedRooms[0];
-    if (defaultRoom) setActiveRoomId(defaultRoom.id);
+    
+    // Auto-select first room if none active and tab is messenger
+    if (storedRooms.length > 0 && !activeRoomId && activeTab === 'messenger') {
+      setActiveRoomId(storedRooms[0].id);
+    }
 
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -276,7 +286,6 @@ export const Community: React.FC<CommunityProps> = ({ user }) => {
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Increased size check to 10MB (10 * 1024 * 1024 bytes)
       if (file.size > 10 * 1024 * 1024) {
         alert(lang === 'English' ? "Image too large. Max 10MB." : "Chithunzi ndi chachikulu kwambiri. Osapitirira 10MB.");
         return;
@@ -327,10 +336,45 @@ export const Community: React.FC<CommunityProps> = ({ user }) => {
     setNewRoomIcon('🎓');
   };
 
+  const handleExitRoom = () => {
+    setShowExitConfirm(false);
+    setActiveRoomId(null);
+  };
+
   const activeRoom = rooms.find(r => r.id === activeRoomId);
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500 pb-20 px-4 md:px-0">
+      
+      {/* Exit Confirmation Modal */}
+      {showExitConfirm && (
+        <div className="fixed inset-0 z-[300] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-300">
+          <div className="bg-white dark:bg-slate-900 rounded-[3rem] max-w-md w-full p-10 shadow-2xl animate-in zoom-in duration-300 border border-slate-100 dark:border-slate-800 text-center space-y-8">
+            <div className="w-20 h-20 bg-red-50 dark:bg-red-950/30 rounded-3xl flex items-center justify-center text-4xl mx-auto shadow-inner">
+              🚪
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">{t.exitConfirmTitle}</h3>
+              <p className="text-slate-500 dark:text-slate-400 font-medium">{t.exitConfirmSub}</p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <button 
+                onClick={() => setShowExitConfirm(false)}
+                className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-black rounded-2xl text-[11px] uppercase tracking-[0.2em] transition-all"
+              >
+                {t.noStay}
+              </button>
+              <button 
+                onClick={handleExitRoom}
+                className="flex-1 py-4 bg-red-600 hover:bg-red-700 text-white font-black rounded-2xl text-[11px] uppercase tracking-[0.2em] shadow-xl shadow-red-500/20 transition-all active:scale-95"
+              >
+                {t.yesExit}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Enhanced Create Room Modal */}
       {isCreateRoomModalOpen && (
         <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
@@ -508,7 +552,7 @@ export const Community: React.FC<CommunityProps> = ({ user }) => {
 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h2 className="text-3xl font-black text-slate-900 dark:text-slate-100 tracking-tight">{t.hubTitle}</h2>
+          <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{t.hubTitle}</h2>
           <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium italic">{t.hubSub}</p>
         </div>
         
@@ -546,7 +590,42 @@ export const Community: React.FC<CommunityProps> = ({ user }) => {
                <p className="text-slate-500 dark:text-slate-400 mb-10 leading-relaxed max-w-md">{t.rulesSub}</p>
                <button onClick={() => { localStorage.setItem(`study_hub_chat_rules_agreed_${user.id}`, 'true'); setHasAgreedToRules(true); }} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-5 rounded-2xl shadow-xl transition-all uppercase tracking-widest text-sm active:scale-[0.98]">{t.agreeBtn}</button>
             </div>
+          ) : !activeRoomId ? (
+            /* Lobby View */
+            <div className="space-y-10 animate-in fade-in duration-500">
+              <div className="flex items-center justify-between px-2">
+                 <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">{t.roomGallery}</h3>
+                 <button onClick={() => setIsCreateRoomModalOpen(true)} className="px-6 py-3 bg-emerald-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl active:scale-95 transition-all">
+                    + {t.createNewRoom}
+                 </button>
+              </div>
+              
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                {rooms.map(room => (
+                  <button 
+                    key={room.id} 
+                    onClick={() => setActiveRoomId(room.id)}
+                    className="bg-white dark:bg-slate-800 p-8 rounded-[3rem] border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-2xl hover:border-emerald-500/20 transition-all text-left group flex flex-col justify-between h-full min-h-[220px]"
+                  >
+                    <div>
+                      <div className="w-16 h-16 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-center text-4xl mb-6 shadow-inner group-hover:scale-110 transition-transform">
+                        {room.icon}
+                      </div>
+                      <h4 className="text-xl font-black text-slate-900 dark:text-white leading-tight mb-2">{room.title}</h4>
+                      <p className="text-slate-500 dark:text-slate-400 text-xs font-medium line-clamp-2">{room.description || "Discuss study topics and connect."}</p>
+                    </div>
+                    <div className="mt-8 flex items-center justify-between">
+                       <span className="text-[10px] font-black uppercase text-emerald-600 tracking-widest bg-emerald-50 dark:bg-emerald-950/30 px-3 py-1.5 rounded-xl">{room.activeUsers} {t.active}</span>
+                       <div className="text-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity translate-x-2 group-hover:translate-x-0">
+                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                       </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
           ) : (
+            /* Chat View */
             <div className="flex flex-col bg-white dark:bg-slate-800 rounded-[3rem] border border-slate-200/60 dark:border-slate-700 overflow-hidden shadow-2xl h-[calc(100vh-20rem)] min-h-[450px]">
                  {/* Chat Header */}
                  <div className="bg-slate-900 dark:bg-slate-950 p-6 md:px-8 text-white flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/5 flex-none">
@@ -585,9 +664,19 @@ export const Community: React.FC<CommunityProps> = ({ user }) => {
                           )}
                        </div>
                     </div>
-                    <div className="hidden sm:flex items-center gap-3 bg-white/5 px-4 py-2 rounded-full border border-white/5">
-                      <span className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></span>
-                      <span className="text-[10px] font-black uppercase tracking-widest text-emerald-100">{t.liveSupport}</span>
+                    
+                    <div className="flex items-center gap-3">
+                      <div className="hidden sm:flex items-center gap-3 bg-white/5 px-4 py-2 rounded-full border border-white/5">
+                        <span className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-emerald-100">{t.liveSupport}</span>
+                      </div>
+                      <button 
+                        onClick={() => setShowExitConfirm(true)}
+                        className="p-3 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl transition-all border border-red-500/20 group"
+                        title={t.exitRoom}
+                      >
+                         <svg className="w-5 h-5 group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                      </button>
                     </div>
                  </div>
 
