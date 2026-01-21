@@ -13,7 +13,6 @@ import { Activity } from './pages/Activity';
 import { Community } from './pages/Community';
 import { Announcements } from './pages/Announcements';
 import { FAQs } from './pages/FAQs';
-import { AdminExamForm } from './pages/AdminExamForm';
 import { Assistant } from './pages/Assistant';
 import { SyncIndicator } from './components/SyncIndicator';
 import { storage } from './services/storage';
@@ -184,7 +183,6 @@ const App: React.FC = () => {
       case 'support': return <Support user={user} onNavigate={setActiveTab} />;
       case 'settings': return <Settings user={user} onUpdate={handleUpdateUser} onNavigate={setActiveTab} />;
       case 'assistant': return <Assistant user={user} />;
-      case 'admin-exam-form': return isAdmin ? <AdminExamForm onNavigate={setActiveTab} /> : <Home user={user} onNavigate={setActiveTab} />;
       case 'admin': return isAdmin ? <Admin user={user} onNavigate={setActiveTab} /> : <Home user={user} onNavigate={setActiveTab} />;
       default: return <Home user={user} onNavigate={setActiveTab} />;
     }
@@ -234,8 +232,7 @@ const App: React.FC = () => {
               <span className="opacity-30">/</span>
               <span className="text-emerald-600 dark:text-emerald-400">
                 {activeTab === 'testimonials' ? 'Community' : 
-                 activeTab === 'admin-exam-form' ? 'Exam Portal' : 
-                 activeTab === 'assistant' ? 'AI Teacher' :
+                 activeTab === 'assistant' ? 'Learner Assistant' :
                  activeTab}
               </span>
             </div>

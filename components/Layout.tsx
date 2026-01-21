@@ -30,7 +30,7 @@ export const Layout: React.FC<LayoutProps> = ({
   const navItems = [
     { id: 'home', label: 'Home', icon: '🏠' },
     { id: 'library', label: 'Library', icon: '📚' },
-    { id: 'assistant', label: 'AI Teacher', icon: '🧠' },
+    { id: 'assistant', label: 'AI Assistant', icon: '🧠' },
     { id: 'announcements', label: 'Updates', icon: '📢' },
     { id: 'support', label: 'Support', icon: '💬' },
     ...(isAdmin ? [{ id: 'admin', label: 'Admin', icon: '🛡️' }] : [])
@@ -92,7 +92,7 @@ export const Layout: React.FC<LayoutProps> = ({
             </div>
             <button 
               onClick={handleLogoutClick}
-              className="bg-emerald-600 hover:bg-emerald-700 px-5 py-2.5 rounded-xl text-[10px] text-white font-black uppercase tracking-widest transition-all shadow-lg shadow-emerald-500/20 dark:shadow-none"
+              className="bg-emerald-600 hover:bg-emerald-700 px-5 py-2.5 rounded-xl text-[10px] text-white font-black uppercase tracking-widest transition-all shadow-lg shadow-emerald-500/10 dark:shadow-none"
             >
               Logout
             </button>

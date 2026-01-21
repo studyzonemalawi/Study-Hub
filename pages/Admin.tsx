@@ -22,11 +22,10 @@ interface AdminProps {
 }
 
 export const Admin: React.FC<AdminProps> = ({ user, onNavigate }) => {
-  const [activeAdminTab, setActiveAdminTab] = useState<'content' | 'local-upload' | 'users' | 'announcements' | 'exams'>('local-upload');
+  const [activeAdminTab, setActiveAdminTab] = useState<'content' | 'local-upload' | 'users' | 'announcements'>('local-upload');
   const [materials, setMaterials] = useState<StudyMaterial[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [exams, setExams] = useState<any[]>([]);
   
   // Content Upload States
   const [level, setLevel] = useState<EducationLevel>(EducationLevel.PRIMARY);
@@ -60,7 +59,6 @@ export const Admin: React.FC<AdminProps> = ({ user, onNavigate }) => {
     setMaterials(storage.getMaterials());
     setUsers(storage.getUsers());
     setAnnouncements(storage.getAnnouncements());
-    setExams(storage.getExams());
     
     // Attempt to sync from cloud immediately on admin panel load
     if (navigator.onLine) {
@@ -224,7 +222,7 @@ export const Admin: React.FC<AdminProps> = ({ user, onNavigate }) => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
         <div className="flex bg-white dark:bg-slate-800 p-1.5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-x-auto no-scrollbar">
-          {(['local-upload', 'content', 'exams', 'users', 'announcements'] as const).map((tab) => (
+          {(['local-upload', 'content', 'users', 'announcements'] as const).map((tab) => (
             <button 
               key={tab}
               onClick={() => { setActiveAdminTab(tab); resetForm(); }}
@@ -358,18 +356,6 @@ export const Admin: React.FC<AdminProps> = ({ user, onNavigate }) => {
                 </div>
               ))}
             </div>
-          </div>
-        </div>
-      )}
-      
-      {activeAdminTab === 'exams' && (
-        <div className="space-y-8 animate-in fade-in duration-500 pb-20">
-          <div className="bg-emerald-800 p-10 md:p-16 rounded-[3rem] text-white flex flex-col md:flex-row items-center justify-between gap-10 shadow-2xl relative overflow-hidden">
-             <div className="relative z-10 space-y-4 text-center md:text-left">
-                <h2 className="text-4xl font-black tracking-tight leading-none">AI Exam Creator</h2>
-                <p className="text-emerald-200 font-medium max-w-md">Instantly formulate digital exams from curriculum content.</p>
-                <button onClick={() => onNavigate('admin-exam-form')} className="bg-white text-emerald-800 font-black px-10 py-4 rounded-2xl shadow-xl hover:scale-105 transition-all uppercase tracking-widest text-[11px]">Start Creator</button>
-             </div>
           </div>
         </div>
       )}
