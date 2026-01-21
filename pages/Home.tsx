@@ -78,7 +78,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, user }) => {
 
   const modules = [
     { id: 'library', title: 'Library', desc: 'Revision Notes', icon: '📚', color: 'bg-indigo-600' },
-    { id: 'exams', title: 'Online Exams', desc: 'AI Assessment', icon: '📝', color: 'bg-emerald-600' },
+    { id: 'assistant', title: 'AI Assistant', desc: 'Learner Teacher', icon: '🧠', color: 'bg-emerald-600' },
     { id: 'announcements', title: 'Updates', desc: 'Stay Informed', icon: '📢', color: 'bg-orange-500' },
     { id: 'testimonials', title: 'Community', desc: 'Connect & Help', icon: '👥', color: 'bg-pink-600' },
     { id: 'activity', title: 'Progress', desc: 'My Statistics', icon: '📈', color: 'bg-blue-600' },
@@ -129,10 +129,11 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, user }) => {
               <svg className="w-5 h-5 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
             </button>
             <button 
-              onClick={() => onNavigate('exams')} 
-              className="px-10 py-5 bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-200 font-black rounded-3xl border border-slate-200 dark:border-slate-600 hover:bg-slate-50 transition-all active:scale-95 uppercase tracking-widest text-[11px]"
+              onClick={() => onNavigate('assistant')} 
+              className="px-10 py-5 bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-200 font-black rounded-3xl border border-slate-200 dark:border-slate-600 hover:bg-slate-50 transition-all active:scale-95 uppercase tracking-widest text-[11px] flex items-center gap-3"
             >
-              Take Exam
+              <span>Ask AI Teacher</span>
+              <span className="text-lg">🧠</span>
             </button>
           </div>
         </div>

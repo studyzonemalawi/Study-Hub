@@ -15,6 +15,7 @@ interface ChatMessage {
   role: 'user' | 'ai';
   content: string;
   groundingUrls?: { uri: string; title: string }[];
+  feedback?: 'up' | 'down' | null;
 }
 
 export const Assistant: React.FC<AssistantProps> = ({ user }) => {
@@ -107,6 +108,17 @@ export const Assistant: React.FC<AssistantProps> = ({ user }) => {
     }
   };
 
+  const handleFeedback = (index: number, type: 'up' | 'down') => {
+    setMessages(prev => {
+      const newMsgs = [...prev];
+      newMsgs[index] = {
+        ...newMsgs[index],
+        feedback: newMsgs[index].feedback === type ? null : type
+      };
+      return newMsgs;
+    });
+  };
+
   return (
     <div className="max-w-5xl mx-auto flex flex-col h-[calc(100vh-16rem)] animate-in fade-in duration-500 px-4 md:px-0">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
@@ -158,95 +170,4 @@ export const Assistant: React.FC<AssistantProps> = ({ user }) => {
                           href={url.uri} 
                           target="_blank" 
                           rel="noopener noreferrer" 
-                          className="inline-flex items-center gap-2 px-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-[10px] font-bold text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 transition-all"
-                        >
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                          {url.title}
-                        </a>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {m.role === 'ai' && !isTyping && idx === messages.length - 1 && (
-                   <div className="mt-4 flex items-center gap-3">
-                      <span className="text-[9px] font-black uppercase text-emerald-600 tracking-widest">Malawi Syllabus: High Confidence</span>
-                      <div className="flex gap-1">
-                         <span className="w-1 h-1 bg-emerald-500 rounded-full animate-pulse"></span>
-                         <span className="w-1 h-1 bg-emerald-500 rounded-full animate-pulse" style={{animationDelay: '200ms'}}></span>
-                         <span className="w-1 h-1 bg-emerald-500 rounded-full animate-pulse" style={{animationDelay: '400ms'}}></span>
-                      </div>
-                   </div>
-                )}
-              </div>
-            </div>
-          ))}
-
-          {/* Initial Suggestions (Only shown at the very start) */}
-          {messages.length === 1 && !isTyping && (
-             <div className="grid sm:grid-cols-2 gap-4 w-full max-w-3xl pt-4 animate-in fade-in zoom-in duration-500">
-                {SUGGESTED_QUESTIONS.map((q, i) => (
-                  <button 
-                   key={i} 
-                   onClick={() => handleSendMessage(undefined, q.text)}
-                   className="p-5 bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700 text-left hover:border-emerald-500 hover:shadow-xl transition-all group flex items-start gap-4"
-                  >
-                    <span className="text-2xl group-hover:scale-110 transition-transform">{q.icon}</span>
-                    <span className="text-xs font-black text-slate-600 dark:text-slate-300 leading-tight tracking-tight">{q.text}</span>
-                  </button>
-                ))}
-             </div>
-          )}
-
-          {isTyping && (
-             <div className="flex justify-start animate-in fade-in">
-                <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] rounded-tl-none p-6 md:p-8 border border-slate-200 dark:border-slate-700 shadow-sm flex items-center gap-3">
-                   <div className="flex gap-1.5">
-                      <div className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce"></div>
-                      <div className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" style={{animationDelay: '200ms'}}></div>
-                      <div className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" style={{animationDelay: '400ms'}}></div>
-                   </div>
-                   <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Teacher is researching your question...</span>
-                </div>
-             </div>
-          )}
-          <div ref={scrollRef} />
-        </div>
-
-        {/* Action Area for suggestions after response */}
-        {showSuggestions && !isTyping && (
-          <div className="px-6 md:px-10 pb-4 flex flex-wrap gap-2 animate-in slide-in-from-bottom-2 duration-300">
-            {FOLLOW_UP_SUGGESTIONS.map((suggestion, i) => (
-              <button 
-                key={i}
-                onClick={() => handleSendMessage(undefined, suggestion)}
-                className="px-4 py-2 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800 rounded-full text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest hover:bg-emerald-600 hover:text-white transition-all shadow-sm"
-              >
-                {suggestion}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Input Bar */}
-        <form onSubmit={handleSendMessage} className="p-6 md:p-10 bg-white dark:bg-slate-800 border-t border-slate-100 dark:border-slate-700 flex items-center gap-4 flex-none">
-           <input
-             type="text"
-             value={input}
-             onChange={(e) => setInput(e.target.value)}
-             placeholder="Ask about Math, Science, History, Geography..."
-             disabled={isTyping}
-             className="flex-1 px-6 py-5 rounded-[1.5rem] border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 font-bold text-sm outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all text-slate-900 dark:text-white disabled:opacity-50"
-           />
-           <button 
-             type="submit"
-             disabled={isTyping || !input.trim()}
-             className="bg-emerald-600 hover:bg-emerald-700 text-white p-5 rounded-[1.5rem] shadow-xl shadow-emerald-500/20 active:scale-95 transition-all disabled:opacity-50 flex-none"
-           >
-             <svg className="w-6 h-6 transform rotate-90" fill="currentColor" viewBox="0 0 20 20"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"></path></svg>
-           </button>
-        </form>
-      </div>
-    </div>
-  );
-};
+                          className="inline-flex items-center gap-2 px-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-[10px] font-bold text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 transition
